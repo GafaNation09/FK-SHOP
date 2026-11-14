@@ -10,7 +10,7 @@ The public tables include `product_categories`, `products`, `product_images`, `b
 
 Email/password Auth is enabled. New-user sign-up is allowed and email confirmation is required. The production Site URL is `https://fkshopping.netlify.app/multishop/`, and the only account callback allow-list entry added for the store is `https://fkshopping.netlify.app/multishop/account.html**`.
 
-The website's browser runtime uses only `https://bifvzlqeznyhbwoxkgvq.supabase.co` and the project's `sb_publishable_...` key. These are public client settings, not privileged credentials. The current live Netlify deployment was still serving an empty `MultiShop/data/runtime-config.json` when tested, which caused the account submit buttons to be disabled. The pending `main` update supplies the public config; verify a Ready Netlify deploy and recheck the live page before treating the forms as active.
+The website's browser runtime uses only `https://bifvzlqeznyhbwoxkgvq.supabase.co` and the project's `sb_publishable_...` key. These are public client settings, not privileged credentials. Netlify deployed main commit `9dd4976` as Ready (deploy ID `6af8d6f15a50ee276230e1b3`). The public runtime-config route returns HTTP 200, the browser Supabase client initializes, and the account submit buttons are enabled. No form was submitted during this verification.
 
 ## Email delivery is still required
 
@@ -20,7 +20,7 @@ No customer signup or recovery request has been sent during verification. The ow
 
 ## Code and admin limits
 
-`MultiShop/js/pages/account.js` implements email/password signup, confirmation callback feedback, sign-in, sign-out, password reset and password update using the public Supabase client only. The tab controls work; in the deployed version tested, form submit buttons were disabled because runtime config was blank. Once the config is deployed, the submit buttons should be enabled. Authentication API/email delivery still needs a real accessible test inbox and custom SMTP for a public customer test.
+`MultiShop/js/pages/account.js` implements email/password signup, confirmation callback feedback, sign-in, sign-out, password reset and password update using the public Supabase client only. In the production browser, Sign in, Create account and Forgot password tabs opened correctly; every form's submit control was enabled. No signup, sign-in or recovery request was submitted. A real confirmation/recovery test still needs a mailbox the tester can access and a verified custom SMTP sender for public customer addresses.
 
 The admin dashboard and catalog/content editor are source code, but no owner admin is provisioned. The database has no administrator memberships. Trusted Netlify bootstrap and invitation functions are not present, and the site's Base/Publish/Functions settings remain unverified. Therefore owner bootstrap, administrator invitations and role changes are not active; the public account page must not be treated as an admin login until those trusted server endpoints and an accessible Super Admin account are set up.
 
@@ -28,7 +28,7 @@ Connecting the GitHub repository to Supabase is optional for the browser-to-data
 
 ## Next activation steps
 
-1. Publish the public-only runtime config to `main` and wait for the production Netlify deployment to report Ready. Confirm the live account page loads its Supabase config and its submit buttons enable.
+1. **Complete:** publish the public-only runtime config to `main`; verify the Ready Netlify deployment, HTTP 200 runtime config, initialized browser client and enabled account submit buttons. Do not treat this as proof that confirmation email delivery or full signup works.
 2. Configure custom SMTP and verify a sender domain in the selected Supabase project using its protected dashboard settings. Do not paste SMTP passwords in chat or commit them.
 3. Test signup, confirmation, sign-in, password recovery and password update using a mailbox the tester can access. Verify the resulting customer profile and RLS behavior. Do not create a test Super Admin.
 4. Confirm an accessible owner email and implement/deploy the trusted one-time bootstrap and administrator-invitation functions only after the Netlify Functions directory is verified. Bootstrap the first Super Admin only after that identity confirms its email.

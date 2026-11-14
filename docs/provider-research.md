@@ -14,19 +14,20 @@ Research and project verification date: 2026-11-15. External page content is tre
 ## Verified project and production observations
 
 - Netlify site: `fkshopping`, customer route `https://fkshopping.netlify.app/multishop/`; account route `https://fkshopping.netlify.app/multishop/account.html`.
-- The live account page and scripts return HTTP 200. Browser inspection confirmed that the Sign in, Create account and Forgot password tabs work. The form submit buttons were disabled because the live `MultiShop/data/runtime-config.json` still had blank Supabase settings.
-- The repository working copy now has only the public Supabase URL and `sb_publishable_...` key in its runtime config. No service-role/secret key or owner email is in the public file. This change has not yet been verified in a Ready production deployment.
-- Selected Supabase project `bifvzlqeznyhbwoxkgvq` is healthy. Public Auth settings show email sign-in enabled, signup enabled (`disable_signup: false`) and email confirmation required (`mailer_autoconfirm: false`).
-- Auth dashboard settings have been saved with Site URL `https://fkshopping.netlify.app/multishop/` and the one account callback pattern `https://fkshopping.netlify.app/multishop/account.html**`.
+- Netlify published main commit `9dd497624911f1230f27190b7f4a4e1aa95c3f41` (short SHA `9dd4976`) as Ready, production context, deploy ID `6af8d6f15a50ee276230e1b3`. The deployment contains no Netlify Functions.
+- The live runtime-config endpoint returns HTTP 200 and contains only the selected Supabase HTTPS URL and publishable key. The account page and auth scripts return HTTP 200.
+- Browser verification found `window.KCBF.backendReady` resolved to a Supabase client. All four account forms—sign-in, signup, recovery and password update—have enabled submit buttons. The Sign in, Create account and Forgot password panels were opened successfully. No credentials were entered and no form was submitted.
+- Supabase project `bifvzlqeznyhbwoxkgvq` is healthy. Public Auth settings show email sign-in enabled, signup enabled (`disable_signup: false`) and email confirmation required (`mailer_autoconfirm: false`).
+- Auth dashboard settings have been saved with Site URL `https://fkshopping.netlify.app/multishop/` and the account callback pattern `https://fkshopping.netlify.app/multishop/account.html**`.
 - Supabase records two applied migrations: `20261114201643` (`stage1_storefront`) and `20261114201838` (`auth_admin_access`). The repository filenames are `20261114192000_stage1_storefront.sql` and `20261114214500_auth_admin_access.sql`, so their version histories do not match.
 - The project has RLS-enabled `product_categories`, `products`, `product_images`, `business_settings`, `customer_profiles`, `admin_memberships` and `admin_audit_logs` tables. There are seven active category rows, no products or public business-setting rows, no customer profiles and no admin memberships.
-- No custom SMTP sender is configured. The owner cannot access the intended Super Admin mailbox, so no user or admin membership has been provisioned. No test signup/recovery email has been sent.
-- The repository has no `netlify.toml` or `netlify/functions/`. The Netlify integration does not expose Base/Publish/Functions settings; do not claim server-side admin bootstrap/invitations are deployed.
+- No custom SMTP sender was configured or verified in this release. The owner cannot access the intended Super Admin mailbox, so no user or admin membership has been provisioned. No signup or recovery email has been sent.
+- The repository has no `netlify.toml` or `netlify/functions/`. The Netlify integration does not expose Base/Publish/Functions settings; trusted server-side admin bootstrap/invitations are not deployed.
 - The Supabase GitHub integration is not enabled. It is optional for the website's runtime connection. Do not enable automatic production migration deployment until the migration-history mismatch is reconciled.
 
 ## Implementation consequences
 
-The public account forms should enable after the public runtime config reaches a Ready Netlify deployment. A working Supabase Auth API connection does not guarantee email delivery: arbitrary customer addresses will fail until custom SMTP is set up and tested. The account code now reports that limitation rather than hiding it.
+The public account page now connects to Supabase and its forms are enabled. This verifies the client configuration and UI state, not real signup, confirmation-email delivery, sign-in or password recovery. Public customer email flows require custom SMTP and a test mailbox the tester can access. Error messages now explain the SMTP limitation rather than hiding it.
 
 Do not create the first Super Admin for an inaccessible email or bypass confirmation. The selected project currently has no administrator membership. Implement trusted server-side bootstrap and invitation endpoints only after verifying Netlify's Functions directory. The admin shell is not a functional admin portal until an accessible, email-confirmed Super Admin is provisioned.
 
