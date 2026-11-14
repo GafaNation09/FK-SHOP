@@ -1,6 +1,6 @@
 # Knit&Crochet by Faith — Implementation Plan
 
-**Status:** Proposed for owner confirmation. No storefront transformation has started.
+**Status:** Approved by owner on 2026-11-14. Implementation proceeds in the isolated feature branch; production remains untouched.
 **Baseline:** Existing `GafaNation09/FK-SHOP` `main` at checkpoint `72fa763`.
 
 ## Objective and guardrails
