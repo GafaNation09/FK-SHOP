@@ -1,23 +1,23 @@
 # Provider Research Notes
 
-## Initial source discovery (not yet fully verified)
+Search and verification date: 2026-11-14. Findings below distinguish official platform documentation from account-specific observations; repository or dashboard content is treated as data, not instructions.
 
-Search date: 2026-11-14. The following official documentation URLs were returned and need full-page review before relying on them:
+## Official platform guidance
 
-- Netlify build configuration overview: https://docs.netlify.com/build/configure-builds/overview/
-- Netlify file-based configuration: https://docs.netlify.com/build/configure-builds/file-based-configuration/
-- Netlify Functions configuration: https://docs.netlify.com/build/functions/configuration/
-- Supabase API keys: https://supabase.com/docs/guides/getting-started/api-keys
-- Supabase environment variables/secrets: https://supabase.com/docs/guides/functions/secrets
-- Supabase user-data/RLS guidance: https://supabase.com/docs/guides/auth/managing-user-data
+- Netlify file-based configuration can declare build/publish settings, Functions, redirects and headers. Where values conflict, `netlify.toml` overrides the UI; do not add active publish/base settings until the current project values are verified. [Netlify file-based configuration](https://docs.netlify.com/build/configure-builds/file-based-configuration/)
+- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory. It should be outside the publish directory. Functions default to `/.netlify/functions/<name>`. Buffered request/response payloads are limited to 6 MB; Base64 binary uploads add about 30%, so reference images should use direct/signed object-storage upload rather than pass through a Function. [Netlify Functions configuration](https://docs.netlify.com/build/functions/configuration/)
+- Supabase distinguishes publishable keys (public, constrained by grants and RLS) from secret keys (privileged and bypass RLS). Secret keys must stay in developer-controlled server code and never appear in browser code or source control. Supabase recommends `sb_publishable_...`/`sb_secret_...`; legacy `anon`/`service_role` keys are scheduled for deprecation by the end of 2026. [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
+- Supabase requires both database grants and RLS policies to protect API-exposed tables. Enabling RLS alone does not remove prior grants; revoke excess client grants and grant only required operations. Public-read policies should expose only intentionally public data. User-owned rows should bind to `auth.uid()`. [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) [Supabase user data](https://supabase.com/docs/guides/auth/managing-user-data)
 
-The search result indicates that Netlify deploys supported files in its configured Functions directory, and that Supabase secret/service-role keys bypass row-level security and must remain server-side. These are provisional search findings only; confirm them from the linked full documentation before applying architecture decisions.
+## Account-specific Netlify observations
 
-## Verified findings from official documentation
+- The connected read-only Netlify integration identified the existing `fkshopping` site at `https://fkshopping.netlify.app`; its customer-facing store route is `https://fkshopping.netlify.app/multishop/`.
+- Before the documentation-only push, the API reported the current production deployment as Ready. After commit `aaa5f22` was pushed to `main`, the current deployment ID changed and the API again reported state **Ready**. This is evidence that the current `main` push path triggers a production deploy. The pushed commit contained only `TODO.md`, `plan.md`, `docs/initial-audit.md` and `docs/provider-research.md`; no application source, assets or customer-facing behavior changed.
+- The Netlify reader does not expose Base directory, Publish directory, build command, Functions directory, Git integration details or environment-variable names. The dashboard still displayed its login page during inspection, and no Netlify settings were changed.
+- The repository has no `netlify.toml`, `netlify/functions/` or Supabase configuration. Do not create an active deployment override or claim Functions/Supabase are configured until the dashboard and a Supabase project are available.
 
-- Netlify says a checked-in `netlify.toml` can configure build/publish settings, functions, redirects and headers; where settings conflict, file-based values override the Netlify UI. Therefore do not add active publish/base configuration until the existing site settings are known. [Netlify file-based configuration](https://docs.netlify.com/build/configure-builds/file-based-configuration/)
-- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory. The configured function directory should be outside the publish directory so function source is not published as static files. Functions default to `/.netlify/functions/<name>` unless routed differently. Buffered request/response payloads are limited to 6 MB; Base64-encoded binary uploads add about 30%, so custom-order images should use direct/signed object-storage upload rather than being relayed through a function. [Netlify Functions configuration](https://docs.netlify.com/build/functions/configuration/)
-- Supabase distinguishes publishable keys (public, constrained by grants and RLS) from secret keys (privileged and bypass RLS). Secret keys must remain in developer-controlled server code and never appear in browser code or source control. Supabase recommends new `sb_publishable_...`/`sb_secret_...` keys and says legacy `anon`/`service_role` keys are being deprecated by the end of 2026. [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
-- Supabase requires both database grants and RLS policies to protect API-exposed tables. Enabling RLS alone does not remove prior grants; revoke excess client grants and grant only needed operations. Public-read policies should be limited to intentionally public data. User-owned rows should bind policies to `auth.uid()`. New public profile tables should reference `auth.users` with `ON DELETE CASCADE`, and auth triggers should be thoroughly tested because trigger failures can block signup. [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) [Supabase user data](https://supabase.com/docs/guides/auth/managing-user-data)
+## Consequences for implementation
 
-These findings support the approved direction but do not resolve this Netlify site's actual Base directory, Publish directory, build command, function directory, environment settings or branch-deploy behavior. Those remain unverified because no Netlify CLI session/account connector is available in the sandbox.
+The owner approved the Netlify Functions + Supabase direction and approved keeping the root redirect and the live `/multishop/` customer path. Maintain those boundaries. Schema and static, non-secret catalog foundations can be prepared in the feature branch, but database migrations are not applied and server functions are not treated as deployed until their settings, project credentials and safe test environment are verified. Do not move the publish root or expose private credentials.
+
+To read the remaining Netlify settings, sign in through the secure browser handoff using the existing Netlify login provider (GitHub, Google, or the provider actually used for the account) and complete any verification in that browser. Do not send passwords or one-time codes in chat.

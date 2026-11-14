@@ -1,0 +1,93 @@
+/* Stage 1 foundation: preserve the MultiShop layout while clearly marking missing brand imagery. */
+.kcbf-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+    min-height: 100px;
+    padding: 0.75rem;
+    color: #4f4a43;
+    text-align: center;
+    background: #f1eee8;
+    border: 1px dashed #a49b8e;
+}
+
+.kcbf-photo-placeholder i {
+    font-size: 1.35rem;
+}
+
+.kcbf-photo-placeholder small {
+    max-width: 18rem;
+    line-height: 1.35;
+}
+
+.kcbf-photo-placeholder--category {
+    height: 100%;
+    min-height: 100px;
+    font-size: 0.72rem;
+}
+
+.kcbf-photo-placeholder--product {
+    min-height: 245px;
+}
+
+.kcbf-image-note {
+    position: absolute;
+    z-index: 2;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    max-width: calc(100% - 1rem);
+    padding: 0.25rem 0.5rem;
+    color: #fff;
+    font-size: 0.7rem;
+    line-height: 1.25;
+    text-align: right;
+    background: rgba(33, 37, 41, 0.82);
+}
+
+.kcbf-empty-state {
+    color: #4f4a43;
+    background: #f8f7f4;
+    border: 1px solid #e6e1d8;
+}
+
+.kcbf-empty-state h3,
+.kcbf-empty-state h4,
+.kcbf-empty-state h5 {
+    color: #34302b;
+}
+
+.kcbf-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    line-height: 1.1;
+}
+
+.kcbf-brand-mark span {
+    font-size: clamp(0.68rem, 1.25vw, 1rem);
+    letter-spacing: 0.015em;
+}
+
+.kcbf-location-placeholder {
+    color: #4f4a43;
+    background: #f1eee8;
+    border: 1px dashed #a49b8e;
+}
+
+.kcbf-setup-notice {
+    font-size: 0.875rem;
+}
+
+[data-detail-content][hidden] {
+    display: none !important;
+}
+
+@media (max-width: 991.98px) {
+    .kcbf-photo-placeholder--product {
+        min-height: 210px;
+    }
+}

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "brand": {
+    "name": "Knit&Crochet by Faith",
+    "tagline": "Handmade with creativity. Crafted with care.",
+    "description": "Discover unique crochet creations, thoughtful gifts and personalised pieces made to bring creativity into everyday life."
+  },
+  "contact": {
+    "telephone": null,
+    "email": null,
+    "physicalAddress": null,
+    "whatsappBusiness": null,
+    "ownerInputRequired": true
+  },
+  "business": {
+    "registrationNumber": null,
+    "founderName": null,
+    "certifications": [],
+    "deliveryPartnerships": [],
+    "ownerInputRequired": true
+  },
+  "socialAccounts": {
+    "instagram": null,
+    "facebook": null,
+    "tiktok": null,
+    "pinterest": null,
+    "ownerInputRequired": true
+  },
+  "commerce": {
+    "baseCurrency": "KES",
+    "displayCurrencies": ["KES", "USD", "GBP", "EUR"],
+    "exchangeRatesConfigured": false,
+    "paymentProviders": [],
+    "ownerInputRequired": true
+  },
+  "delivery": {
+    "kenyaZones": [],
+    "internationalShippingConfigured": false,
+    "ownerInputRequired": true
+  },
+  "policies": {
+    "delivery": null,
+    "returnsAndExchanges": null,
+    "customOrderCancellation": null,
+    "privacy": null,
+    "terms": null,
+    "ownerApprovalRequired": true
+  },
+  "siteNotices": {
+    "contactPlaceholder": "Business contact details will be added after owner confirmation.",
+    "commercePlaceholder": "Product, payment and delivery details will appear after they are configured and verified."
+  }
+}

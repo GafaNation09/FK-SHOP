@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Shop Detail | Knit&Crochet by Faith</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="handmade crochet, gifts, bags, accessories, Knit&Crochet by Faith" name="keywords">
+    <meta content="View verified product details from Knit&Crochet by Faith." name="description">
+
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/animate/animate.min.css" rel="stylesheet">
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="css/style.min.css" rel="stylesheet">
+    <link href="css/brand-foundation.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Topbar Start -->
+    <div class="container-fluid">
+        <div class="row bg-secondary py-1 px-xl-5">
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="d-inline-flex align-items-center h-100">
+                    <a class="text-body mr-3" href="index.html">About</a>
+                    <a class="text-body mr-3" href="contact.html">Contact</a>
+                    <a class="text-body mr-3" href="contact.html">Help</a>
+                    <a class="text-body mr-3" href="contact.html">FAQs</a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center text-lg-right">
+                <div class="d-inline-flex align-items-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">My Account</button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <button class="dropdown-item" type="button" disabled title="Customer accounts are not configured yet">Sign in (setup pending)</button>
+                            <button class="dropdown-item" type="button" disabled title="Customer accounts are not configured yet">Sign up (setup pending)</button>
+                        </div>
+                    </div>
+                    <div class="btn-group mx-2">
+                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" data-base-currency>KES</button>
+                        <div class="dropdown-menu dropdown-menu-right" aria-label="Display currency options">
+                            <button class="dropdown-item" type="button" disabled>KES (base currency)</button>
+                            <button class="dropdown-item" type="button" disabled>USD (rates pending)</button>
+                            <button class="dropdown-item" type="button" disabled>GBP (rates pending)</button>
+                            <button class="dropdown-item" type="button" disabled>EUR (rates pending)</button>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">EN</button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <button class="dropdown-item" type="button">FR</button>
+                            <button class="dropdown-item" type="button">AR</button>
+                            <button class="dropdown-item" type="button">RU</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-inline-flex align-items-center d-block d-lg-none">
+                    <a href="#" class="btn px-0" aria-disabled="true" data-disabled-feature title="Wishlist setup pending">
+                        <i class="fas fa-heart text-dark"></i>
+                        <span class="badge text-dark border border-dark rounded-circle" style="padding-bottom: 2px;">0</span>
+                    </a>
+                    <a href="cart.html" class="btn px-0 ml-2">
+                        <i class="fas fa-shopping-cart text-dark"></i>
+                        <span class="badge text-dark border border-dark rounded-circle" style="padding-bottom: 2px;">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row align-items-center bg-light py-3 px-xl-5 d-none d-lg-flex">
+            <div class="col-lg-4">
+                <a href="index.html" class="text-decoration-none kcbf-brand-mark" aria-label="Knit&Crochet by Faith home"><span class="text-uppercase text-primary bg-dark px-2 py-1">Knit&amp;Crochet</span><span class="text-uppercase text-dark bg-primary px-2 py-1">by Faith</span></a>
+            </div>
+            <div class="col-lg-4 col-6 text-left">
+                <form action="shop.html" method="get">
+                    <div class="input-group">
+                        <input type="search" class="form-control" name="q" data-shop-search placeholder="Search crochet products" aria-label="Search crochet products">
+                        <div class="input-group-append">
+                            <button class="input-group-text bg-transparent text-primary" type="submit" aria-label="Search"><i class="fa fa-search" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="col-lg-4 col-6 text-right">
+                <p class="m-0">Customer Service</p>
+                <h5 class="m-0"><a href="contact.html">Contact us for orders</a></h5>
+            </div>
+        </div>
+    </div>
+    <!-- Topbar End -->
+
+
+    <!-- Navbar Start -->
+    <div class="container-fluid bg-dark mb-30">
+        <div class="row px-xl-5">
+            <div class="col-lg-3 d-none d-lg-block">
+                <a class="btn d-flex align-items-center justify-content-between bg-primary w-100" data-toggle="collapse" href="#navbar-vertical" style="height: 65px; padding: 0 30px;">
+                    <h6 class="text-dark m-0"><i class="fa fa-bars mr-2"></i>Categories</h6>
+                    <i class="fa fa-angle-down text-dark"></i>
+                </a>
+                <nav class="collapse position-absolute navbar navbar-vertical navbar-light align-items-start p-0 bg-light" id="navbar-vertical" style="width: calc(100% - 30px); z-index: 999;">
+                    <div class="navbar-nav w-100" data-category-nav>
+                        <a href="shop.html?category=crochet-bags" class="nav-item nav-link">Crochet Bags</a>
+                        <a href="shop.html?category=crochet-clothing" class="nav-item nav-link">Crochet Clothing</a>
+                        <a href="shop.html?category=crochet-accessories" class="nav-item nav-link">Crochet Accessories</a>
+                        <a href="shop.html?category=crochet-flowers-gifts" class="nav-item nav-link">Crochet Flowers and Gifts</a>
+                        <a href="shop.html?category=crochet-home-decorations" class="nav-item nav-link">Crochet Home Decorations</a>
+                        <a href="shop.html?category=baby-products" class="nav-item nav-link">Baby Products</a>
+                        <a href="shop.html?category=other-handmade-crochet-products" class="nav-item nav-link">Other Handmade Crochet Products</a>
+                    </div>
+                </nav>
+            </div>
+            <div class="col-lg-9">
+                <nav class="navbar navbar-expand-lg bg-dark navbar-dark py-3 py-lg-0 px-0">
+                    <a href="index.html" class="text-decoration-none d-block d-lg-none kcbf-brand-mark" aria-label="Knit&Crochet by Faith home"><span class="text-uppercase text-dark bg-light px-2 py-1">Knit&amp;Crochet</span><span class="text-uppercase text-light bg-primary px-2 py-1">by Faith</span></a>
+                    <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbarCollapse">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse justify-content-between" id="navbarCollapse">
+                        <div class="navbar-nav mr-auto py-0">
+                            <a href="index.html" class="nav-item nav-link">Home</a>
+                            <a href="shop.html" class="nav-item nav-link active">Shop</a>
+                            <a href="cart.html" class="nav-item nav-link">Shopping Cart</a>
+                            <a href="checkout.html" class="nav-item nav-link">Checkout</a>
+                            <a href="contact.html" class="nav-item nav-link">Contact</a>
+                        </div>
+                        <div class="navbar-nav ml-auto py-0 d-none d-lg-block">
+                            <a href="#" class="btn px-0" aria-disabled="true" data-disabled-feature title="Wishlist setup pending">
+                                <i class="fas fa-heart text-primary"></i>
+                                <span class="badge text-secondary border border-secondary rounded-circle" style="padding-bottom: 2px;">0</span>
+                            </a>
+                            <a href="cart.html" class="btn px-0 ml-2">
+                                <i class="fas fa-shopping-cart text-primary"></i>
+                                <span class="badge text-secondary border border-secondary rounded-circle" style="padding-bottom: 2px;">0</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <!-- Navbar End -->
+
+
+    <!-- Breadcrumb Start -->
+    <div class="container-fluid">
+        <div class="row px-xl-5">
+            <div class="col-12">
+                <nav class="breadcrumb bg-light mb-30">
+                    <a class="breadcrumb-item text-dark" href="#">Home</a>
+                    <a class="breadcrumb-item text-dark" href="#">Shop</a>
+                    <span class="breadcrumb-item active">Shop Detail</span>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <!-- Breadcrumb End -->
+
+
+    <!-- Product Detail Start -->
+    <div class="container-fluid py-5">
+        <div class="row px-xl-5">
+            <div class="col-lg-5 mb-30">
+                <div class="bg-light p-3" data-detail-image>
+                    <div class="kcbf-photo-placeholder kcbf-photo-placeholder--product" role="img" aria-label="Approved crochet product photo will be added">
+                        <i class="far fa-image" aria-hidden="true"></i><small>Approved product photo to be added</small>
+                    </div>
+                </div>
+                <div class="row px-xl-2 mt-3" data-detail-gallery aria-label="Additional product photographs"></div>
+            </div>
+            <div class="col-lg-7 h-auto mb-30">
+                <div class="h-100 bg-light p-30" data-detail-empty role="status">
+                    <h3>Product details are not available yet</h3>
+                    <p>No product has been selected or published. This page will show only verified catalog details.</p>
+                    <a class="btn btn-primary" href="shop.html">Browse the shop</a>
+                </div>
+                <div class="h-100 bg-light p-30" data-detail-content hidden>
+                    <h3 data-detail-name>Product name to be added</h3>
+                    <div class="d-flex mb-3"><h3 class="font-weight-semi-bold mb-0" data-detail-price>Price to be confirmed</h3></div>
+                    <p class="mb-4" data-detail-description>Product description to be added.</p>
+                    <div class="mb-4">
+                        <p class="mb-2"><strong>Category:</strong> <span data-detail-category>Category details to be confirmed</span></p>
+                        <p class="mb-2"><strong>Availability:</strong> <span data-detail-availability>Availability to be confirmed</span></p>
+                        <p class="mb-2"><strong>Production time:</strong> <span data-detail-production>Production time to be confirmed</span></p>
+                        <p class="mb-2"><strong>Materials:</strong> <span data-detail-materials>Materials to be confirmed</span></p>
+                        <p class="mb-0"><strong>Care:</strong> <span data-detail-care>Care instructions to be confirmed</span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Colours:</strong> <span data-detail-colors></span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Sizes:</strong> <span data-detail-sizes></span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Patterns:</strong> <span data-detail-patterns></span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Personalisation:</strong> <span data-detail-personalization></span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Measurements:</strong> <span data-detail-measurements></span></p>
+                        <p class="mb-2" data-detail-optional hidden><strong>Weight:</strong> <span data-detail-weight></span></p>
+                        <p class="mb-0" data-detail-optional hidden><strong>Shipping:</strong> <span data-detail-shipping></span></p>
+                    </div>
+                    <div class="d-flex align-items-center mb-4 pt-2">
+                        <div class="input-group quantity mr-3" style="width: 130px;">
+                            <div class="input-group-btn"><button class="btn btn-primary btn-minus" type="button" disabled aria-label="Decrease quantity"><i class="fa fa-minus"></i></button></div>
+                            <input class="form-control bg-secondary text-center" type="number" min="1" value="1" data-detail-quantity disabled aria-label="Product quantity">
+                            <div class="input-group-btn"><button class="btn btn-primary btn-plus" type="button" disabled aria-label="Increase quantity"><i class="fa fa-plus"></i></button></div>
+                        </div>
+                        <button class="btn btn-primary px-3" type="button" disabled title="Cart service setup pending"><i class="fa fa-shopping-cart mr-1"></i> Add to Cart (setup pending)</button>
+                    </div>
+                    <div class="d-flex align-items-center mb-4">
+                        <button class="btn btn-outline-dark mr-2" type="button" disabled title="Wishlist service setup pending"><i class="far fa-heart mr-1"></i> Wishlist (setup pending)</button>
+                        <a class="btn btn-outline-dark" href="contact.html" data-detail-quote>Ask about a custom request</a>
+                    </div>
+                    <p class="small mb-0">Only verified product information is shown. Prices, availability, stock and production estimates must be confirmed before publication.</p>
+                </div>
+            </div>
+        </div>
+        <div class="row px-xl-5 mt-4">
+            <div class="col">
+                <div class="bg-light p-30">
+                    <h4 class="mb-3">Product information</h4>
+                    <p class="mb-0">Material, measurements, care guidance and any product-specific options will be displayed here when supplied and verified.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Product Detail End -->
+
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-secondary mt-5 pt-5">
+        <div class="row px-xl-5 pt-5">
+            <div class="col-lg-4 col-md-12 mb-5 pr-3 pr-xl-5">
+                <h5 class="text-secondary text-uppercase mb-4">Get In Touch</h5>
+                <p class="mb-4" data-business-setting="brand.description">Discover unique crochet creations, thoughtful gifts and personalised pieces made to bring creativity into everyday life.</p>
+                <p class="mb-2"><i class="fa fa-map-marker-alt text-primary mr-3"></i><span data-business-field="physicalAddress" data-placeholder>Business address to be confirmed</span></p>
+                <p class="mb-2"><i class="fa fa-envelope text-primary mr-3"></i><span data-business-field="email" data-placeholder>Contact email to be confirmed</span></p>
+                <p class="mb-0"><i class="fa fa-phone-alt text-primary mr-3"></i><span data-business-field="telephone" data-placeholder>Telephone to be confirmed</span></p>
+            </div>
+            <div class="col-lg-8 col-md-12">
+                <div class="row">
+                    <div class="col-md-4 mb-5">
+                        <h5 class="text-secondary text-uppercase mb-4">Quick Shop</h5>
+                        <div class="d-flex flex-column justify-content-start">
+                            <a class="text-secondary mb-2" href="index.html"><i class="fa fa-angle-right mr-2"></i>Home</a>
+                            <a class="text-secondary mb-2" href="shop.html"><i class="fa fa-angle-right mr-2"></i>Our Shop</a>
+                            <a class="text-secondary mb-2" href="detail.html"><i class="fa fa-angle-right mr-2"></i>Shop Detail</a>
+                            <a class="text-secondary mb-2" href="cart.html"><i class="fa fa-angle-right mr-2"></i>Shopping Cart</a>
+                            <a class="text-secondary mb-2" href="checkout.html"><i class="fa fa-angle-right mr-2"></i>Checkout</a>
+                            <a class="text-secondary" href="contact.html"><i class="fa fa-angle-right mr-2"></i>Contact Us</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-5">
+                        <h5 class="text-secondary text-uppercase mb-4">Customer Support</h5>
+                        <div class="d-flex flex-column justify-content-start">
+                            <a class="text-secondary mb-2" href="index.html"><i class="fa fa-angle-right mr-2"></i>Home</a>
+                            <a class="text-secondary mb-2" href="shop.html"><i class="fa fa-angle-right mr-2"></i>Our Shop</a>
+                            <a class="text-secondary mb-2" href="detail.html"><i class="fa fa-angle-right mr-2"></i>Shop Detail</a>
+                            <a class="text-secondary mb-2" href="cart.html"><i class="fa fa-angle-right mr-2"></i>Shopping Cart</a>
+                            <a class="text-secondary mb-2" href="checkout.html"><i class="fa fa-angle-right mr-2"></i>Checkout</a>
+                            <a class="text-secondary" href="contact.html"><i class="fa fa-angle-right mr-2"></i>Contact Us</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-5">
+                        <h5 class="text-secondary text-uppercase mb-4">Newsletter</h5>
+                        <p>Newsletter signup is not connected yet; no subscription information is collected.</p>
+                        <form action="#" data-not-connected-form="Newsletter signup is not connected yet. No address was saved.">
+                            <div class="input-group">
+                                <input type="email" class="form-control" name="newsletter-email" placeholder="Your Email Address" aria-label="Your email address">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">Sign Up</button>
+                                </div>
+                            </div>
+                            <p class="small mt-2 mb-0" data-form-status role="status" aria-live="polite" hidden></p>
+                        </form>
+                        <h6 class="text-secondary text-uppercase mt-4 mb-3">Follow Us</h6><p class="small">Social profiles will be linked after owner confirmation.</p>
+                        <div class="d-flex">
+                            <a class="btn btn-primary btn-square mr-2" href="#" data-unconfigured-social aria-label="Social profile not configured"><i class="fab fa-twitter"></i></a>
+                            <a class="btn btn-primary btn-square mr-2" href="#" data-unconfigured-social aria-label="Social profile not configured"><i class="fab fa-facebook-f"></i></a>
+                            <a class="btn btn-primary btn-square mr-2" href="#" data-unconfigured-social aria-label="Social profile not configured"><i class="fab fa-linkedin-in"></i></a>
+                            <a class="btn btn-primary btn-square" href="#" data-unconfigured-social aria-label="Social profile not configured"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row border-top mx-xl-5 py-4" style="border-color: rgba(256, 256, 256, .1) !important;">
+            <div class="col-md-6 px-xl-0">
+                <p class="mb-md-0 text-center text-md-left text-secondary">
+                    &copy; <a class="text-primary" href="index.html">Knit&amp;Crochet by Faith</a>. All Rights Reserved.
+                    <!--/*** The author’s attribution link must remain intact in the template. ***/-->
+                    <!--/*** If you wish to remove this credit link, please purchase the Pro Version . ***/-->
+                    Designed by <a class="text-primary" href="https://htmlcodex.com">HTML Codex</a>
+                </p>
+            </div>
+            <div class="col-md-6 px-xl-0 text-center text-md-right">
+                <div class="position-relative d-inline-block"><img class="img-fluid" src="img/payments.png" alt="Template payment artwork; no payment provider is configured"><small class="kcbf-image-note">Template artwork — payment providers are not configured</small></div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+
+    <!-- Back to Top -->
+    <a href="#" class="btn btn-primary back-to-top"><i class="fa fa-angle-double-up"></i></a>
+
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+    <script src="lib/easing/easing.min.js"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+
+
+    <!-- Template Javascript -->
+    <script src="js/main.js"></script>
+    <script src="js/storefront-data.js"></script>
+    <script src="js/pages/site-settings.js"></script>
+    <script src="js/catalog-render.js"></script>
+    <script src="js/pages/detail.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "crochet-bags",
+      "slug": "crochet-bags",
+      "name": "Crochet Bags",
+      "description": "Handmade crochet bags and carry pieces.",
+      "displayOrder": 1,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet bag photograph"
+    },
+    {
+      "id": "crochet-clothing",
+      "slug": "crochet-clothing",
+      "name": "Crochet Clothing",
+      "description": "Wearable crochet pieces and garments.",
+      "displayOrder": 2,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet clothing photograph"
+    },
+    {
+      "id": "crochet-accessories",
+      "slug": "crochet-accessories",
+      "name": "Crochet Accessories",
+      "description": "Handmade crochet accessories and finishing pieces.",
+      "displayOrder": 3,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet accessories photograph"
+    },
+    {
+      "id": "crochet-flowers-gifts",
+      "slug": "crochet-flowers-gifts",
+      "name": "Crochet Flowers and Gifts",
+      "description": "Crochet flowers and thoughtful handmade gifts.",
+      "displayOrder": 4,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet flowers and gifts photograph"
+    },
+    {
+      "id": "crochet-home-decorations",
+      "slug": "crochet-home-decorations",
+      "name": "Crochet Home Decorations",
+      "description": "Crochet-made accents for the home.",
+      "displayOrder": 5,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet home decoration photograph"
+    },
+    {
+      "id": "baby-products",
+      "slug": "baby-products",
+      "name": "Baby Products",
+      "description": "Crochet baby items; product suitability and materials must be verified for each listing.",
+      "displayOrder": 6,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet baby product photograph"
+    },
+    {
+      "id": "other-handmade-crochet-products",
+      "slug": "other-handmade-crochet-products",
+      "name": "Other Handmade Crochet Products",
+      "description": "Other handmade crochet products not listed in the categories above.",
+      "displayOrder": 7,
+      "status": "active",
+      "imageUrl": null,
+      "imagePlaceholder": "Add an approved crochet product photograph"
+    }
+  ]
+}

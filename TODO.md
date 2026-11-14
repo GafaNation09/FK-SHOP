@@ -4,25 +4,27 @@ Approved implementation plan: [`plan.md`](plan.md). Initial technical audit: [`d
 
 Status meanings: **Not started** = no implementation evidence; **In progress** = partial outcome; **Implemented** = code exists; **Tested** = evidence from actual tests; **Credential-dependent** = requires provider/account/business input; **Outstanding** = unresolved requirement or decision. Code presence alone is not evidence of a working feature.
 
+**Current implementation checkpoint (feature branch only; not on `main` or deployed):** editable public brand/category data, product-grid hooks, Shop search/filter/sort/page-size/pagination, and the missing Shop Detail route are in progress. A draft Supabase catalog migration and seven-category seed pass PostgreSQL syntax parsing but are not applied or reviewed against a live project. JavaScript/HTML checks, section preservation, local HTTP, and mocked Node VM behavior tests pass; no real-browser/end-to-end test has run. Product records remain empty and contact/provider values remain placeholders. There is no admin console, authentication, cart/order workflow, payment provider, server function or live database integration. All full acceptance items below remain open until their complete criteria are met and tested.
+
 ## 1. Baseline, architecture, and preservation — **In progress**
 
 - [x] Audit the connected repository and live Netlify site; record current routes, code, dependencies, integrations and gaps in `docs/initial-audit.md`.
 - [x] Preserve a recoverable Git checkpoint (`72fa763`) before application changes.
-- [ ] Record and verify the exact current Netlify build/publish settings and environment-variable names with access to the site configuration; preserve `/multishop/` and current production behavior before changing deployment files.
+- [ ] Record and verify the exact current Netlify build/publish settings and environment-variable names with access to the site configuration; preserve `/multishop/` and current production behavior before changing deployment files. **Partial evidence:** a main push triggered a new Ready deployment, but Base/Publish/build/Functions settings and environment-variable names remain unread; no deployment settings were changed.
 - [ ] Document the current application architecture, data flow, routes, page sections, external dependencies, all known baseline behaviors and deviations between source and deployed output.
 - [ ] Keep the current MultiShop visual identity, layout, section hierarchy, navigation arrangement, page structure and responsive design. Preserve the existing header, navigation, account navigation, currency selector, language selector, wishlist indicator, shopping-cart indicator, all three hero slides, promotional banners, four service-benefit positions, category grid, Featured Products, banners between product sections, Recent Products, social icons, newsletter, footer, and the Home, Shop, Shop Detail, Shopping Cart, Checkout and Contact page structures.
 - [ ] Retain the original Bootstrap structure, styling approach, component relationships, scripts and libraries wherever technically possible. Do not change the number or order of homepage sections or remove a component simply because it is not immediately relevant to crochet.
 - [ ] Do not introduce a new homepage layout, reorder sections, remove banners or product grids, replace navigation or theme, rewrite in React/another framework unless necessity is documented first, change the design language/container structure, add excessive card rounding or unnecessary animation, simplify desktop features, or remove desktop functionality for mobile.
 - [ ] Integrate required features into the most appropriate existing page/section. If a requirement cannot fit, document the limitation and smallest design-preserving addition. Keep the website recognisably the original MultiShop template.
 
-## 2. Brand identity, business settings, and customer language — **Not started**
+## 2. Brand identity, business settings, and customer language — **In progress**
 
 - [ ] Use the exact official name **Knit&Crochet by Faith** throughout the public site. Represent a handmade crochet and creative-lifestyle brand—not clothing alone—with welcoming, inclusive language for everyone and product discovery organized by interests, product types and occasions. Avoid unnecessary crochet jargon and do not restrict customers by age, gender, student status or fashion interests.
 - [ ] Communicate handmade craftsmanship, creativity, quality, originality, personalisation, authenticity, reliability and customer satisfaction. Where appropriate, use the proposed brand statement **“Handmade with creativity. Crafted with care.”** and supporting message **“Discover unique crochet creations, thoughtful gifts and personalised pieces made to bring creativity into everyday life.”** Do not add homepage sections to display the messages.
 - [ ] Add central editable business settings for telephone, email, physical address, registration number, founder information, social accounts, certifications, delivery partnerships and other business details. Do not invent any of these values; use clearly identified editable placeholders until supplied.
 - [ ] Maintain business settings and site content without routine source-code edits. Never publish placeholder text as verified customer-facing business information.
 
-## 3. Manageable product categories, product records, and ordering models — **Not started**
+## 3. Manageable product categories, product records, and ordering models — **In progress**
 
 - [ ] Initialize these seven manageable categories: Crochet Bags; Crochet Clothing; Crochet Accessories; Crochet Flowers and Gifts; Crochet Home Decorations; Baby Products; Other Handmade Crochet Products.
 - [ ] Allow administrators to add, edit, delete or archive categories, upload category images, change descriptions, control visibility and reorder categories where supported. Do not permanently hardcode the catalogue to seven categories; new categories must be manageable without source changes. Each category must show its actual product count and link to its product listing. Preserve the existing category grid.
@@ -31,7 +33,7 @@ Status meanings: **Not started** = no implementation evidence; **In progress** =
 - [ ] Let the administrator configure each product's ordering model independently. A product may support both ready-made and custom-made ordering. Do not force every handmade product into a warehouse inventory model.
 - [ ] Do not use permanent fake products, prices, ratings, sales figures or reviews. Use clearly identified editable placeholders until real product facts and genuine crochet photographs are supplied.
 
-## 4. Homepage transformation while preserving layout — **Not started**
+## 4. Homepage transformation while preserving layout — **In progress**
 
 - [ ] Preserve every original homepage section and its order, grid, dimensions, hierarchy, responsive arrangement and component relationships. Change only the content/functionality needed to represent the approved business.
 - [ ] Retain the existing header and navigation arrangement and activate Home, Shop, product discovery, account, wishlist, cart, currency and language destinations. Make cart/wishlist counts update dynamically.
@@ -42,7 +44,7 @@ Status meanings: **Not started** = no implementation evidence; **In progress** =
 - [ ] Preserve Recent Products and derive it from genuine creation dates, not permanent hardcoded sample products.
 - [ ] Preserve the full footer layout/columns and replace generic content with business description, configured contact information, shopping/customer-service links, approved delivery/returns/exchanges, privacy, terms, configured social links, functional newsletter and appropriate copyright. Do not invent legal/policy text.
 
-## 5. Shop discovery, product detail, and product media — **Not started**
+## 5. Shop discovery, product detail, and product media — **In progress**
 
 - [ ] Preserve the existing Shop-page structure. Implement search and actual-data filters for category, price, availability, product type, relevant colours and relevant sizes; sorting by price, newest and relevance; existing-equivalent pagination; and a clear empty state. Search must query/filter actual products, not just redirect to a static page.
 - [ ] Preserve the existing Shop Detail layout. Implement product gallery, name, price, description, applicable variants, colour/size choices, quantity, availability, production time, care instructions, add-to-cart, add-to-wishlist, related products and genuine customer reviews. Add useful measurement guidance for clothing/wearable products so customers are not forced to guess sizes.
