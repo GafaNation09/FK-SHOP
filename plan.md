@@ -1,10 +1,10 @@
 # Knit&Crochet by Faith — Implementation Plan
 
-**Status:** Approved by owner on 2026-11-14. The Stage 1 foundation is committed as `f59e82d` on `main` and `feature/knight-crochet-foundation`. Netlify reports the `main` production deployment as Ready, and browser checks confirm the current `/multishop/` route serves the branded static storefront. Further stages remain incomplete; do not describe the site as a functioning checkout.
+**Status:** Approved by owner on 2026-11-14. The Stage 1 foundation is committed as `f59e82d` on `main` and `feature/knit-crochet-foundation`. Netlify reports the `main` production deployment as Ready, and browser checks confirm the current `/multishop/` route serves the branded static storefront. Further stages remain incomplete; do not describe the site as a functioning checkout.
 
 **Stage 1 verification:** JavaScript syntax, HTML parsing and section-order checks, local static HTTP requests, mocked Node behavior tests, PostgreSQL syntax parsing, plus deployed browser smoke checks for Home, Shop and Detail. These do not apply the migration, test mobile/accessibility behavior, or verify backend/payment operation.
 
-**Source baseline:** Application source at `72fa763`. **Published Stage 1 commit:** `f59e82d`.
+**Source baseline:** Application source at `72fa763`. **Published Stage 1 application commit:** `f59e82d`.
 
 ## Objective and guardrails
 

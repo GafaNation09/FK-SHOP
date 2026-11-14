@@ -1,6 +1,6 @@
 # Stage 1 Progress and Verification
 
-**Date:** 2026-11-14. **Working branch:** `feature/knight-crochet-foundation`. **Published `main` commit:** [`f59e82d`](https://github.com/GafaNation09/FK-SHOP/commit/f59e82dbea6b1dda47c07baad3883972e549775d). **Production:** Netlify reports this commit Ready at [`https://fkshopping.netlify.app/multishop/`](https://fkshopping.netlify.app/multishop/). **Baseline:** `72fa763`. This is a Stage 1 progress record, not final acceptance.
+**Date:** 2026-11-14. **Working branch:** `feature/knit-crochet-foundation`. **Published `main` application commit:** [`f59e82d`](https://github.com/GafaNation09/FK-SHOP/commit/f59e82dbea6b1dda47c07baad3883972e549775d). **Production:** Netlify reports the application commit Ready at [`https://fkshopping.netlify.app/multishop/`](https://fkshopping.netlify.app/multishop/). **Baseline:** `72fa763`. This is a Stage 1 progress record, not final acceptance.
 
 ## Implemented foundation
 
@@ -18,7 +18,7 @@
 5. Mocked Node VM tests verified seven real categories plus five neutral grid slots, eight Featured and Recent placeholders, nine Shop placeholders, three disabled action controls per empty product card, HTML escaping, unsafe image URL rejection, published-only product filtering, readable ordering-mode labels, and Shop search over supplied product records.
 6. A separate mocked Detail VM test verified snake_case database fields, main/additional images, escaped image alt text, optional colour/size/pattern/personalisation/measurement/weight/shipping details, production-time display and quote-only price display.
 7. A live-browser smoke test on the deployed Netlify site confirmed the JSON data loader resolves, the Home page shows seven linked categories within twelve slots and eight Featured plus eight Recent placeholders, the Shop page shows seven category filters and nine product placeholders, and the Detail route reports an empty catalog instead of a broken page.
-8. The deploy-specific permalink and a cache-busted public `/multishop/` URL served the new commit. One initial non-cache-busted alias read returned stale content; the deploy-specific response and browser check confirmed the current Ready deploy.
+8. The deploy-specific permalink and a cache-busted public `/multishop/` URL served the new application commit. One initial non-cache-busted alias read returned stale content; the deploy-specific response and browser check confirmed the current Ready deploy.
 9. Local route/assets were checked against the source baseline. The only missing local reference is the already-missing baseline `img/favicon.ico`; this work introduced no additional missing page or asset references.
 
 ## Re-run the automated checks
