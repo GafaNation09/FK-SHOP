@@ -44,8 +44,9 @@
                     <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">My Account</button>
                         <div class="dropdown-menu dropdown-menu-right">
-                            <button class="dropdown-item" type="button" disabled title="Customer accounts are not configured yet">Sign in (setup pending)</button>
-                            <button class="dropdown-item" type="button" disabled title="Customer accounts are not configured yet">Sign up (setup pending)</button>
+                            <a class="dropdown-item" href="account.html">Sign in</a>
+                            <a class="dropdown-item" href="account.html?mode=signup">Create account</a>
+                            <a class="dropdown-item" href="admin/">Administrator portal</a>
                         </div>
                     </div>
                     <div class="btn-group mx-2">
@@ -424,6 +425,7 @@
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+    <script src="js/backend.js"></script>
     <script src="js/storefront-data.js"></script>
     <script src="js/pages/site-settings.js"></script>
     <script src="js/catalog-render.js"></script>

@@ -15,6 +15,23 @@
             : 'Price to be confirmed';
     }
 
+    function itemPriceMarkup(product) {
+        let current = product.priceKes;
+        if (current === undefined) current = product.price_kes;
+        if (current === undefined) current = product.base_price_kes;
+        let original = product.originalPriceKes;
+        if (original === undefined) original = product.original_price_kes;
+        const currentAmount = Number(current);
+        const originalAmount = Number(original);
+        if (current !== null && current !== undefined && current !== '' &&
+            original !== null && original !== undefined && original !== '' &&
+            Number.isFinite(currentAmount) && Number.isFinite(originalAmount) && originalAmount > currentAmount) {
+            return '<span class="text-primary">' + api.escapeHtml(api.formatKes(current)) + '</span> ' +
+                '<del class="small text-muted">' + api.escapeHtml(api.formatKes(original)) + '</del>';
+        }
+        return '<span>' + api.escapeHtml(itemPrice(product)) + '</span>';
+    }
+
     function productSlug(product) {
         return String(product.slug || product.id || '');
     }
@@ -43,7 +60,7 @@
         const detailUrl = 'detail.html?product=' + slug;
         const name = api.escapeHtml(product.name || 'Product name to be added');
         const image = productImage(product);
-        const price = api.escapeHtml(itemPrice(product));
+        const price = itemPriceMarkup(product);
         const availability = product.availability || product.availability_status || 'Availability to be confirmed';
         return '<div class="' + columns + '">' +
             '<div class="product-item bg-light mb-4">' +

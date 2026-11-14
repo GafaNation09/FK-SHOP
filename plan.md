@@ -21,14 +21,18 @@ Do not invent business details, product facts, prices, reviews, discounts, shipp
 - **Backend:** use Netlify Functions for trusted server-side operations and webhooks, subject to confirmation of the current Netlify build/publish configuration. Avoid moving the static site's publish root or changing `/multishop/` until Netlify settings are verified.
 - **Data/auth/storage:** use the owner-approved Supabase direction for managed PostgreSQL, Auth and image storage. Use migrations, least-privilege access and row-level security. Keep service-role and payment credentials server-side in protected environment variables. The browser may use only a restricted publishable key with policies verified before deployment. No Supabase project or credentials are configured yet; do not claim integration is active.
 - **Payments and fulfilment:** build explicit provider boundaries. Evaluate Daraja M-Pesa for Kenya and eligible card providers after verifying merchant eligibility. Keep orders and payments in separate state machines; callback-verified provider results alone may mark a payment successful. Configure real currency and shipping rules only from owner-approved settings.
-- **Administration:** provision the owner-designated first Super Admin through a trusted, verified setup; add protected product/category, order, custom-request, quote, delivery, business-setting and report workflows. Let authorized admins invite/manage secondary administrators with least-privilege roles, server-side checks and audit logs. Do not hardcode the owner email or allow public admin signup/self-elevation.
+- **Customer and administrator authentication:** use Supabase Auth for email/password signup and sign-in, email confirmation, sign-out and password recovery. Customer accounts do not grant admin access. Protect the separate account and admin routes with verified sessions and server-side role checks; never trust a browser-supplied role or JWT user metadata.
+- **First Super Admin bootstrap:** grant the first owner-designated Super Admin only through a one-time, trusted server/database operation after Supabase confirms the email address. Store the owner identity only in protected server configuration when the project is authorized; do not hardcode it in HTML, JavaScript, SQL seed data or Git. Make the one-time claim atomic and auditable.
+- **Administration and role management:** expose protected product, category, order, custom-request, quote, delivery, business-setting and reporting workflows. Let the Super Admin and administrators explicitly granted administrator-management permission invite/manage secondary administrators with least-privilege roles, verified invitations, server-side checks and audit logs. Prevent self-promotion and removal/demotion of the final Super Admin.
+- **Public-content propagation:** persist products, categories and approved public business settings in Supabase. The existing storefront loader reads published/active database records when configured, and the admin UI must write through authorized operations so successful edits appear on public pages without changing their section order or responsive layout. Keep static JSON only as an explicit fallback before the backend is configured.
 
 ## Repository structure
 
 Preserve the current `MultiShop/` pages and assets. Add only supporting folders required by implementation:
 
 - `MultiShop/data/` — public, non-secret brand settings and initial catalog fallback data while backend credentials are unavailable.
-- `MultiShop/js/` — readable feature modules; retain and reuse `main.js` behavior.
+- `MultiShop/js/` — readable feature modules; retain and reuse `main.js` behavior. Add page-scoped customer-auth and admin modules without embedding service-role credentials or owner identity.
+- `MultiShop/account.html` and `MultiShop/admin/` — customer sign-in/sign-up/recovery and the separate, role-gated administration interface; retain the existing public storefront's layout and routes.
 - `netlify/functions/` — server-side API endpoints, payment callbacks and trusted mail/storage operations, only after the existing Netlify base/functions configuration is confirmed.
 - `supabase/migrations/` and `supabase/seed/` — versioned schema, constraints, indexes, RLS policies and approved category seed data. These files are not applied until an owner-controlled Supabase project is available.
 - `docs/` — architecture, environment-variable setup, operations and truthful test reports.
@@ -38,13 +42,13 @@ Do not copy all of `MultiShop/` into a second web root. Keep the public site pat
 
 ## Controlled implementation stages
 
-### Stage 1 — Audit and foundation — **In progress**
+### Stage 1 — Audit and foundation — **Complete**
 
-The repository/live-site audit and recoverable checkpoint are complete. A static, editable brand/catalog foundation, seven approved category records, page-scoped catalog scripts, preserved page sections and the missing Shop Detail route are committed and deployed. Runtime checks show the JSON loader and empty-state layouts work at the current public path. The database migration is only syntax-parsed, not applied. Product records are empty. Netlify Base/Publish/build/Functions settings and environment names remain outstanding, so no deployment configuration or server functions have been added.
+The repository/live-site audit and recoverable checkpoint are complete. A static, editable brand/catalog foundation, seven approved category records, page-scoped catalog scripts, preserved page sections and the missing Shop Detail route are committed and deployed. Runtime checks show the JSON loader and empty-state layouts work at the current public path. The Stage 1 database migration is only syntax-parsed, not applied; product records are empty.
 
-### Stage 2 — Customer commerce — **Not started**
+### Stage 2 — Customer commerce and access foundation — **In progress (feature branch only; live services pending)**
 
-Implement data-driven product listing/detail, search/filter/sort, product variations, guest and authenticated cart/wishlist behavior, custom-order request and reference-image upload, quote/status workflow, customer accounts, persistent order creation and secure order tracking. Do not claim cart/order flows work until a real isolated test environment and service configuration exist.
+The feature branch now contains customer sign-in/sign-up/email-confirmation/recovery UI, a role-gated admin shell and catalog/content editor, a live-source-preferred catalog loader, a public-only runtime configuration placeholder, and a draft RLS/owner-bootstrap migration. No Supabase project is configured, no migration is applied, and no Netlify Functions source exists because the project's Base/Publish/Functions settings have not been verified. Thus customer auth, first-owner bootstrap, invitations and admin writes are not live; cart/wishlist, custom-order requests, persistent orders and order tracking remain open. Do not claim these features work until a real isolated test environment and service configuration exist.
 
 ### Stage 3 — Payments and delivery — **Not started**
 

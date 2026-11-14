@@ -31,6 +31,35 @@
             '<i class="far fa-image" aria-hidden="true"></i><small>Approved product photo to be added</small></div>';
     }
 
+    function renderPublicAttributes(list, wrapper, attributes) {
+        if (!list || !wrapper) return;
+        list.replaceChildren();
+        const entries = attributes && typeof attributes === 'object' && !Array.isArray(attributes)
+            ? Object.entries(attributes)
+            : [];
+        entries.forEach(function (entry) {
+            const key = String(entry[0] || '').trim();
+            const raw = entry[1];
+            let value = '';
+            if (Array.isArray(raw)) {
+                value = raw.filter(function (item) {
+                    return typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean';
+                }).map(String).join(', ');
+            } else if (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean') {
+                value = String(raw);
+            }
+            if (!key || !value) return;
+            const term = document.createElement('dt');
+            term.className = 'col-sm-4';
+            term.textContent = key.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+            const description = document.createElement('dd');
+            description.className = 'col-sm-8';
+            description.textContent = value;
+            list.append(term, description);
+        });
+        wrapper.hidden = !list.childElementCount;
+    }
+
     api.ready.then(function (data) {
         const params = new URLSearchParams(window.location.search);
         const requested = params.get('product') || params.get('id') || '';
@@ -47,15 +76,29 @@
 
         if (empty) empty.hidden = true;
         panel.hidden = false;
-        panel.querySelector('[data-detail-image]').innerHTML = productImage(product);
+        const imageContainer = document.querySelector('[data-detail-image]');
+        if (imageContainer) imageContainer.innerHTML = productImage(product);
         panel.querySelector('[data-detail-name]').textContent = product.name || 'Product name to be added';
         let rawPrice = product.priceKes;
         if (rawPrice === undefined) rawPrice = product.price_kes;
         if (rawPrice === undefined) rawPrice = product.base_price_kes;
+        let originalPrice = product.originalPriceKes;
+        if (originalPrice === undefined) originalPrice = product.original_price_kes;
         const requiresQuote = product.requiresQuote === true || product.requires_quote === true;
-        panel.querySelector('[data-detail-price]').textContent = requiresQuote && (rawPrice === null || rawPrice === undefined || rawPrice === '')
+        const priceNode = panel.querySelector('[data-detail-price]');
+        priceNode.textContent = requiresQuote && (rawPrice === null || rawPrice === undefined || rawPrice === '')
             ? 'Price by quotation'
             : api.formatKes(rawPrice);
+        const originalNode = panel.querySelector('[data-detail-original-price]');
+        if (originalNode) {
+            const currentAmount = Number(rawPrice);
+            const originalAmount = Number(originalPrice);
+            const hasDiscount = rawPrice !== null && rawPrice !== undefined && rawPrice !== '' &&
+                originalPrice !== null && originalPrice !== undefined && originalPrice !== '' &&
+                Number.isFinite(currentAmount) && Number.isFinite(originalAmount) && originalAmount > currentAmount;
+            originalNode.textContent = hasDiscount ? api.formatKes(originalPrice) : '';
+            originalNode.hidden = !hasDiscount;
+        }
         panel.querySelector('[data-detail-description]').textContent = text(product, 'description', 'description') || 'Product description to be added.';
         panel.querySelector('[data-detail-category]').textContent = product.categoryName || product.category_name || product.categorySlug || product.category_slug || 'Category details to be confirmed';
         panel.querySelector('[data-detail-availability]').textContent = product.availability || product.availability_status || 'Availability to be confirmed';
@@ -85,12 +128,17 @@
                 if (row) row.hidden = !value;
             }
         });
+        renderPublicAttributes(
+            panel.querySelector('[data-detail-attributes]'),
+            panel.querySelector('[data-detail-attributes-container]'),
+            product.attributes
+        );
         const stock = product.stockQuantity !== undefined ? product.stockQuantity : product.stock_quantity;
         if (stock !== null && stock !== undefined) panel.querySelector('[data-detail-quantity]').setAttribute('max', String(stock));
         panel.querySelector('[data-detail-quote]').href = 'contact.html?product=' + encodeURIComponent(product.slug || product.id);
 
         const photos = Array.isArray(product.images) ? product.images : [];
-        const gallery = panel.querySelector('[data-detail-gallery]');
+        const gallery = document.querySelector('[data-detail-gallery]');
         if (gallery && photos.length) {
             const primary = photos.find(function (image) {
                 return image && typeof image === 'object' && (image.isMain === true || image.is_main === true);

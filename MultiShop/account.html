@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Customer Account | Knit&Crochet by Faith</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in or create a customer account for Knit&Crochet by Faith.">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="lib/animate/animate.min.css" rel="stylesheet">
+    <link href="css/style.min.css" rel="stylesheet">
+    <link href="css/brand-foundation.css" rel="stylesheet">
+    <link href="css/auth-admin.css" rel="stylesheet">
+</head>
+<body>
+    <header class="container-fluid bg-light py-3 px-xl-5">
+        <div class="d-flex align-items-center justify-content-between flex-wrap">
+            <a href="index.html" class="text-decoration-none kcbf-brand-mark" aria-label="Knit&Crochet by Faith home">
+                <span class="text-uppercase text-primary bg-dark px-2 py-1">Knit&amp;Crochet</span>
+                <span class="text-uppercase text-dark bg-primary px-2 py-1">by Faith</span>
+            </a>
+            <nav aria-label="Account navigation" class="d-flex align-items-center flex-wrap">
+                <a class="btn btn-sm btn-outline-dark mr-2" href="shop.html">Shop</a>
+                <a class="btn btn-sm btn-outline-dark" href="index.html">Home</a>
+                <button class="btn btn-sm btn-outline-dark ml-2" type="button" data-auth-signout hidden>Sign out</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-xl-6">
+                <div class="text-center mb-4">
+                    <p class="text-primary text-uppercase font-weight-bold mb-2">Knit&amp;Crochet by Faith</p>
+                    <h1 class="h2 mb-2">Your account</h1>
+                    <p class="text-muted mb-0">Use these forms for customer sign-in, registration and password recovery once account services are connected. Email confirmation is required; profile and order tools will follow as those workflows are added.</p>
+                </div>
+                <div class="card kcbf-auth-card shadow-sm">
+                    <div class="card-header bg-white pb-0 border-0">
+                        <ul class="nav nav-tabs card-header-tabs" role="tablist" aria-label="Account actions">
+                            <li class="nav-item"><button class="nav-link active" type="button" data-auth-mode="signin" aria-selected="true">Sign in</button></li>
+                            <li class="nav-item"><button class="nav-link" type="button" data-auth-mode="signup" aria-selected="false">Create account</button></li>
+                            <li class="nav-item"><button class="nav-link" type="button" data-auth-mode="recovery" aria-selected="false">Forgot password</button></li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-4 p-md-5">
+                        <div class="alert alert-info" data-auth-status role="status" aria-live="polite" hidden></div>
+                        <section data-auth-panel="signin">
+                            <h2 class="h4 mb-3">Sign in</h2>
+                            <form data-auth-form="signin" novalidate>
+                                <div class="form-group"><label for="signin-email">Email address</label><input class="form-control" id="signin-email" name="email" type="email" autocomplete="email" required></div>
+                                <div class="form-group"><label for="signin-password">Password</label><input class="form-control" id="signin-password" name="password" type="password" autocomplete="current-password" required></div>
+                                <button class="btn btn-primary btn-block py-2" type="submit">Sign in</button>
+                            </form>
+                        </section>
+                        <section data-auth-panel="signup" hidden>
+                            <h2 class="h4 mb-3">Create your account</h2>
+                            <form data-auth-form="signup" novalidate>
+                                <div class="form-group"><label for="signup-name">Full name</label><input class="form-control" id="signup-name" name="fullName" type="text" autocomplete="name" maxlength="160" required></div>
+                                <div class="form-group"><label for="signup-email">Email address</label><input class="form-control" id="signup-email" name="email" type="email" autocomplete="email" required></div>
+                                <div class="form-group"><label for="signup-password">Password</label><input class="form-control" id="signup-password" name="password" type="password" autocomplete="new-password" minlength="10" required aria-describedby="signup-password-help"><small class="form-text text-muted" id="signup-password-help">Use at least 10 characters.</small></div>
+                                <div class="form-group"><label for="signup-confirm">Confirm password</label><input class="form-control" id="signup-confirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="10" required></div>
+                                <button class="btn btn-primary btn-block py-2" type="submit">Create account</button>
+                            </form>
+                        </section>
+                        <section data-auth-panel="recovery" hidden>
+                            <h2 class="h4 mb-3">Reset your password</h2>
+                            <p class="text-muted">Enter your account email and we’ll send a recovery link if an account is registered.</p>
+                            <form data-auth-form="recovery" novalidate>
+                                <div class="form-group"><label for="recovery-email">Email address</label><input class="form-control" id="recovery-email" name="email" type="email" autocomplete="email" required></div>
+                                <button class="btn btn-primary btn-block py-2" type="submit">Send recovery email</button>
+                            </form>
+                        </section>
+                        <section data-auth-panel="update-password" hidden>
+                            <h2 class="h4 mb-3">Choose a new password</h2>
+                            <form data-auth-form="update-password" novalidate>
+                                <div class="form-group"><label for="new-password">New password</label><input class="form-control" id="new-password" name="password" type="password" autocomplete="new-password" minlength="10" required></div>
+                                <div class="form-group"><label for="new-password-confirm">Confirm new password</label><input class="form-control" id="new-password-confirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="10" required></div>
+                                <button class="btn btn-primary btn-block py-2" type="submit">Update password</button>
+                            </form>
+                        </section>
+                        <div class="border-top pt-3 mt-4 small text-muted">
+                            <p class="mb-2">Account services require verified email confirmation. Customer accounts do not grant access to administration.</p>
+                            <a href="admin/">Administrator portal</a>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center small text-muted mt-4 mb-0"><a href="index.html">Return to the storefront</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/backend.js"></script>
+    <script src="js/pages/account.js"></script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import threading
@@ -42,7 +43,7 @@ def html_markers(source: str) -> list[str]:
     ]
 
 
-def local_references(document) -> set[str]:
+def local_references(document, base_dir: Path | None = None) -> set[str]:
     missing: set[str] = set()
     refs = [(element, "src") for element in document.xpath("//*[@src]")]
     refs += [(element, "href") for element in document.xpath("//*[@href]")]
@@ -58,7 +59,7 @@ def local_references(document) -> set[str]:
         if path.startswith("/"):
             candidate = ROOT / path.lstrip("/")
         else:
-            candidate = ROOT / "MultiShop" / path
+            candidate = (base_dir or ROOT / "MultiShop") / path
         if not candidate.exists():
             missing.add(value)
     return missing
@@ -81,6 +82,9 @@ def main() -> None:
     for script in js_files:
         subprocess.run(["node", "--check", str(script)], cwd=ROOT, check=True)
     print(f"PASS: JavaScript syntax ({len(js_files)} files)")
+    subprocess.run(["node", str(ROOT / "scripts/test_backend_config.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_storefront_data.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
 
     expected_names = [
         "Crochet Bags",
@@ -106,7 +110,7 @@ def main() -> None:
         "priceKes", "originalPriceKes", "requiresQuote", "stockQuantity",
         "productionTimeDays", "colors", "sizes", "patterns", "personalizationOptions",
         "materials", "measurements", "weightGrams", "careInstructions",
-        "shippingInformation", "featured", "images", "createdAt", "updatedAt",
+        "shippingInformation", "attributes", "featured", "images", "createdAt", "updatedAt",
     }
     assert_ok(required_fields <= set(template),
               f"Product template is missing: {sorted(required_fields - set(template))}")
@@ -118,10 +122,36 @@ def main() -> None:
     serialized = json.dumps(business).lower()
     for token in ("sk_live_", "sb_secret_", "password", "private_key", "api_key"):
         assert_ok(token not in serialized, f"Possible secret in public settings: {token}")
+    runtime = json.loads((ROOT / "MultiShop/data/runtime-config.json").read_text())
+    assert_ok(set(runtime) == {"supabaseUrl", "supabasePublishableKey"},
+              "Public runtime config must contain only the URL and publishable key")
+    assert_ok(all(isinstance(value, str) for value in runtime.values()),
+              "Public runtime config values must be strings")
+    public_source = "\n".join(path.read_text() for path in (ROOT / "MultiShop").rglob("*") if path.is_file() and path.suffix in {".html", ".js", ".json"})
+    for forbidden in ("sb_secret_", "service_role"):
+        assert_ok(forbidden not in public_source, f"Private owner/credential material appears in public source: {forbidden}")
+    owner_email = os.environ.get("INITIAL_SUPER_ADMIN_EMAIL", "").strip().lower()
+    if owner_email:
+        assert_ok(owner_email not in public_source.lower(), "Configured owner identity appears in public source")
+    admin_doc = html.fromstring((ROOT / "MultiShop/admin/index.html").read_text())
+    setting_names = admin_doc.xpath("//form[@data-settings-form]//*[@name]/@name")
+    assert_ok(all(re.fullmatch(r"[a-z][a-z0-9_.-]{0,99}", name) for name in setting_names),
+              "Admin public setting names must satisfy the database's lowercase key constraint")
+    product_names = set(admin_doc.xpath("//form[@data-product-form]//*[@name]/@name"))
+    required_product_names = {
+        "patterns", "personalization_options", "materials", "measurements", "weight_grams",
+        "care_instructions", "shipping_information", "attributes",
+    }
+    assert_ok(required_product_names <= product_names,
+              f"Admin product editor is missing crochet fields: {sorted(required_product_names - product_names)}")
+    detail_doc = html.parse(str(ROOT / "MultiShop/detail.html"))
+    assert_ok(bool(detail_doc.xpath("//*[@data-detail-attributes]")),
+              "Public product detail must expose approved product-specific specifications")
     print("PASS: JSON records, seven category names/seed, empty catalog, product template, public settings")
 
     migration_paths = [
         ROOT / "supabase/migrations/20261114192000_stage1_storefront.sql",
+        ROOT / "supabase/migrations/20261114214500_auth_admin_access.sql",
         ROOT / "supabase/seed/20261114192000_initial_categories.sql",
     ]
     for sql_path in migration_paths:
@@ -153,6 +183,17 @@ def main() -> None:
     assert_ok(not detail_parser.error_log,
               f"HTML parser errors in detail.html: {list(detail_parser.error_log)}")
     current_missing |= local_references(detail_doc)
+    for page_path, base_dir in [
+        (ROOT / "MultiShop" / "account.html", ROOT / "MultiShop"),
+        (ROOT / "MultiShop" / "admin" / "index.html", ROOT / "MultiShop" / "admin"),
+    ]:
+        name = page_path.relative_to(ROOT / "MultiShop").as_posix()
+        auth_parser = html.HTMLParser(recover=True)
+        auth_doc = html.fromstring(page_path.read_text(), parser=auth_parser)
+        assert_ok(not auth_parser.error_log,
+                  f"HTML parser errors in {name}: {list(auth_parser.error_log)}")
+        missing = local_references(auth_doc, base_dir)
+        assert_ok(not missing, f"Unresolved local references in {name}: {sorted(missing)}")
     assert_ok(current_missing <= baseline_missing,
               f"New local references do not resolve: {sorted(current_missing - baseline_missing)}")
     baseline_home = git_show("MultiShop/index.html")
@@ -192,7 +233,10 @@ def main() -> None:
             "/", "/MultiShop/", "/MultiShop/index.html", "/MultiShop/shop.html",
             "/MultiShop/detail.html", "/MultiShop/cart.html", "/MultiShop/checkout.html",
             "/MultiShop/contact.html", "/MultiShop/data/categories.json",
-            "/MultiShop/data/products.json", "/MultiShop/js/pages/detail.js",
+            "/MultiShop/account.html", "/MultiShop/admin/",
+            "/MultiShop/data/products.json", "/MultiShop/data/runtime-config.json",
+            "/MultiShop/js/backend.js", "/MultiShop/js/pages/account.js",
+            "/MultiShop/js/pages/admin.js", "/MultiShop/js/pages/detail.js",
             "/MultiShop/css/brand-foundation.css",
         ]
         for path in paths:

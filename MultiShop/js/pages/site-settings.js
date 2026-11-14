@@ -11,7 +11,7 @@
         const fields = {
             telephone: settings.contact && settings.contact.telephone,
             email: settings.contact && settings.contact.email,
-            physicalAddress: settings.contact && settings.contact.physicalAddress
+            physicalAddress: settings.contact && settings.contact.physical_address
         };
         document.querySelectorAll('[data-business-field]').forEach(function (element) {
             const value = fields[element.getAttribute('data-business-field')];

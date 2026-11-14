@@ -8,7 +8,7 @@
   "contact": {
     "telephone": null,
     "email": null,
-    "physicalAddress": null,
+    "physical_address": null,
     "whatsappBusiness": null,
     "ownerInputRequired": true
   },

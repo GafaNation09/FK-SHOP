@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Store Administration | Knit&Crochet by Faith</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="description" content="Protected store administration for Knit&Crochet by Faith.">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="../css/style.min.css" rel="stylesheet">
+    <link href="../css/brand-foundation.css" rel="stylesheet">
+    <link href="../css/auth-admin.css" rel="stylesheet">
+</head>
+<body class="bg-white">
+    <header class="container-fluid bg-light py-3 px-xl-5 kcbf-admin-header">
+        <div class="d-flex align-items-center justify-content-between flex-wrap">
+            <a href="../index.html" class="text-decoration-none kcbf-brand-mark" aria-label="Knit&Crochet by Faith storefront">
+                <span class="text-uppercase text-primary bg-dark px-2 py-1">Knit&amp;Crochet</span>
+                <span class="text-uppercase text-dark bg-primary px-2 py-1">by Faith</span>
+                <span class="ml-3 small text-muted">Administration</span>
+            </a>
+            <div class="d-flex align-items-center mt-2 mt-md-0">
+                <a class="btn btn-sm btn-outline-dark mr-2" href="../index.html">View storefront</a>
+                <a class="btn btn-sm btn-outline-dark mr-2" data-admin-signin href="../account.html?returnTo=%2Fmultishop%2Fadmin%2F">Sign in</a>
+                <button class="btn btn-sm btn-outline-dark" type="button" data-admin-signout hidden>Sign out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container-fluid px-xl-5 py-4">
+        <div class="alert alert-info kcbf-admin-status" data-admin-status role="status" aria-live="polite">Checking administrator access…</div>
+
+        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-access hidden>
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h3 mb-3">Administrator sign-in</h1>
+                <p class="text-muted">Sign in with your confirmed account. Customer accounts do not have administrator permissions.</p>
+                <a class="btn btn-primary" data-admin-login-link href="../account.html?returnTo=%2Fmultishop%2Fadmin%2F">Continue to sign in</a>
+            </div>
+        </section>
+
+        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-owner-bootstrap hidden>
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h3 mb-3">Set up the first administrator</h1>
+                <p class="text-muted">If this is the confirmed owner account, request the one-time Super Admin setup. The server verifies the account against protected project configuration; this page never grants itself a role.</p>
+                <button class="btn btn-primary" type="button" data-admin-bootstrap>Verify owner account</button>
+            </div>
+        </section>
+
+        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-denied hidden>
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h3 mb-3">Administrator access required</h1>
+                <p class="text-muted mb-0">This confirmed account has no active administrator membership. Contact the store owner if you believe this is a mistake.</p>
+            </div>
+        </section>
+
+        <section data-admin-shell hidden>
+            <div class="kcbf-admin-shell">
+                <aside class="kcbf-admin-sidebar" aria-label="Administration sections">
+                    <div class="small text-muted mb-3" data-admin-identity></div>
+                    <nav class="nav nav-pills flex-column" data-admin-nav>
+                        <button class="nav-link active text-left" type="button" data-admin-tab="overview">Overview</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="products" data-requires-permission="catalog:write">Products</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="categories" data-requires-permission="catalog:write">Categories</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="content" data-requires-permission="content:write">Store content</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="team" data-requires-permission="admins:manage">Administrator access</button>
+                    </nav>
+                </aside>
+
+                <div class="kcbf-admin-content">
+                    <section class="kcbf-admin-section" data-admin-section="overview">
+                        <div class="d-flex align-items-start justify-content-between flex-wrap mb-4">
+                            <div><h1 class="h3 mb-1">Store overview</h1><p class="text-muted mb-0">Changes saved here are used by the public storefront.</p></div>
+                            <span class="badge badge-light p-2" data-admin-role></span>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Published products</span><strong data-metric-products>—</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Active categories</span><strong data-metric-categories>—</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Orders</span><strong>Not configured</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Payments</span><strong>Not configured</strong></div></div>
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0">Order and payment metrics are unavailable until those workflows are implemented. No sales figures are invented.</div>
+                    </section>
+
+                    <section class="kcbf-admin-section" data-admin-section="products" hidden>
+                        <div class="d-flex align-items-center justify-content-between flex-wrap mb-3"><div><h1 class="h3 mb-1">Products</h1><p class="text-muted mb-0">Create drafts or publish approved products and prices.</p></div><button class="btn btn-outline-dark mt-2" type="button" data-new-product>New product</button></div>
+                        <div class="card kcbf-admin-card mb-4"><div class="card-body">
+                            <h2 class="h5" data-product-form-title>New product</h2>
+                            <form data-product-form>
+                                <input type="hidden" name="id">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6"><label for="product-name">Product name</label><input class="form-control" id="product-name" name="name" maxlength="200" required></div>
+                                    <div class="form-group col-md-6"><label for="product-slug">URL slug</label><input class="form-control" id="product-slug" name="slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4"><label for="product-category">Category</label><select class="custom-select" id="product-category" name="category_id" required><option value="">Choose category</option></select></div>
+                                    <div class="form-group col-md-2"><label for="product-price">Price (KES)</label><input class="form-control" id="product-price" name="base_price_kes" type="number" min="0" step="1"></div>
+                                    <div class="form-group col-md-2"><label for="product-original-price">Was price (KES)</label><input class="form-control" id="product-original-price" name="original_price_kes" type="number" min="0" step="1"></div>
+                                    <div class="form-group col-md-2"><label for="product-stock">Stock</label><input class="form-control" id="product-stock" name="stock_quantity" type="number" min="0" step="1"></div>
+                                    <div class="form-group col-md-2"><label for="product-production-time">Production days</label><input class="form-control" id="product-production-time" name="production_time_days" type="number" min="1" step="1"></div>
+                                </div>
+                                <div class="form-group"><label for="product-short-description">Short description</label><textarea class="form-control" id="product-short-description" name="short_description" rows="2" maxlength="500"></textarea></div>
+                                <div class="form-group"><label for="product-description">Description</label><textarea class="form-control" id="product-description" name="description" rows="4"></textarea></div>
+                                <div class="form-row"><div class="form-group col-md-6"><label for="product-colors">Colors</label><input class="form-control" id="product-colors" name="colors" maxlength="500" placeholder="Comma-separated values"></div><div class="form-group col-md-6"><label for="product-sizes">Sizes</label><input class="form-control" id="product-sizes" name="sizes" maxlength="500" placeholder="Comma-separated values"></div></div>
+                                <div class="form-row"><div class="form-group col-md-6"><label for="product-patterns">Patterns or designs</label><input class="form-control" id="product-patterns" name="patterns" maxlength="500" placeholder="Comma-separated values"></div><div class="form-group col-md-6"><label for="product-personalization">Personalisation options</label><input class="form-control" id="product-personalization" name="personalization_options" maxlength="500" placeholder="Comma-separated values"></div></div>
+                                <div class="form-row"><div class="form-group col-md-6"><label for="product-materials">Materials</label><textarea class="form-control" id="product-materials" name="materials" rows="2" maxlength="800"></textarea></div><div class="form-group col-md-6"><label for="product-measurements">Measurements or sizing details</label><textarea class="form-control" id="product-measurements" name="measurements" rows="2" maxlength="800"></textarea></div></div>
+                                <div class="form-row"><div class="form-group col-md-4"><label for="product-weight">Weight (grams)</label><input class="form-control" id="product-weight" name="weight_grams" type="number" min="0" step="1"></div><div class="form-group col-md-8"><label for="product-care">Care instructions</label><textarea class="form-control" id="product-care" name="care_instructions" rows="2" maxlength="1000"></textarea></div></div>
+                                <div class="form-group"><label for="product-shipping">Product-specific shipping information</label><textarea class="form-control" id="product-shipping" name="shipping_information" rows="2" maxlength="1000"></textarea></div>
+                                <div class="form-group"><label for="product-attributes">Additional public specifications (JSON object)</label><textarea class="form-control" id="product-attributes" name="attributes" rows="3" maxlength="3000" placeholder='{"fiber":"Cotton","finish":"Handmade"}'></textarea><small class="form-text text-muted">Only verified public product details. Values are visible to everyone; do not enter private information, credentials or customer data.</small></div>
+                                <fieldset class="form-group"><legend class="h6">Ordering options</legend>
+                                    <div class="custom-control custom-checkbox custom-control-inline"><input class="custom-control-input" id="mode-ready" type="checkbox" name="ordering_modes" value="ready_made"><label class="custom-control-label" for="mode-ready">Ready-made</label></div>
+                                    <div class="custom-control custom-checkbox custom-control-inline"><input class="custom-control-input" id="mode-made" type="checkbox" name="ordering_modes" value="made_to_order"><label class="custom-control-label" for="mode-made">Made to order</label></div>
+                                    <div class="custom-control custom-checkbox custom-control-inline"><input class="custom-control-input" id="mode-custom" type="checkbox" name="ordering_modes" value="customizable"><label class="custom-control-label" for="mode-custom">Customisable</label></div>
+                                </fieldset>
+                                <div class="custom-control custom-checkbox mb-3"><input class="custom-control-input" id="product-quote" type="checkbox" name="requires_quote"><label class="custom-control-label" for="product-quote">Price by quotation (only for made-to-order/customisable products)</label></div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4"><label for="product-availability">Availability</label><select class="custom-select" id="product-availability" name="availability_status"><option value="to_be_confirmed">To be confirmed</option><option value="available">Available</option><option value="limited_stock">Limited stock</option><option value="out_of_stock">Out of stock</option><option value="made_to_order">Made to order</option><option value="contact_for_availability">Contact for availability</option></select></div>
+                                    <div class="form-group col-md-4"><label for="product-status">Publication status</label><select class="custom-select" id="product-status" name="status"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></div>
+                                    <div class="form-group col-md-4"><label for="product-photo">Main product photo</label><input class="form-control-file" id="product-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp"><small class="form-text text-muted">JPG, PNG or WebP; up to 5 MB.</small></div>
+                                </div>
+                                <div class="custom-control custom-checkbox mb-3"><input class="custom-control-input" id="product-featured" type="checkbox" name="featured"><label class="custom-control-label" for="product-featured">Show in Featured Products</label></div>
+                                <button class="btn btn-primary" type="submit">Save product</button>
+                                <button class="btn btn-link" type="button" data-cancel-product>Clear form</button>
+                            </form>
+                        </div></div>
+                        <div class="card kcbf-admin-card"><div class="card-body"><h2 class="h5 mb-3">Catalog records</h2><div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody data-products-table></tbody></table></div></div></div>
+                    </section>
+
+                    <section class="kcbf-admin-section" data-admin-section="categories" hidden>
+                        <h1 class="h3 mb-1">Categories</h1><p class="text-muted">Active categories are shown in the public shop navigation and category grid.</p>
+                        <div class="card kcbf-admin-card mb-4"><div class="card-body">
+                            <h2 class="h5" data-category-form-title>New category</h2>
+                            <form data-category-form>
+                                <input type="hidden" name="id">
+                                <div class="form-row"><div class="form-group col-md-5"><label for="category-name">Name</label><input class="form-control" id="category-name" name="name" maxlength="120" required></div><div class="form-group col-md-5"><label for="category-slug">URL slug</label><input class="form-control" id="category-slug" name="slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></div><div class="form-group col-md-2"><label for="category-order">Order</label><input class="form-control" id="category-order" name="sort_order" type="number" min="0" step="1" value="0"></div></div>
+                                <div class="form-group"><label for="category-description">Description</label><textarea class="form-control" id="category-description" name="description" rows="2"></textarea></div>
+                                <div class="form-row align-items-center"><div class="form-group col-md-8"><label for="category-image">Category image URL</label><input class="form-control" id="category-image" name="image_url" type="url" maxlength="2048" placeholder="HTTPS URL, if an approved image is available"></div><div class="form-group col-md-4 mb-md-0"><div class="custom-control custom-checkbox"><input class="custom-control-input" id="category-active" name="is_active" type="checkbox" checked><label class="custom-control-label" for="category-active">Visible in public shop</label></div></div></div>
+                                <button class="btn btn-primary" type="submit">Save category</button><button class="btn btn-link" type="button" data-cancel-category>Clear form</button>
+                            </form>
+                        </div></div>
+                        <div class="card kcbf-admin-card"><div class="card-body"><h2 class="h5 mb-3">Category records</h2><div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table"><thead><tr><th>Name</th><th>Slug</th><th>Visibility</th><th>Order</th><th>Actions</th></tr></thead><tbody data-categories-table></tbody></table></div></div></div>
+                    </section>
+
+                    <section class="kcbf-admin-section" data-admin-section="content" hidden>
+                        <h1 class="h3 mb-1">Store content</h1><p class="text-muted">Only approved non-secret public values belong here. Saved values are loaded by the existing storefront.</p>
+                        <div class="card kcbf-admin-card"><div class="card-body">
+                            <form data-settings-form>
+                                <div class="alert alert-light border">The approved brand identity, Knit&amp;Crochet by Faith, remains fixed. Edit the public description and contact details below.</div>
+                                <div class="form-group"><label for="setting-description">Brand description</label><textarea class="form-control" id="setting-description" name="brand.description" rows="3" maxlength="1000"></textarea></div>
+                                <div class="form-row"><div class="form-group col-md-4"><label for="setting-email">Public contact email</label><input class="form-control" id="setting-email" name="contact.email" type="email" maxlength="320"></div><div class="form-group col-md-4"><label for="setting-phone">Public contact telephone</label><input class="form-control" id="setting-phone" name="contact.telephone" type="tel" maxlength="40"></div><div class="form-group col-md-4"><label for="setting-address">Public physical address</label><input class="form-control" id="setting-address" name="contact.physical_address" maxlength="240"></div></div>
+                                <button class="btn btn-primary" type="submit">Save public settings</button>
+                            </form>
+                        </div></div>
+                    </section>
+
+                    <section class="kcbf-admin-section" data-admin-section="team" hidden>
+                        <h1 class="h3 mb-1">Administrator access</h1><p class="text-muted">Invitations are sent through a trusted server operation. This page never holds a service key or grants roles by itself.</p>
+                        <div class="card kcbf-admin-card mb-4"><div class="card-body">
+                            <h2 class="h5">Invite an administrator</h2>
+                            <form data-admin-invite-form>
+                                <div class="form-group"><label for="admin-invite-email">Email address</label><input class="form-control" id="admin-invite-email" name="email" type="email" required></div>
+                                <fieldset class="form-group"><legend class="h6">Permissions</legend><div class="kcbf-admin-permissions">
+                                    <div class="custom-control custom-checkbox"><input class="custom-control-input" id="perm-catalog" type="checkbox" name="permissions" value="catalog:write"><label class="custom-control-label" for="perm-catalog">Manage products and categories</label></div>
+                                    <div class="custom-control custom-checkbox"><input class="custom-control-input" id="perm-content" type="checkbox" name="permissions" value="content:write"><label class="custom-control-label" for="perm-content">Manage public store content</label></div>
+                                    <div class="custom-control custom-checkbox"><input class="custom-control-input" id="perm-admins" type="checkbox" name="permissions" value="admins:manage"><label class="custom-control-label" for="perm-admins">Manage administrator access</label></div>
+                                </div></fieldset>
+                                <button class="btn btn-primary" type="submit" data-invite-submit>Send verified invitation</button>
+                            </form>
+                        </div></div>
+                        <div class="card kcbf-admin-card"><div class="card-body"><h2 class="h5 mb-3">Current administrators</h2><div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table"><thead><tr><th>Email</th><th>Role</th><th>Permissions</th><th>Status</th><th>Actions</th></tr></thead><tbody data-admins-table></tbody></table></div></div></div>
+                    </section>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/backend.js"></script>
+    <script src="../js/pages/admin.js"></script>
+</body>
+</html>
