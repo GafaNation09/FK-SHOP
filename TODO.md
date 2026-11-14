@@ -1,0 +1,132 @@
+# Knit&Crochet by Faith — Project TODO
+
+Approved implementation plan: [`plan.md`](plan.md). Initial technical audit: [`docs/initial-audit.md`](docs/initial-audit.md). Work from the preserved `72fa763` baseline; do not publish incomplete commerce functionality as live.
+
+Status meanings: **Not started** = no implementation evidence; **In progress** = partial outcome; **Implemented** = code exists; **Tested** = evidence from actual tests; **Credential-dependent** = requires provider/account/business input; **Outstanding** = unresolved requirement or decision. Code presence alone is not evidence of a working feature.
+
+## 1. Baseline, architecture, and preservation — **In progress**
+
+- [x] Audit the connected repository and live Netlify site; record current routes, code, dependencies, integrations and gaps in `docs/initial-audit.md`.
+- [x] Preserve a recoverable Git checkpoint (`72fa763`) before application changes.
+- [ ] Record and verify the exact current Netlify build/publish settings and environment-variable names with access to the site configuration; preserve `/multishop/` and current production behavior before changing deployment files.
+- [ ] Document the current application architecture, data flow, routes, page sections, external dependencies, all known baseline behaviors and deviations between source and deployed output.
+- [ ] Keep the current MultiShop visual identity, layout, section hierarchy, navigation arrangement, page structure and responsive design. Preserve the existing header, navigation, account navigation, currency selector, language selector, wishlist indicator, shopping-cart indicator, all three hero slides, promotional banners, four service-benefit positions, category grid, Featured Products, banners between product sections, Recent Products, social icons, newsletter, footer, and the Home, Shop, Shop Detail, Shopping Cart, Checkout and Contact page structures.
+- [ ] Retain the original Bootstrap structure, styling approach, component relationships, scripts and libraries wherever technically possible. Do not change the number or order of homepage sections or remove a component simply because it is not immediately relevant to crochet.
+- [ ] Do not introduce a new homepage layout, reorder sections, remove banners or product grids, replace navigation or theme, rewrite in React/another framework unless necessity is documented first, change the design language/container structure, add excessive card rounding or unnecessary animation, simplify desktop features, or remove desktop functionality for mobile.
+- [ ] Integrate required features into the most appropriate existing page/section. If a requirement cannot fit, document the limitation and smallest design-preserving addition. Keep the website recognisably the original MultiShop template.
+
+## 2. Brand identity, business settings, and customer language — **Not started**
+
+- [ ] Use the exact official name **Knit&Crochet by Faith** throughout the public site. Represent a handmade crochet and creative-lifestyle brand—not clothing alone—with welcoming, inclusive language for everyone and product discovery organized by interests, product types and occasions. Avoid unnecessary crochet jargon and do not restrict customers by age, gender, student status or fashion interests.
+- [ ] Communicate handmade craftsmanship, creativity, quality, originality, personalisation, authenticity, reliability and customer satisfaction. Where appropriate, use the proposed brand statement **“Handmade with creativity. Crafted with care.”** and supporting message **“Discover unique crochet creations, thoughtful gifts and personalised pieces made to bring creativity into everyday life.”** Do not add homepage sections to display the messages.
+- [ ] Add central editable business settings for telephone, email, physical address, registration number, founder information, social accounts, certifications, delivery partnerships and other business details. Do not invent any of these values; use clearly identified editable placeholders until supplied.
+- [ ] Maintain business settings and site content without routine source-code edits. Never publish placeholder text as verified customer-facing business information.
+
+## 3. Manageable product categories, product records, and ordering models — **Not started**
+
+- [ ] Initialize these seven manageable categories: Crochet Bags; Crochet Clothing; Crochet Accessories; Crochet Flowers and Gifts; Crochet Home Decorations; Baby Products; Other Handmade Crochet Products.
+- [ ] Allow administrators to add, edit, delete or archive categories, upload category images, change descriptions, control visibility and reorder categories where supported. Do not permanently hardcode the catalogue to seven categories; new categories must be manageable without source changes. Each category must show its actual product count and link to its product listing. Preserve the existing category grid.
+- [ ] Support product fields: unique ID, name, slug, category, detailed description, main image, additional images, price, original price only for a genuine discount, availability, status, production type, optional colours/sizes/patterns, materials, measurements where applicable, weight where relevant, care instructions, production time, shipping information, stock quantity where applicable, creation date and last-updated date. Allow optional attributes; do not force irrelevant variations.
+- [ ] Support ready-made products with real price, immediate availability, applicable stock tracking and cart/checkout; made-to-order products with configurable production time and clear dispatch expectations; customisable products with applicable colour, size, pattern, personalisation or other product-specific selections; and limited-stock products with accurate quantities and oversell prevention.
+- [ ] Let the administrator configure each product's ordering model independently. A product may support both ready-made and custom-made ordering. Do not force every handmade product into a warehouse inventory model.
+- [ ] Do not use permanent fake products, prices, ratings, sales figures or reviews. Use clearly identified editable placeholders until real product facts and genuine crochet photographs are supplied.
+
+## 4. Homepage transformation while preserving layout — **Not started**
+
+- [ ] Preserve every original homepage section and its order, grid, dimensions, hierarchy, responsive arrangement and component relationships. Change only the content/functionality needed to represent the approved business.
+- [ ] Retain the existing header and navigation arrangement and activate Home, Shop, product discovery, account, wishlist, cart, currency and language destinations. Make cart/wishlist counts update dynamically.
+- [ ] Keep all three hero carousel slides and their placement/dimensions. Use them respectively for handmade collections, custom-made creations, and unique gifts/personalised products. Use relevant genuine crochet photography or clearly identified placeholders; replace generic fashion wording with concise brand messages; give each slide a working CTA to the relevant shopping destination.
+- [ ] Preserve all promotional banners for featured crochet collections, seasonal products, gifts, occasions, genuine promotions or custom-order campaigns. Never show fake discounts/savings; connect promotions to actual price data and configurable campaigns.
+- [ ] Preserve four service-highlight positions. Use only truthful, configured promises (possible messages: Handmade Quality, Made with Care, Reliable Delivery, Customer Support); do not promise services the business cannot fulfil.
+- [ ] Preserve Featured Products and select products through management. Each product card must display photograph, name, price, original price only if applicable, availability, product-detail link, wishlist action and add-to-cart action where appropriate. Never show fake ratings/sales.
+- [ ] Preserve Recent Products and derive it from genuine creation dates, not permanent hardcoded sample products.
+- [ ] Preserve the full footer layout/columns and replace generic content with business description, configured contact information, shopping/customer-service links, approved delivery/returns/exchanges, privacy, terms, configured social links, functional newsletter and appropriate copyright. Do not invent legal/policy text.
+
+## 5. Shop discovery, product detail, and product media — **Not started**
+
+- [ ] Preserve the existing Shop-page structure. Implement search and actual-data filters for category, price, availability, product type, relevant colours and relevant sizes; sorting by price, newest and relevance; existing-equivalent pagination; and a clear empty state. Search must query/filter actual products, not just redirect to a static page.
+- [ ] Preserve the existing Shop Detail layout. Implement product gallery, name, price, description, applicable variants, colour/size choices, quantity, availability, production time, care instructions, add-to-cart, add-to-wishlist, related products and genuine customer reviews. Add useful measurement guidance for clothing/wearable products so customers are not forced to guess sizes.
+- [ ] Investigate and repair the currently missing Shop Detail route using the smallest addition consistent with the existing template and approved route; do not replace other pages.
+- [ ] Allow administrators to upload multiple product photos, reorder them, select the main image, replace and remove photos. Apply suitable image optimization. Do not use irrelevant generic fashion imagery as if it were crochet product photography. Use clearly identified placeholders until real product photos are supplied.
+
+## 6. Custom crochet requests and quotation workflow — **Not started**
+
+- [ ] Add a functional custom-order request within the existing design. Collect product category; desired-product description; preferred colour, size and pattern/design; measurements where relevant; quantity; personalisation instructions; reference-image upload; preferred completion date; and customer contact details.
+- [ ] Do not automatically assign a final price before the business assesses a custom creation.
+- [ ] Give administrators a workflow to view all requests and individual records, inspect uploaded photos, contact customers, request additional information, accept/reject, prepare and send quotations, set production estimates, record quotation validity, and record customer acceptance/rejection.
+- [ ] Support the request statuses: Submitted; Under Review; Awaiting Customer Information; Quoted; Accepted; Rejected; In Production; Completed; Delivered; Cancelled.
+- [ ] Let customers securely follow request status. When an accepted quotation becomes an order, retain the accepted quotation as part of that order.
+
+## 7. Cart, wishlist, customer account, and order tracking — **Not started**
+
+- [ ] Preserve cart/wishlist structures and make them functional. Customers can add/remove products, change quantities, select applicable variations, and view unit prices, subtotals, applicable discounts, delivery estimates/charges when available and final total.
+- [ ] Prevent overselling. Revalidate prices and variations before checkout. Persist authenticated customers' carts and registered customers' wishlists; use appropriate local persistence for guest carts. Cart/wishlist actions alone must never create an order; require explicit customer confirmation.
+- [ ] Implement secure customer registration, login, logout, forgotten-password reset, profile editing, address management, order history/details, order tracking, wishlist management, custom-request viewing and communication preferences. Support guest shopping; do not force account registration to purchase.
+- [ ] Enforce customer data isolation. Customers must never access another customer's orders, addresses, payment details, custom requests or private account data.
+- [ ] Allow secure order tracking through a customer account or order reference with access controls. Use statuses Order Received; Payment Pending; Payment Confirmed; Processing; In Production; Ready for Dispatch; Dispatched; Delivered; Cancelled; Refunded. Record courier/tracking references where available and notify customers on important status changes.
+
+## 8. Checkout and order management — **Not started**
+
+- [ ] Preserve existing Checkout design. Support guest and authenticated checkout and collect customer name, email, telephone, country, county/region, town/city, delivery address, delivery instructions, delivery method and payment method.
+- [ ] Before order placement, show a complete summary of products, variations, quantities, individual prices, discounts, delivery charges, total, transaction currency, customer delivery details and payment method. Validate required information and prevent duplicate submissions.
+- [ ] Generate unique order references and persist orders in the database. Show accurate confirmation. Order creation is not proof of payment; keep order and payment statuses distinct.
+- [ ] Support order search, date/status filtering, customer detail review, payment-record review, manual-payment verification, order-status updates, internal notes, dispatch details, cancellations and refund records in the authorized administrator workflow.
+
+## 9. Payments, currency, and payment security — **Credential-dependent**
+
+- [ ] Prioritize Safaricom Daraja M-Pesa for Kenya where merchant approval and credentials are available. Flow: customer selects M-Pesa and confirms phone; backend initiates STK Push; customer receives and authorizes prompt; provider sends callback; backend validates/processes callback; payment and order states update accurately; customer receives truthful confirmation.
+- [ ] Keep consumer secrets in protected environment variables, never frontend code. Validate callbacks, amounts and references; process callbacks idempotently; retain transaction records; support pending/failed payments and reconciliation. Configure manual Till/Paybill only when business details exist; manual payments remain pending until genuinely verified. Never mark paid from a submitted transaction code or button click.
+- [ ] Evaluate eligible Kenya-onboardable card providers, including Flutterwave, Pesapal, IntaSend or alternatives. Assess merchant eligibility, card coverage, settlement, currencies, fees, refunds, security and complexity. Do not assume eligibility. Use hosted/tokenized checkout; never store raw card numbers or CVV.
+- [ ] Prepare international payments; verify Kenyan merchant eligibility for Stripe, PayPal or alternatives before activation. Do not activate unsupported providers or display unconfigured methods as operational.
+- [ ] Maintain payment states Pending, Processing, Successful, Failed, Cancelled, Refunded, Partially Refunded, with payment history and transaction references. Only verified provider results can mark payment successful.
+- [ ] Use KES as the base pricing currency. Preserve/activate currency selection for KES, USD, GBP and EUR. Use a reliable exchange-rate provider for display; timestamp/cache rates; distinguish display currency from charge currency; base the actual payment amount on configured verified pricing rules; never use fabricated conversion rates.
+- [ ] Keep all provider integrations clearly classified as implemented, tested, credential-dependent or outstanding. Document provider, needed credentials, secure configuration location, who supplies them and remaining tests. Do not claim a provider works before configured testing.
+
+## 10. Delivery, shipping, and international expansion — **Not started**
+
+- [ ] Make Kenya-focused delivery configurable by administrators: counties, towns, zones, charges, free-delivery thresholds, pickup arrangements, estimated delivery times and instructions. Do not hardcode one price for every destination.
+- [ ] Prepare international shipping enquiry/quotation. Collect destination country, full address, applicable postal code, shipping method, estimated dispatch time, shipping quote, and applicable customs/import-duty information. Do not promise worldwide shipping until arrangements exist.
+- [ ] Prepare extensible international registration, phone numbers and addresses, country selection, multiple currencies, payment providers, shipping quotations, country-specific delivery rules and international enquiries without complicating the initial Kenyan customer journey or requiring a future rebuild.
+
+## 11. Administration, business management, and reporting — **Not started**
+
+- [ ] Add a secure, role-authorized administrator area without replacing the public site or unnecessarily changing its visual style. Administrators must manage routine business operations without source edits.
+- [ ] Dashboard must show actual total orders, sales, pending/confirmed payments, orders in process, custom requests, available/low-stock/out-of-stock products and recent customer activity. Do not fabricate metrics; define sales, pending revenue and completed orders.
+- [ ] Product management must support create/edit/archive/delete as appropriate, image upload, prices, categories, variations, inventory, availability, featured selection and promotional pricing.
+- [ ] Customer management must support viewing/searching registered customers, relevant order history, custom-order enquiries and support enquiries. Never expose passwords or secret payment information.
+- [ ] Content/promotion management must allow brand information, homepage text, hero slides, banners, featured products, categories, discounts, service highlights, newsletter and contact information while leaving public layout unchanged.
+- [ ] Provide actual-data sales, order, product-performance, bestseller, customer, payment, custom-order and inventory reports with CSV and Excel-compatible exports.
+
+## 12. Customer communication, newsletter, reviews, and policies — **Not started**
+
+- [ ] Support configured WhatsApp business contact and product/custom-order enquiries, configured email, social links, order confirmations, payment notices and order-status notices. Never invent email, WhatsApp or social account details. Where supported, product shares must contain correct product name, real price and product URL.
+- [ ] Make the existing newsletter form functional with secure subscription storage, duplicate prevention, success/error responses and marketing-consent handling. Do not show success unless recorded.
+- [ ] Implement genuine product reviews linked to real customers and, where possible, verified purchases. Never fabricate testimonials, ratings, review counts or sales figures.
+- [ ] Provide configurable returns, exchanges, damaged-product, custom-order-cancellation, refund, delivery, privacy, terms and product-care information. Actual policy content requires owner approval; do not invent legal guarantees.
+
+## 13. Data architecture, security, and recovery — **Not started**
+
+- [ ] Preserve the current frontend framework and Netlify compatibility. Evaluate an appropriate persistent relational backend, authentication, row-level security, storage and trusted server functions. Use Netlify Functions or other suitable server-side functions for privileged operations and payments. Never expose privileged operations to untrusted frontend requests.
+- [ ] Design/reuse suitable structures for Users, CustomerProfiles, Addresses, Products, ProductCategories, ProductImages, ProductVariants, Inventory, Carts, CartItems, Wishlists, WishlistItems, Orders, OrderItems, Payments, PaymentTransactions, CustomOrderRequests, CustomOrderQuotes, Reviews, Promotions, DeliveryZones, ShippingMethods, NewsletterSubscriptions, SupportMessages, Notifications, BusinessSettings and AuditLogs. These are logical entities, not an instruction to duplicate suitable existing tables. Maintain referential integrity, constraints, validation and indexes.
+- [ ] Implement secure authentication, role-based access control, server-side validation, database access restrictions, customer isolation, safe image uploads, payment verification, secret management, audit logging, appropriate rate limits and protection against common web vulnerabilities.
+- [ ] Prevent customers from changing their admin role, marking orders paid, changing another customer's order, accessing another customer's private data, bypassing server-side payment validation or uploading unrestricted dangerous files.
+- [ ] Establish/document database backup and recovery. Do not assume GitHub backups contain customer orders or payment records.
+
+## 14. SEO, accessibility, performance, and legal readiness — **Not started**
+
+- [ ] Without changing layout, provide suitable titles/descriptions, product URLs and structured data, Open Graph metadata, image alt text, sitemap, robots.txt, canonical URLs and search-friendly descriptions. Ensure WhatsApp/social product shares have meaningful previews.
+- [ ] Optimize images, lazy-load where suitable, size responsive media, prioritize mobile usability, ensure accessible forms, keyboard navigation and clear validation feedback.
+- [ ] Prepare for applicable Kenyan requirements including Kenya Data Protection Act 2019, privacy, marketing consent, applicable cookies, customer access/deletion requests, secure personal-data handling, transparent prices, consumer protection, delivery/refund disclosures. Identify professional legal/regulatory review needs; never claim legal certification/compliance without verification.
+
+## 15. Testing, deployment, final reporting, and acceptance — **Not started**
+
+- [ ] Test the actual customer journey: homepage; category browse; search; filters; product detail; variation selection; cart addition/quantity; wishlist; checkout; delivery data; payment-method selection; order creation; payment only in a designated test environment; accurate confirmation; admin order visibility/status update; customer status view. A simulated test payment must never look like live payment.
+- [ ] Test custom journey: customer request; specifications; reference-image upload; submission; admin receipt/review; quotation; customer receives and accepts/declines; accepted quotation becomes an order; production/delivery status progress.
+- [ ] Test administrator login, product create/edit, image upload, category management, price changes, inventory, orders, payment verification, custom requests, promotions, reports and exports.
+- [ ] Security-test unauthenticated access, customer isolation, admin permissions, server validation, payment callback verification and duplicate callbacks, duplicate order submissions, file-upload restrictions and protected admin routes.
+- [ ] Regression-check all original homepage sections and pages, navigation, carousel, banners, product grids, desktop/tablet/mobile presentation, broken images/links/routes, critical JavaScript errors and successful Netlify deployment. Do not declare completion merely because the site loads.
+- [ ] Work in the connected repository, preserve architecture and functionality, do not replace the theme, remove existing files, publish unfinished/destructive changes, use permanent fake products/reviews, simulate live payment success, fabricate business details/credentials, expose secrets, or claim untested functions work. Keep recoverable history, make incremental changes, run checks after major stages, organize the repository and maintain Netlify compatibility. Where credentials/approvals/details are missing, implement safe integration boundaries and document exact requirements.
+- [ ] Complete implementation in order: Stage 1 Audit and Foundation (architecture, feature assessment, checkpoint, brand/business configuration, catalogue/categories, detail/search/image management); Stage 2 Customer Commerce (auth, cart, wishlist, checkout/orders, custom requests/quotes, accounts/tracking); Stage 3 Payments and Delivery (M-Pesa, card/international readiness, currency, zones, quotes, verification/reconciliation); Stage 4 Business Administration (dashboard, products, orders, customers, custom orders, promotions/settings, reports/exports); Stage 5 Quality and Production Readiness (security, performance, accessibility, mobile/regression, SEO, docs, deployment). Do not skip stages; parallelize only independent work safely.
+- [ ] At delivery, produce a comprehensive technical/operational report with sections A–M: Executive Summary; Existing Architecture Audit; Website Preservation Report (all pages/sections/grids/navigation and deviations); Implemented Features Report; Database and Backend Report (schema/relationships/auth/storage/functions/security policies); Payment and Delivery Report; Administrator Guide; Testing Report (test, environment, expected/actual, pass/fail, evidence); Security Report; Deployment Report (Netlify, GitHub, environment variables, database/payment setup and migrations); Credential-Dependent Requirements (provider, credentials, secure location, supplier and remaining tests); Outstanding Work Register prioritized Critical/High/Medium/Low with reason/impact/next step; Final Acceptance Assessment.
+- [ ] Classify each feature truthfully as **IMPLEMENTED** (code exists, not proof of operation), **TESTED** (actual tests with environment, expected/actual, result and evidence), **CREDENTIAL-DEPENDENT** (provider/account/credentials/config and remaining tests identified), or **OUTSTANDING** (missing/failed/incomplete/dependent/pending item with reason, impact and next action).
+- [ ] Final acceptance requires: original layout preserved; no unnecessary section removed; brand represented; seven initial categories supported; products manageable; product discovery and detail work; ready-made purchase and custom request/quote workflows work; cart/wishlist/checkout work; orders persist; accounts and administration work; secure payments and Kenyan support; appropriately integrated card payment; international readiness; delivery configuration and tracking; customer communication; manageable product photos; reports/exports; protected customer data; desktop/mobile usability; successful Netlify deployment; documented test evidence; and disclosed outstanding dependencies. Do not call it production-ready while critical payment, security, data or ordering functions are unverified.
