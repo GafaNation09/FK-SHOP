@@ -21,7 +21,7 @@ Do not invent business details, product facts, prices, reviews, discounts, shipp
 - **Backend:** use Netlify Functions for trusted server-side operations and webhooks, subject to confirmation of the current Netlify build/publish configuration. Avoid moving the static site's publish root or changing `/multishop/` until Netlify settings are verified.
 - **Data/auth/storage:** use the owner-approved Supabase direction for managed PostgreSQL, Auth and image storage. Use migrations, least-privilege access and row-level security. Keep service-role and payment credentials server-side in protected environment variables. The browser may use only a restricted publishable key with policies verified before deployment. No Supabase project or credentials are configured yet; do not claim integration is active.
 - **Payments and fulfilment:** build explicit provider boundaries. Evaluate Daraja M-Pesa for Kenya and eligible card providers after verifying merchant eligibility. Keep orders and payments in separate state machines; callback-verified provider results alone may mark a payment successful. Configure real currency and shipping rules only from owner-approved settings.
-- **Administration:** add protected product/category, order, custom-request, quote, delivery, business-setting and report workflows after authentication and authorization foundations are tested.
+- **Administration:** provision the owner-designated first Super Admin through a trusted, verified setup; add protected product/category, order, custom-request, quote, delivery, business-setting and report workflows. Let authorized admins invite/manage secondary administrators with least-privilege roles, server-side checks and audit logs. Do not hardcode the owner email or allow public admin signup/self-elevation.
 
 ## Repository structure
 
@@ -52,7 +52,7 @@ Verify provider eligibility and merchant onboarding requirements. Implement M-Pe
 
 ### Stage 4 — Business administration — **Not started**
 
-Implement protected, role-authorized product/category/content/settings management, orders/payments, custom requests/quotations, delivery management, reports and exports. Do not expose customer data across accounts or create public administrator routes.
+Implement protected, role-authorized product/category/content/settings management, orders/payments, custom requests/quotations, delivery management, reports, exports and administrator invitation/role management. Provision the owner account securely, prevent unauthorized privilege escalation or removal of the final Super Admin, and do not expose customer data across accounts or create public administrator routes.
 
 ### Stage 5 — Quality and production readiness — **Not started**
 
