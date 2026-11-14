@@ -4,7 +4,7 @@ Approved implementation plan: [`plan.md`](plan.md). Initial technical audit: [`d
 
 Status meanings: **Not started** = no implementation evidence; **In progress** = partial outcome; **Implemented** = code exists; **Tested** = evidence from actual tests; **Credential-dependent** = requires provider/account/business input; **Outstanding** = unresolved requirement or decision. Code presence alone is not evidence of a working feature.
 
-**Current implementation checkpoint:** The Stage 1 storefront foundation is on `main` and Netlify reports a Ready production deployment. The feature branch now contains draft customer sign-in/sign-up/email-confirmation/recovery UI, a role-gated admin catalog/content/team portal, a public-key-only Supabase bootstrap, a live-catalog loader, and an unapplied RLS/owner-bootstrap migration. Static validation and mocked browser-config/catalog behavior tests pass. These are code drafts only: runtime configuration is blank, no Supabase project is authorized, migrations are unapplied, and trusted Netlify Functions are absent because the Base/Publish/Functions settings remain unverified. Therefore no live customer authentication, Super Admin account, invitations, admin writes, cart/order flow or payment integration is enabled. All full acceptance items remain open until their complete criteria are configured and tested.
+**Current implementation checkpoint:** The Stage 1 storefront is on `main`; the selected Supabase project has the catalog/auth tables, seven categories, email signup enabled and confirmation required. Its Site URL and account callback allow-list are configured. The local main update now contains the project's public URL and publishable key, but production still needs the resulting Netlify deployment to become Ready before the account submit buttons can be rechecked. The production SMTP sender is not configured, so default Supabase email cannot serve arbitrary customer inboxes. No test signup was sent because no accessible test inbox was supplied. The intended owner mailbox cannot be accessed, so no Super Admin user/membership exists. Trusted Netlify bootstrap/invitation functions and other commerce flows remain incomplete; all full acceptance items are still open until configured and tested.
 
 ## 1. Baseline, architecture, and preservation — **In progress**
 
@@ -59,7 +59,7 @@ Status meanings: **Not started** = no implementation evidence; **In progress** =
 - [ ] Support the request statuses: Submitted; Under Review; Awaiting Customer Information; Quoted; Accepted; Rejected; In Production; Completed; Delivered; Cancelled.
 - [ ] Let customers securely follow request status. When an accepted quotation becomes an order, retain the accepted quotation as part of that order.
 
-## 7. Cart, wishlist, customer account, and order tracking — **In progress (auth UI drafted; live provider not configured)**
+## 7. Cart, wishlist, customer account, and order tracking — **In progress (Supabase Auth configured; public email delivery and end-to-end test pending)**
 
 - [ ] Preserve cart/wishlist structures and make them functional. Customers can add/remove products, change quantities, select applicable variations, and view unit prices, subtotals, applicable discounts, delivery estimates/charges when available and final total.
 - [ ] Prevent overselling. Revalidate prices and variations before checkout. Persist authenticated customers' carts and registered customers' wishlists; use appropriate local persistence for guest carts. Cart/wishlist actions alone must never create an order; require explicit customer confirmation.
@@ -91,7 +91,7 @@ Status meanings: **Not started** = no implementation evidence; **In progress** =
 - [ ] Prepare international shipping enquiry/quotation. Collect destination country, full address, applicable postal code, shipping method, estimated dispatch time, shipping quote, and applicable customs/import-duty information. Do not promise worldwide shipping until arrangements exist.
 - [ ] Prepare extensible international registration, phone numbers and addresses, country selection, multiple currencies, payment providers, shipping quotations, country-specific delivery rules and international enquiries without complicating the initial Kenyan customer journey or requiring a future rebuild.
 
-## 11. Administration, business management, and reporting — **In progress (dashboard/RLS draft only; no live project or server endpoints)**
+## 11. Administration, business management, and reporting — **In progress (dashboard/RLS source on main; owner provisioning and trusted endpoints pending)**
 
 - [ ] Add a secure, role-authorized administrator area without replacing the public site or unnecessarily changing its visual style. Administrators must manage routine business operations without source edits.
 - [ ] Require a confirmed Supabase Auth session and server/database-validated administrator role for every admin route and action. Customer accounts and untrusted user metadata must never grant dashboard access; unauthorized or suspended users must be denied.

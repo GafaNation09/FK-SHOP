@@ -63,6 +63,7 @@
         const message = String(error.message || '');
         if (/invalid login credentials/i.test(message)) return 'Email or password is incorrect.';
         if (/email not confirmed/i.test(message)) return 'Confirm your email address using the link we sent before signing in.';
+        if (/email address not authorized|email.*rate limit|smtp/i.test(message)) return 'The confirmation or recovery email could not be delivered to this address yet. The store needs a verified SMTP sender for customer emails; please try again after email delivery is configured.';
         if (/password/i.test(message) && /weak|short|length/i.test(message)) return 'Choose a stronger password and try again.';
         return message || 'The request could not be completed. Please try again.';
     }
@@ -72,6 +73,7 @@
             form.querySelectorAll('button[type="submit"]').forEach(function (button) { button.disabled = !enabled; });
         });
         if (!enabled) showStatus('Account services are not connected yet. No account information was sent or saved. Please try again after secure project configuration.', 'info');
+        else showStatus('Account services are connected and email confirmation is required. Public customer confirmation and recovery emails still need a verified SMTP sender.', 'info');
     }
 
     function setSignedIn(signedIn) {

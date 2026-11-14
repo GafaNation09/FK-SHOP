@@ -235,7 +235,7 @@ begin
     where u.id = p_target_user_id;
 
   cleaned_email := pg_catalog.lower(pg_catalog.btrim(coalesce(p_email, target_email, old_email, '')));
-  if cleaned_email = '' or pg_catalog.position('@' in cleaned_email) < 2 then
+  if cleaned_email = '' or position('@' in cleaned_email) < 2 then
     raise exception 'A valid invited email is required.' using errcode = '22023';
   end if;
   if target_email is null or target_email <> cleaned_email then

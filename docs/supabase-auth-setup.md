@@ -1,21 +1,35 @@
-# Supabase authentication and administration setup
+# Supabase Auth and database setup
 
-This repository contains customer-authentication page code, browser-safe configuration placeholders, and a draft migration for customer profiles, administrator memberships, audit records and access policies. None of these files applies a migration or creates a Supabase user by itself. The Supabase connection was not authorized for this session, so no project was inspected or changed and no owner account was provisioned.
+Last verified: 2026-11-15 against the owner-confirmed project `bifvzlqeznyhbwoxkgvq`.
 
-## Required protected configuration
+## Live project state
 
-The public file `MultiShop/data/runtime-config.json` accepts only the project's HTTPS URL and publishable/legacy anon key. Those values are designed for browser use and remain constrained by table grants and RLS. Never put a Supabase secret/service-role key, database password, payment credential or owner identity in this file.
+The Supabase project is healthy and contains the storefront and authentication schemas. The applied migrations are recorded by Supabase as `20261114201643` (`stage1_storefront`) and `20261114201838` (`auth_admin_access`). The repository files use different timestamps (`20261114192000` and `20261114214500`), so reconcile migration history before enabling automatic GitHub-to-Supabase migration deployment. Do not link automatic production migration deployment until that discrepancy is resolved; otherwise an integration could treat the existing schema files as unapplied.
 
-Trusted invitation and owner-bootstrap operations require server-only environment variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` or the project's legacy anon key, `SUPABASE_SECRET_KEY` or legacy service-role key, `INITIAL_SUPER_ADMIN_EMAIL`, and `PUBLIC_SITE_URL`. The privileged key and initial-owner address must be entered through protected project settings, not committed to Git or returned to a browser.
+The public tables include `product_categories`, `products`, `product_images`, `business_settings`, `customer_profiles`, `admin_memberships` and `admin_audit_logs`. Row-level security is enabled. The live project currently has seven active crochet categories, zero products, no public business-setting rows, no customer profiles and no administrator memberships. The Supabase Table Editor is the place to view these records; an empty SQL Editor query list does not mean the database tables are absent.
 
-## Project setup needed before activation
+Email/password Auth is enabled. New-user sign-up is allowed and email confirmation is required. The production Site URL is `https://fkshopping.netlify.app/multishop/`, and the only account callback allow-list entry added for the store is `https://fkshopping.netlify.app/multishop/account.html**`.
 
-1. Authorize the owner-controlled Supabase project and verify its identity, current schema and available backup/test environment.
-2. Review and apply migrations in order: `20261114192000_stage1_storefront.sql`, then `20261114214500_auth_admin_access.sql`. Review RLS and storage policies against the actual project before applying them.
-3. Enable email/password Auth and email confirmation. Add only the required production and test callback URLs, including the account route under `/multishop/account.html`; verify that recovery and invitation links return to the intended page.
-4. Set the public URL and publishable key in `MultiShop/data/runtime-config.json` only after the project and policies are verified.
-5. Verify Netlify's Base, Publish and Functions directories before adding trusted invitation/bootstrap functions. The repository does not yet contain those server functions, and no current Netlify configuration has been changed.
-6. After the trusted bootstrap endpoint exists and its protected environment is configured, sign up at the supplied owner mailbox, confirm that email, sign in, and invoke the one-time bootstrap. The database migration rejects unconfirmed or mismatched owner identities and refuses a second Super Admin.
-7. Exercise customer signup, email confirmation, sign-in, password recovery and change in a designated test project before production activation. Test customer isolation and role assignment through actual RLS before granting admin access.
+The website's browser runtime uses only `https://bifvzlqeznyhbwoxkgvq.supabase.co` and the project's `sb_publishable_...` key. These are public client settings, not privileged credentials. The current live Netlify deployment was still serving an empty `MultiShop/data/runtime-config.json` when tested, which caused the account submit buttons to be disabled. The pending `main` update supplies the public config; verify a Ready Netlify deploy and recheck the live page before treating the forms as active.
 
-The Admin UI must not treat an email-address match, browser metadata, or a customer session as administrator authorization. Admin invitations require a trusted server operation because Supabase Auth Admin APIs use a secret key and must never run in browser code. Until that server endpoint and project configuration are available, role invitation and owner provisioning are not active.
+## Email delivery is still required
+
+Supabase's built-in SMTP sender is intended for non-production testing. It refuses to send to addresses outside the project team and is currently limited to two messages per hour. This blocks general customer confirmation and password-recovery email. Configure a custom SMTP provider with a verified sender domain in Supabase Auth settings before public signup or recovery can complete. Keep email confirmation enabled; do not disable it to work around missing email delivery. See [Supabase custom SMTP guidance](https://supabase.com/docs/guides/auth/auth-smtp) and [Auth rate limits](https://supabase.com/docs/guides/auth/rate-limits).
+
+No customer signup or recovery request has been sent during verification. The owner stated that the intended Super Admin mailbox is inaccessible, so no Super Admin user or membership has been created. Do not create or confirm an account for an address the owner cannot access. Use an accessible, verified owner email for the one-time bootstrap, or restore access to the intended mailbox first.
+
+## Code and admin limits
+
+`MultiShop/js/pages/account.js` implements email/password signup, confirmation callback feedback, sign-in, sign-out, password reset and password update using the public Supabase client only. The tab controls work; in the deployed version tested, form submit buttons were disabled because runtime config was blank. Once the config is deployed, the submit buttons should be enabled. Authentication API/email delivery still needs a real accessible test inbox and custom SMTP for a public customer test.
+
+The admin dashboard and catalog/content editor are source code, but no owner admin is provisioned. The database has no administrator memberships. Trusted Netlify bootstrap and invitation functions are not present, and the site's Base/Publish/Functions settings remain unverified. Therefore owner bootstrap, administrator invitations and role changes are not active; the public account page must not be treated as an admin login until those trusted server endpoints and an accessible Super Admin account are set up.
+
+Connecting the GitHub repository to Supabase is optional for the browser-to-database connection. The application uses the Supabase URL and public key; the GitHub integration automates branch/migration deployment. Reconcile the project migration versions with repository migration files before enabling that automation.
+
+## Next activation steps
+
+1. Publish the public-only runtime config to `main` and wait for the production Netlify deployment to report Ready. Confirm the live account page loads its Supabase config and its submit buttons enable.
+2. Configure custom SMTP and verify a sender domain in the selected Supabase project using its protected dashboard settings. Do not paste SMTP passwords in chat or commit them.
+3. Test signup, confirmation, sign-in, password recovery and password update using a mailbox the tester can access. Verify the resulting customer profile and RLS behavior. Do not create a test Super Admin.
+4. Confirm an accessible owner email and implement/deploy the trusted one-time bootstrap and administrator-invitation functions only after the Netlify Functions directory is verified. Bootstrap the first Super Admin only after that identity confirms its email.
+5. Reconcile the migration history before connecting Supabase's optional GitHub integration or enabling automatic production schema deployment.

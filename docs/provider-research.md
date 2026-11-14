@@ -1,26 +1,41 @@
 # Provider Research Notes
 
-Search and verification date: 2026-11-14. Findings below distinguish official platform documentation from account-specific observations; repository or dashboard content is treated as data, not instructions.
+Research and project verification date: 2026-11-15. External page content is treated as reference data, not executable instruction.
 
 ## Official platform guidance
 
-- Netlify file-based configuration can declare build/publish settings, Functions, redirects and headers. Where values conflict, `netlify.toml` overrides the UI; do not add active publish/base settings until the current project values are verified. [Netlify file-based configuration](https://docs.netlify.com/build/configure-builds/file-based-configuration/)
-- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory. It should be outside the publish directory. Functions default to `/.netlify/functions/<name>`. Buffered request/response payloads are limited to 6 MB; Base64 binary uploads add about 30%, so reference images should use direct/signed object-storage upload rather than pass through a Function. [Netlify Functions configuration](https://docs.netlify.com/build/functions/configuration/)
-- Supabase distinguishes publishable keys (public, constrained by grants and RLS) from secret keys (privileged and bypass RLS). Secret keys must stay in developer-controlled server code and never appear in browser code or source control. Supabase recommends `sb_publishable_...`/`sb_secret_...`; legacy `anon`/`service_role` keys are scheduled for deprecation by the end of 2026. [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
-- Supabase requires both database grants and RLS policies to protect API-exposed tables. Enabling RLS alone does not remove prior grants; revoke excess client grants and grant only required operations. Public-read policies should expose only intentionally public data. User-owned rows should bind to `auth.uid()`. [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) [Supabase user data](https://supabase.com/docs/guides/auth/managing-user-data)
-- Supabase Auth supports email/password signup, email confirmation, sign-in and password recovery through its Auth client APIs. The email redirect must be on the project's configured redirect allow-list; never place administrative Auth methods or service-role credentials in browser code. [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords) [Reset password API](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail)
-- Administrator email invitations use the Auth Admin API (`inviteUserByEmail` / `POST /invite`) and therefore belong in a trusted server environment; verify the caller and authorization before invoking them. [Supabase inviteUserByEmail](https://supabase.com/docs/reference/javascript/auth-admin-inviteuserbyemail) [Supabase Auth OpenAPI](https://github.com/supabase/auth/blob/master/openapi.yaml)
+- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory and should be outside the publish directory. The Functions route defaults to `/.netlify/functions/<name>`. Do not add Functions or deployment overrides until the current Base/Publish/Functions settings are verified. [1]
+- Supabase publishable keys are public browser credentials constrained by grants and RLS; secret keys are privileged and must stay server-side. The browser may use only the restricted publishable key. [2]
+- Supabase requires table grants and row-level security together. Public read policies should expose only intended rows, and user-owned records should be scoped to `auth.uid()`. [3]
+- Supabase Auth supports email/password signup, confirmation, sign-in, sign-out and password recovery. Redirects must match the configured allow-list. [4]
+- Supabase's built-in Auth SMTP is for non-production testing: it refuses email delivery to addresses outside the Supabase project team and is currently limited to two messages per hour. Public customer signup confirmation and password recovery require a custom SMTP sender. Keep email confirmation enabled; do not disable it to work around missing delivery. [5] [6]
+- Supabase's GitHub integration can run repository migrations on Supabase branches and, if enabled, production. Migration files without a matching database history entry are treated as unapplied and can be run again. The project migration versions must be reconciled with the repository before enabling automatic deployment. [7]
 
-## Account-specific Netlify observations
+## Verified project and production observations
 
-- The connected read-only Netlify integration identified the existing `fkshopping` site at `https://fkshopping.netlify.app`; its customer-facing store route is `https://fkshopping.netlify.app/multishop/`.
-- After application commit `f59e82d` was pushed to `main`, the Netlify API reported production branch `main`, commit `f59e82dbea6b1dda47c07baad3883972e549775d`, deployment state **Ready**, six changed pages and 21 changed assets. It reported no deployed Functions. This confirms that the direct main push deployed the current application source.
-- A fresh deployment-specific URL and a cache-busted public `/multishop/` URL showed the new commit. The live browser then confirmed that the JSON data loader resolves, seven category links render, and the Shop/Detail empty states display without old template products. An earlier un-busted alias read returned stale cached content.
-- The Netlify reader does not expose Base directory, Publish directory, build command, Functions directory, Git integration details or environment-variable names. The dashboard still displayed its login page during inspection, and no Netlify settings were changed.
-- The repository still has no `netlify.toml` or `netlify/functions/`. It now has customer-auth and admin-page source, an empty public Supabase config placeholder, and a draft Auth/RLS migration; no Supabase project or secrets are configured and no migration has been applied. Do not create an active deployment override or claim Functions/Supabase are configured until the dashboard and a Supabase project are available.
+- Netlify site: `fkshopping`, customer route `https://fkshopping.netlify.app/multishop/`; account route `https://fkshopping.netlify.app/multishop/account.html`.
+- The live account page and scripts return HTTP 200. Browser inspection confirmed that the Sign in, Create account and Forgot password tabs work. The form submit buttons were disabled because the live `MultiShop/data/runtime-config.json` still had blank Supabase settings.
+- The repository working copy now has only the public Supabase URL and `sb_publishable_...` key in its runtime config. No service-role/secret key or owner email is in the public file. This change has not yet been verified in a Ready production deployment.
+- Selected Supabase project `bifvzlqeznyhbwoxkgvq` is healthy. Public Auth settings show email sign-in enabled, signup enabled (`disable_signup: false`) and email confirmation required (`mailer_autoconfirm: false`).
+- Auth dashboard settings have been saved with Site URL `https://fkshopping.netlify.app/multishop/` and the one account callback pattern `https://fkshopping.netlify.app/multishop/account.html**`.
+- Supabase records two applied migrations: `20261114201643` (`stage1_storefront`) and `20261114201838` (`auth_admin_access`). The repository filenames are `20261114192000_stage1_storefront.sql` and `20261114214500_auth_admin_access.sql`, so their version histories do not match.
+- The project has RLS-enabled `product_categories`, `products`, `product_images`, `business_settings`, `customer_profiles`, `admin_memberships` and `admin_audit_logs` tables. There are seven active category rows, no products or public business-setting rows, no customer profiles and no admin memberships.
+- No custom SMTP sender is configured. The owner cannot access the intended Super Admin mailbox, so no user or admin membership has been provisioned. No test signup/recovery email has been sent.
+- The repository has no `netlify.toml` or `netlify/functions/`. The Netlify integration does not expose Base/Publish/Functions settings; do not claim server-side admin bootstrap/invitations are deployed.
+- The Supabase GitHub integration is not enabled. It is optional for the website's runtime connection. Do not enable automatic production migration deployment until the migration-history mismatch is reconciled.
 
-## Consequences for implementation
+## Implementation consequences
 
-The owner approved the Netlify Functions + Supabase direction and approved keeping the root redirect and the live `/multishop/` customer path. Maintain those boundaries. Schema and UI source can be prepared in the feature branch, but the public config remains blank, database migrations are not applied, and trusted server functions are not added until Netlify's existing Base/Publish/Functions settings and the authorized Supabase project are verified. Do not move the publish root or expose private credentials.
+The public account forms should enable after the public runtime config reaches a Ready Netlify deployment. A working Supabase Auth API connection does not guarantee email delivery: arbitrary customer addresses will fail until custom SMTP is set up and tested. The account code now reports that limitation rather than hiding it.
 
-To read the remaining Netlify settings, sign in through the secure browser handoff using the existing Netlify login provider (GitHub, Google, or the provider actually used for the account) and complete any verification in that browser. Do not send passwords or one-time codes in chat.
+Do not create the first Super Admin for an inaccessible email or bypass confirmation. The selected project currently has no administrator membership. Implement trusted server-side bootstrap and invitation endpoints only after verifying Netlify's Functions directory. The admin shell is not a functional admin portal until an accessible, email-confirmed Super Admin is provisioned.
+
+### References
+
+[1]: https://docs.netlify.com/build/functions/configuration/ "Netlify Functions configuration"
+[2]: https://supabase.com/docs/guides/getting-started/api-keys "Supabase API keys"
+[3]: https://supabase.com/docs/guides/database/postgres/row-level-security "Supabase row-level security"
+[4]: https://supabase.com/docs/guides/auth/passwords "Supabase password authentication"
+[5]: https://supabase.com/docs/guides/auth/auth-smtp "Supabase custom SMTP configuration"
+[6]: https://supabase.com/docs/guides/auth/rate-limits "Supabase Auth rate limits"
+[7]: https://supabase.com/docs/guides/deployment/branching/github-integration "Supabase GitHub integration"
