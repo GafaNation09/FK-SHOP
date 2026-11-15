@@ -101,7 +101,7 @@
         });
         const currency = settings.commerce && settings.commerce.baseCurrency || 'KES';
         document.querySelectorAll('[data-base-currency]').forEach(function (element) {
-            element.textContent = currency;
+            element.textContent = namespace.currency && namespace.currency.display || currency;
         });
         if (brand.name) document.title = document.title.replace(/MultiShop/gi, brand.name);
     }

@@ -84,12 +84,40 @@
                         <p class="border-top pt-3 mt-4 mb-0 small text-muted">Account services require verified email confirmation.</p>
                     </div>
                 </div>
-                <section class="card kcbf-auth-card shadow-sm" data-auth-session hidden>
+                <section class="card kcbf-auth-card shadow-sm" id="profile" data-auth-session hidden>
                     <div class="card-body p-4 p-md-5">
                         <h2 class="h4 mb-3">You are signed in</h2>
-                        <p class="text-muted">Your customer session is active. You can continue shopping or sign out to use a different account.</p>
-                        <a class="btn btn-primary" href="shop.html">Continue shopping</a>
-                        <div class="alert alert-info mt-4 mb-0" role="note">Saved payment methods are not available yet. Use only a secure payment-provider flow when enabled; this site will never store your card number or security code.</div>
+                        <p class="text-muted">Your customer session is active. Manage your details and view your recent orders below.</p>
+                        <section class="border-top pt-4 mt-4" aria-labelledby="customer-profile-heading">
+                            <h3 class="h5" id="customer-profile-heading">Your details</h3>
+                            <form data-customer-profile-form novalidate>
+                                <div class="form-group"><label for="customer-full-name">Full name</label><input class="form-control" id="customer-full-name" name="full_name" type="text" autocomplete="name" maxlength="160" required></div>
+                                <div class="form-group"><label for="customer-telephone">Telephone</label><input class="form-control" id="customer-telephone" name="telephone" type="tel" autocomplete="tel" maxlength="40"></div>
+                                <div class="form-group"><label for="customer-current-email">Current sign-in email</label><input class="form-control" id="customer-current-email" type="email" readonly aria-readonly="true"></div>
+                                <button class="btn btn-primary" type="submit">Save details</button>
+                                <p class="small mt-2 mb-0" data-profile-status role="status" aria-live="polite"></p>
+                            </form>
+                        </section>
+                        <section class="border-top pt-4 mt-4" aria-labelledby="customer-email-heading">
+                            <h3 class="h5" id="customer-email-heading">Change sign-in email</h3>
+                            <p class="small text-muted">We’ll ask Supabase Auth to send its usual verification link. Your sign-in email changes only after verification.</p>
+                            <form data-customer-email-form novalidate>
+                                <div class="form-group"><label for="customer-new-email">New email address</label><input class="form-control" id="customer-new-email" name="email" type="email" autocomplete="email" required></div>
+                                <button class="btn btn-outline-primary" type="submit">Request email change</button>
+                                <p class="small mt-2 mb-0" data-email-status role="status" aria-live="polite"></p>
+                            </form>
+                        </section>
+                        <section class="border-top pt-4 mt-4" aria-labelledby="customer-orders-heading">
+                            <h3 class="h5" id="customer-orders-heading">Recent orders</h3>
+                            <p class="small text-muted">Your 50 most recent orders.</p>
+                            <div data-order-history aria-live="polite"><p class="text-muted mb-0">Loading your orders…</p></div>
+                        </section>
+                        <section class="border-top pt-4 mt-4" aria-labelledby="customer-payment-heading">
+                            <h3 class="h5" id="customer-payment-heading">Payment methods</h3>
+                            <div class="alert alert-info mb-0" role="note">Secure payment-provider setup is pending. Payment methods are not available yet. Do not enter or send card numbers or security codes here; no card details are collected or stored on this page.</div>
+                        </section>
+                        <p class="small text-muted mt-4">For passwords, use your browser’s password manager and the “Forgot password” recovery workflow. This page never saves or displays your password.</p>
+                        <a class="btn btn-primary mt-2" href="shop.html">Continue shopping</a>
                     </div>
                 </section>
                 <p class="text-center small text-muted mt-4 mb-0"><a href="index.html">Return to the storefront</a></p>
@@ -99,5 +127,6 @@
 
     <script src="js/backend.js"></script>
     <script src="js/pages/account.js"></script>
+    <script src="js/pages/customer-account.js"></script>
 </body>
 </html>

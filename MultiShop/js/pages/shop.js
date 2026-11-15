@@ -82,6 +82,23 @@
 
         if (searchInput) searchInput.value = initialQuery;
 
+        function setViewMode(mode, remember) {
+            const viewMode = mode === 'list' ? 'list' : 'grid';
+            if (grid) grid.setAttribute('data-view-mode', viewMode);
+            document.querySelectorAll('[data-view-mode-button]').forEach(function (button) {
+                const active = button.getAttribute('data-view-mode-button') === viewMode;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            if (remember) {
+                try { window.localStorage.setItem('kcbf.catalog-view.v1', viewMode); } catch (error) { /* Storage is optional. */ }
+            }
+        }
+
+        let initialViewMode = 'grid';
+        try { initialViewMode = window.localStorage.getItem('kcbf.catalog-view.v1') || 'grid'; } catch (error) { initialViewMode = 'grid'; }
+        setViewMode(initialViewMode, false);
+
         const categoryCounts = {};
         published.forEach(function (product) {
             const slug = api.productCategorySlug(product);
@@ -93,14 +110,15 @@
         createFacet(categoryFilter, categoryLabels, 'category', categoryCounts,
             categories.find(function (category) { return api.categorySlug(category) === initialCategory; })?.name);
 
-        const prices = published.map(productPrice).filter(function (price) { return price !== null; });
-        if (!prices.length) {
-            createFacet(priceFilter, [], 'price', {}, '');
-        } else {
-            const min = Math.min.apply(null, prices);
-            const max = Math.max.apply(null, prices);
-            const lowerBound = Math.min(0, Math.floor(min / 100) * 100);
-            const upperBound = Math.max(100, Math.ceil(max / 100) * 100);
+        const priceRangeSettings = data.settings && data.settings.shop || {};
+        const configuredPriceFloor = Number(priceRangeSettings.price_filter_min_kes);
+        const configuredPriceCeiling = Number(priceRangeSettings.price_filter_max_kes);
+        let lowerBound = Number.isFinite(configuredPriceFloor) && configuredPriceFloor >= 0
+            ? Math.min(999999, Math.floor(configuredPriceFloor)) : 0;
+        let upperBound = Number.isFinite(configuredPriceCeiling) && configuredPriceCeiling > 0
+            ? Math.min(1000000, Math.floor(configuredPriceCeiling)) : 10000;
+        if (upperBound <= lowerBound) { lowerBound = 0; upperBound = 10000; }
+        if (priceFilter) {
             const step = 1;
             priceFilter.innerHTML = '<div class="form-group mb-3">' +
                 '<label for="filter-price-min">Minimum price (KES) <output data-price-min-output>' + lowerBound.toLocaleString('en-KE') + '</output></label>' +
@@ -218,6 +236,11 @@
             render();
         });
         document.addEventListener('click', function (event) {
+            const viewButton = event.target.closest('[data-view-mode-button]');
+            if (viewButton) {
+                setViewMode(viewButton.getAttribute('data-view-mode-button'), true);
+                return;
+            }
             if (!event.target.closest('[data-price-reset]')) return;
             const low = document.querySelector('[data-price-min]');
             const high = document.querySelector('[data-price-max]');

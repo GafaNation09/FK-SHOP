@@ -39,6 +39,8 @@
                         <button class="nav-link text-left" type="button" data-admin-tab="products" data-requires-permission="catalog:write">Products</button>
                         <button class="nav-link text-left" type="button" data-admin-tab="categories" data-requires-permission="catalog:write">Categories</button>
                         <button class="nav-link text-left" type="button" data-admin-tab="content" data-requires-permission="content:write">Store content</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="customers" data-requires-role="store-admin">Customers</button>
+                        <button class="nav-link text-left" type="button" data-admin-tab="orders" data-requires-role="store-admin">Orders</button>
                         <button class="nav-link text-left" type="button" data-admin-tab="team" data-requires-permission="admins:manage">Administrator access</button>
                     </nav>
                 </aside>
@@ -52,10 +54,10 @@
                         <div class="row">
                             <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Published products</span><strong data-metric-products>—</strong></div></div>
                             <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Active categories</span><strong data-metric-categories>—</strong></div></div>
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Orders</span><strong>Not configured</strong></div></div>
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Payments</span><strong>Not configured</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Orders</span><strong data-metric-orders>0 loaded</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Payments</span><strong data-metric-payments>—</strong></div></div>
                         </div>
-                        <div class="alert alert-warning mt-3 mb-0">Order and payment metrics are unavailable until those workflows are implemented. No sales figures are invented.</div>
+                        <div class="alert alert-light mt-3 mb-0">Counts reflect records loaded into this session. Payment state is displayed read-only.</div>
                     </section>
 
                     <section class="kcbf-admin-section" data-admin-section="products" hidden>
@@ -125,9 +127,21 @@
                                 <div class="alert alert-light border">The approved brand identity, Knit&amp;Crochet by Faith, remains fixed. Edit the public description and contact details below.</div>
                                 <div class="form-group"><label for="setting-description">Brand description</label><textarea class="form-control" id="setting-description" name="brand.description" rows="3" maxlength="1000"></textarea></div>
                                 <div class="form-row"><div class="form-group col-md-4"><label for="setting-email">Public contact email</label><input class="form-control" id="setting-email" name="contact.email" type="email" maxlength="320"></div><div class="form-group col-md-4"><label for="setting-phone">Public contact telephone</label><input class="form-control" id="setting-phone" name="contact.telephone" type="tel" maxlength="40"></div><div class="form-group col-md-4"><label for="setting-address">Public physical address</label><input class="form-control" id="setting-address" name="contact.physical_address" maxlength="240"></div></div>
+                                <div class="form-row"><div class="form-group col-md-6"><label for="setting-price-filter-min">Minimum price filter (KES)</label><input class="form-control" id="setting-price-filter-min" name="shop.price_filter_min_kes" type="number" min="0" max="999999" step="1" value="0" required></div><div class="form-group col-md-6"><label for="setting-price-filter-max">Maximum price filter (KES)</label><input class="form-control" id="setting-price-filter-max" name="shop.price_filter_max_kes" type="number" min="1" max="1000000" step="1" value="10000" required></div></div><small class="form-text text-muted mb-3">Both bounds are whole Kenyan shillings; the minimum must be lower than the maximum.</small>
                                 <button class="btn btn-primary" type="submit">Save public settings</button>
                             </form>
                         </div></div>
+                    </section>
+
+                    <section class="kcbf-admin-section" data-admin-section="customers" hidden>
+                        <h1 class="h3 mb-1">Customers</h1><p class="text-muted">Update customer names and telephone numbers. Email is managed through account authentication and cannot be changed here.</p>
+                        <div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table"><thead><tr><th>Email</th><th>Name</th><th>Telephone</th><th>Update</th></tr></thead><tbody data-customers-table></tbody></table></div>
+                        <button class="btn btn-outline-dark" type="button" data-customers-more>Load more customers</button>
+                    </section>
+                    <section class="kcbf-admin-section" data-admin-section="orders" hidden>
+                        <h1 class="h3 mb-1">Orders</h1><p class="text-muted">Update fulfilment status only. Payment status is read-only.</p>
+                        <div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table"><thead><tr><th>Reference / date</th><th>Customer</th><th>Total</th><th>Payment</th><th>Fulfilment</th><th>Details</th><th>Update</th></tr></thead><tbody data-orders-table></tbody></table></div>
+                        <button class="btn btn-outline-dark" type="button" data-orders-more>Load more orders</button>
                     </section>
 
                     <section class="kcbf-admin-section" data-admin-section="team" hidden>

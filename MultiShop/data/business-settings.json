@@ -6,7 +6,7 @@
     "description": "Discover unique crochet creations, thoughtful gifts and personalised pieces made to bring creativity into everyday life."
   },
   "contact": {
-    "telephone": null,
+    "telephone": "0739107295",
     "email": null,
     "physical_address": null,
     "whatsappBusiness": null,
@@ -28,10 +28,15 @@
   },
   "commerce": {
     "baseCurrency": "KES",
-    "displayCurrencies": ["KES", "USD", "GBP", "EUR"],
-    "exchangeRatesConfigured": false,
+    "displayCurrencies": ["KES", "USD"],
+    "exchangeRatesConfigured": true,
+    "exchangeRatesProvider": "ExchangeRate-API Open Access",
     "paymentProviders": [],
     "ownerInputRequired": true
+  },
+  "shop": {
+    "price_filter_min_kes": 0,
+    "price_filter_max_kes": 10000
   },
   "delivery": {
     "kenyaZones": [],
@@ -47,7 +52,7 @@
     "ownerApprovalRequired": true
   },
   "siteNotices": {
-    "contactPlaceholder": "Business contact details will be added after owner confirmation.",
-    "commercePlaceholder": "Product, payment and delivery details will appear after they are configured and verified."
+    "contactPlaceholder": "Additional business contact details will be added after owner confirmation.",
+    "commercePlaceholder": "KES is the order currency. USD is an estimated display conversion only; payment and delivery need verified live providers."
   }
 }

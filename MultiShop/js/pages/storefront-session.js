@@ -18,6 +18,9 @@
             menu.querySelectorAll('[data-account-guest]').forEach(function (item) {
                 setItemVisible(item, !signedIn);
             });
+            menu.querySelectorAll('[data-account-member]').forEach(function (item) {
+                setItemVisible(item, signedIn);
+            });
             menu.querySelectorAll('[data-account-signout]').forEach(function (item) {
                 setItemVisible(item, signedIn);
             });

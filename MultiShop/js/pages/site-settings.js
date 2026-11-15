@@ -5,6 +5,15 @@
     const api = window.KCBF;
     if (!api) return;
 
+    function phoneHref(value) {
+        const source = String(value || '').trim();
+        const digits = source.replace(/\D/g, '');
+        if (digits.length === 10 && digits.charAt(0) === '0') return 'tel:+254' + digits.slice(1);
+        if (digits.length === 12 && digits.slice(0, 3) === '254') return 'tel:+' + digits;
+        if (source.charAt(0) === '+' && digits.length >= 8 && digits.length <= 15) return 'tel:+' + digits;
+        return digits.length >= 7 && digits.length <= 15 ? 'tel:' + digits : '';
+    }
+
     api.ready.then(function (data) {
         if (!data.settings) return;
         const settings = data.settings;
@@ -19,6 +28,10 @@
                 element.textContent = value;
                 element.removeAttribute('data-placeholder');
             }
+        });
+        const telephoneHref = phoneHref(fields.telephone);
+        if (telephoneHref) document.querySelectorAll('[data-business-phone-link]').forEach(function (element) {
+            element.setAttribute('href', telephoneHref);
         });
     });
 

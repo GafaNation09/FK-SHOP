@@ -86,9 +86,14 @@
         if (originalPrice === undefined) originalPrice = product.original_price_kes;
         const requiresQuote = product.requiresQuote === true || product.requires_quote === true;
         const priceNode = panel.querySelector('[data-detail-price]');
-        priceNode.textContent = requiresQuote && (rawPrice === null || rawPrice === undefined || rawPrice === '')
-            ? 'Price by quotation'
-            : api.formatKes(rawPrice);
+        const hasPrice = rawPrice !== null && rawPrice !== undefined && rawPrice !== '' && Number.isFinite(Number(rawPrice)) && Number(rawPrice) >= 0;
+        if (hasPrice && !requiresQuote) {
+            priceNode.setAttribute('data-price-kes', String(Number(rawPrice)));
+            priceNode.textContent = typeof api.formatMoney === 'function' ? api.formatMoney(rawPrice) : api.formatKes(rawPrice);
+        } else {
+            priceNode.removeAttribute('data-price-kes');
+            priceNode.textContent = requiresQuote ? 'Price by quotation' : 'Price to be confirmed';
+        }
         const originalNode = panel.querySelector('[data-detail-original-price]');
         if (originalNode) {
             const currentAmount = Number(rawPrice);
@@ -96,7 +101,13 @@
             const hasDiscount = rawPrice !== null && rawPrice !== undefined && rawPrice !== '' &&
                 originalPrice !== null && originalPrice !== undefined && originalPrice !== '' &&
                 Number.isFinite(currentAmount) && Number.isFinite(originalAmount) && originalAmount > currentAmount;
-            originalNode.textContent = hasDiscount ? api.formatKes(originalPrice) : '';
+            if (hasDiscount) {
+                originalNode.setAttribute('data-price-kes', String(originalAmount));
+                originalNode.textContent = typeof api.formatMoney === 'function' ? api.formatMoney(originalPrice) : api.formatKes(originalPrice);
+            } else {
+                originalNode.removeAttribute('data-price-kes');
+                originalNode.textContent = '';
+            }
             originalNode.hidden = !hasDiscount;
         }
         panel.querySelector('[data-detail-description]').textContent = text(product, 'description', 'description') || 'Product description to be added.';

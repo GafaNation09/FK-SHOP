@@ -13,6 +13,13 @@
     let membership = null;
     let allCategories = [];
     let allProducts = [];
+    let customerOffset = 0;
+    let orderOffset = 0;
+    let loadedCustomers = 0;
+    let loadedOrders = 0;
+    let loadedPaidOrders = 0;
+    const pageSize = 50;
+    const orderStatuses = ['pending', 'confirmed', 'processing', 'in_production', 'ready_for_dispatch', 'dispatched', 'delivered', 'cancelled', 'revoked'];
 
     function showStatus(message, kind) {
         if (!statusBox) return;
@@ -32,8 +39,13 @@
 
     function makeCell(text) {
         const cell = document.createElement('td');
-        cell.textContent = text == null || text === '' ? '—' : String(text);
+        cell.textContent = text == null ? '' : String(text);
         return cell;
+    }
+
+    function humanizeStatus(value) {
+        const words = String(value || 'unknown').replace(/[_-]+/g, ' ').trim();
+        return words.replace(/\b[a-z]/g, function (letter) { return letter.toUpperCase(); });
     }
 
     function makeButton(label, action, id, style) {
@@ -141,6 +153,165 @@
         return allProducts;
     }
 
+    async function loadCustomers(reset) {
+        if (reset) { customerOffset = 0; loadedCustomers = 0; document.querySelector('[data-customers-table]')?.replaceChildren(); }
+        const { data, error } = await client.from('customer_profiles')
+            .select('user_id,email,full_name,telephone')
+            .order('user_id', { ascending: true }).range(customerOffset, customerOffset + pageSize - 1);
+        if (error) throw error;
+        const body = document.querySelector('[data-customers-table]');
+        (data || []).forEach(function (customer) {
+            const row = document.createElement('tr');
+            row.appendChild(makeCell(customer.email));
+            [['full_name', customer.full_name, 'Customer full name', 'text'], ['telephone', customer.telephone, 'Customer telephone', 'tel']].forEach(function (field) {
+                const cell = document.createElement('td');
+                const input = document.createElement('input');
+                input.className = 'form-control form-control-sm';
+                input.type = field[3];
+                input.value = field[1] || '';
+                input.maxLength = field[0] === 'full_name' ? 160 : 40;
+                input.setAttribute('data-customer-field', field[0]);
+                input.setAttribute('aria-label', field[2]);
+                cell.appendChild(input);
+                row.appendChild(cell);
+            });
+            const actions = document.createElement('td');
+            actions.appendChild(makeButton('Save details', 'save-customer-details', customer.user_id, 'btn-primary'));
+            row.appendChild(actions);
+            body.appendChild(row);
+        });
+        const count = (data || []).length; customerOffset += count; loadedCustomers += count;
+        const more = document.querySelector('[data-customers-more]'); if (more) more.hidden = count < pageSize;
+        return count;
+    }
+
+    async function saveCustomerDetails(button) {
+        const row = button.closest('tr');
+        const fullName = String(row && row.querySelector('[data-customer-field="full_name"]')?.value || '').trim();
+        const telephone = String(row && row.querySelector('[data-customer-field="telephone"]')?.value || '').trim();
+        const userId = button.getAttribute('data-id');
+        if (!fullName || fullName.length > 160 || telephone.length > 40) throw new Error('Enter a name up to 160 characters and a telephone up to 40 characters.');
+        button.disabled = true;
+        try {
+            const { error } = await client.from('customer_profiles').update({ full_name: fullName, telephone: telephone })
+                .eq('user_id', userId);
+            if (error) throw error;
+            showStatus('Customer details updated. The sign-in email remains managed by Supabase Auth.', 'success');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderStatusSelect(value, id) {
+        const select = document.createElement('select'); select.className = 'custom-select custom-select-sm';
+        select.setAttribute('data-order-status', id);
+        orderStatuses.forEach(function (status) { const option = new Option(status.replaceAll('_', ' '), status); select.add(option); });
+        select.value = orderStatuses.includes(value) ? value : 'pending'; return select;
+    }
+
+    function renderOrderDetails(order) {
+        const wrapper = document.createElement('div');
+        const items = Array.isArray(order.order_items) ? order.order_items : [];
+        const itemHeading = document.createElement('strong'); itemHeading.textContent = 'Items'; wrapper.appendChild(itemHeading);
+        if (!items.length) { const emptyItems = document.createElement('p'); emptyItems.className = 'text-muted'; emptyItems.textContent = 'No line items are recorded.'; wrapper.appendChild(emptyItems); }
+        else {
+            const list = document.createElement('ul'); list.className = 'mb-3';
+            items.forEach(function (item) {
+                const line = document.createElement('li');
+                line.textContent = (Number(item.quantity) || 0) + ' × ' + String(item.product_name || 'Item') + ' — KES ' + Number(item.line_total_kes || 0).toLocaleString('en-KE');
+                list.appendChild(line);
+            });
+            wrapper.appendChild(list);
+        }
+        const contact = document.createElement('p');
+        contact.className = 'mb-2';
+        contact.textContent = 'Customer telephone: ' + String(order.customer_telephone || 'Not provided');
+        wrapper.appendChild(contact);
+        const address = document.createElement('p');
+        address.className = 'mb-3';
+        address.textContent = 'Delivery address: ' + (order.shipping_address ? JSON.stringify(order.shipping_address).slice(0, 4000) : 'Not provided');
+        wrapper.appendChild(address);
+
+        const transactions = Array.isArray(order.payment_transactions) ? order.payment_transactions : [];
+        const paymentHeading = document.createElement('strong'); paymentHeading.textContent = 'Payment activity (read-only)'; wrapper.appendChild(paymentHeading);
+        const paymentList = document.createElement('ul'); paymentList.className = 'mb-3';
+        if (!transactions.length) paymentList.appendChild(document.createElement('li')).textContent = 'No payment transaction has been recorded.';
+        transactions.forEach(function (payment) {
+            const line = document.createElement('li');
+            line.textContent = String(payment.provider || 'Provider') + ' — ' + String(payment.status || 'unknown') + ' — KES ' + Number(payment.amount_kes || 0).toLocaleString('en-KE') + ' — ' + String(payment.created_at || 'Date unavailable');
+            paymentList.appendChild(line);
+        });
+        wrapper.appendChild(paymentList);
+
+        const history = Array.isArray(order.order_status_history) ? order.order_status_history : [];
+        const historyHeading = document.createElement('strong'); historyHeading.textContent = 'Fulfilment history'; wrapper.appendChild(historyHeading);
+        const historyList = document.createElement('ul'); historyList.className = 'mb-3';
+        if (!history.length) historyList.appendChild(document.createElement('li')).textContent = 'No status changes have been recorded.';
+        history.forEach(function (entry) {
+            const line = document.createElement('li');
+            line.textContent = String(entry.previous_status || 'created') + ' → ' + String(entry.new_status || 'unknown') + ' — ' + String(entry.created_at || 'Date unavailable');
+            historyList.appendChild(line);
+        });
+        wrapper.appendChild(historyList);
+
+        const notesLabel = document.createElement('label');
+        notesLabel.textContent = 'Admin notes';
+        const notes = document.createElement('textarea');
+        notes.className = 'form-control form-control-sm mb-2'; notes.rows = 2; notes.maxLength = 4000;
+        notes.value = order.admin_notes || ''; notes.setAttribute('data-order-notes', order.id);
+        notesLabel.appendChild(notes); wrapper.appendChild(notesLabel);
+        wrapper.appendChild(makeButton('Save notes', 'save-order-notes', order.id, 'btn-outline-dark'));
+        return wrapper;
+    }
+
+    async function loadOrders(reset) {
+        if (reset) { orderOffset = 0; loadedOrders = 0; loadedPaidOrders = 0; document.querySelector('[data-orders-table]')?.replaceChildren(); }
+        const { data, error } = await client.from('orders')
+            .select('id,order_reference,user_id,order_status,payment_status,currency_code,total_kes,customer_name,customer_email,customer_telephone,shipping_address,admin_notes,created_at,order_items(id,product_name,quantity,line_total_kes),payment_transactions(id,provider,status,amount_kes,created_at),order_status_history(id,previous_status,new_status,created_at)')
+            .order('created_at', { ascending: false }).range(orderOffset, orderOffset + pageSize - 1);
+        if (error) throw error;
+        const body = document.querySelector('[data-orders-table]');
+        (data || []).forEach(function (order) {
+            const row = document.createElement('tr');
+            const createdAt = order.created_at && !Number.isNaN(new Date(order.created_at).getTime()) ? new Date(order.created_at).toLocaleDateString() : 'Date unavailable';
+            row.appendChild(makeCell((order.order_reference || order.id) + ' · ' + createdAt));
+            row.appendChild(makeCell(order.customer_name + ' · ' + order.customer_email));
+            row.appendChild(makeCell('KES ' + Number(order.total_kes || 0).toLocaleString('en-KE')));
+            row.appendChild(makeCell(humanizeStatus(order.payment_status)));
+            const statusCell = document.createElement('td'); statusCell.appendChild(renderStatusSelect(order.order_status, order.id)); row.appendChild(statusCell);
+            const detailsCell = document.createElement('td'); detailsCell.appendChild(makeButton('View details', 'toggle-order-details', order.id)); row.appendChild(detailsCell);
+            const actionCell = document.createElement('td'); actionCell.appendChild(makeButton('Save status', 'save-order-status', order.id)); row.appendChild(actionCell);
+            body.appendChild(row);
+            const detailRow = document.createElement('tr'); detailRow.hidden = true; detailRow.setAttribute('data-order-details-row', order.id);
+            const detailCell = document.createElement('td'); detailCell.colSpan = 7; detailCell.className = 'bg-light';
+            detailCell.appendChild(renderOrderDetails(order)); detailRow.appendChild(detailCell); body.appendChild(detailRow);
+        });
+        const count = (data || []).length; orderOffset += count; loadedOrders += count;
+        loadedPaidOrders += (data || []).filter(function (o) { return o.payment_status === 'paid'; }).length;
+        const more = document.querySelector('[data-orders-more]'); if (more) more.hidden = count < pageSize;
+        const metric = document.querySelector('[data-metric-orders]'); if (metric) metric.textContent = loadedOrders + ' loaded';
+        const payments = document.querySelector('[data-metric-payments]'); if (payments) payments.textContent = loadedPaidOrders + ' paid of ' + loadedOrders + ' loaded';
+        return count;
+    }
+
+    async function saveOrderStatus(button) {
+        const id = button.getAttribute('data-id');
+        const select = document.querySelector('[data-order-status="' + CSS.escape(id) + '"]');
+        if (!select || !orderStatuses.includes(select.value)) throw new Error('Choose a valid fulfilment status.');
+        const { error } = await client.from('orders').update({ order_status: select.value }).eq('id', id).select('id').single();
+        if (error) throw error;
+        showStatus('Order fulfilment status updated. Payment status was not changed.', 'success');
+    }
+
+    async function saveOrderNotes(button) {
+        const id = button.getAttribute('data-id');
+        const field = document.querySelector('[data-order-notes="' + CSS.escape(id) + '"]');
+        if (!field || field.value.length > 4000) throw new Error('Order notes must be 4,000 characters or fewer.');
+        const { error } = await client.from('orders').update({ admin_notes: field.value.trim() }).eq('id', id);
+        if (error) throw error;
+        showStatus('Admin notes saved. Payment state was not changed.', 'success');
+    }
+
     async function loadSettings() {
         const { data, error } = await client.from('business_settings')
             .select('setting_key,setting_value,is_public')
@@ -152,7 +323,9 @@
             const value = values.has(field.name) ? values.get(field.name) : field.name.split('.').reduce(function (result, part) {
                 return result && result[part];
             }, defaults);
-            if (typeof value === 'string') field.value = value;
+            if (field.name === 'shop.price_filter_min_kes') field.value = Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) < 1000000 ? String(value) : '0';
+            else if (field.name === 'shop.price_filter_max_kes') field.value = Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 1000000 ? String(value) : '10000';
+            else if (typeof value === 'string') field.value = value;
         });
     }
 
@@ -404,12 +577,20 @@
     }
 
     async function saveSettings(form) {
+        const minimum = Number(form.querySelector('[name="shop.price_filter_min_kes"]')?.value);
+        const maximum = Number(form.querySelector('[name="shop.price_filter_max_kes"]')?.value);
+        if (!Number.isInteger(minimum) || minimum < 0 || minimum >= 1000000 ||
+            !Number.isInteger(maximum) || maximum < 1 || maximum > 1000000 || minimum >= maximum) {
+            throw new Error('Set a valid KES price range with a non-negative minimum below the maximum.');
+        }
         const rows = Array.from(form.querySelectorAll('[name]')).map(function (field) {
-            return {
-                setting_key: field.name,
-                setting_value: field.value.trim(),
-                is_public: true
-            };
+            let settingValue = field.value.trim();
+            if (field.name === 'shop.price_filter_min_kes' || field.name === 'shop.price_filter_max_kes') {
+                const number = Number(settingValue);
+                if (!Number.isInteger(number) || number < 0 || number > 1000000) throw new Error('Price filter bounds must be whole Kenyan shillings.');
+                settingValue = number;
+            }
+            return { setting_key: field.name, setting_value: settingValue, is_public: true };
         });
         const { error } = await client.from('business_settings').upsert(rows, { onConflict: 'setting_key' });
         if (error) throw error;
@@ -439,6 +620,11 @@
         const tasks = [];
         if (isAllowed('catalog:write')) tasks.push(loadCategories(), loadProducts());
         if (isAllowed('content:write')) tasks.push(loadSettings());
+        if (membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role)) {
+            const customerTab = document.querySelector('[data-admin-tab="customers"]'); if (customerTab) customerTab.hidden = false;
+            const ordersTab = document.querySelector('[data-admin-tab="orders"]'); if (ordersTab) ordersTab.hidden = false;
+            tasks.push(loadCustomers(true), loadOrders(true));
+        }
         await Promise.all(tasks);
     }
 
@@ -448,6 +634,7 @@
         nav.querySelectorAll('[data-admin-tab]').forEach(function (button) {
             const permission = button.getAttribute('data-requires-permission');
             if (permission && !isAllowed(permission)) button.hidden = true;
+            if (button.getAttribute('data-requires-role') === 'store-admin') button.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
             button.addEventListener('click', function () {
                 nav.querySelectorAll('[data-admin-tab]').forEach(function (item) { item.classList.toggle('active', item === button); });
                 document.querySelectorAll('[data-admin-section]').forEach(function (section) {
@@ -461,6 +648,28 @@
         const productForm = document.querySelector('[data-product-form]');
         const categoryForm = document.querySelector('[data-category-form]');
         const settingsForm = document.querySelector('[data-settings-form]');
+        document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
+        document.querySelector('[data-customers-table]')?.addEventListener('click', async function (event) {
+            const button = event.target.closest('button[data-action="save-customer-details"]');
+            if (!button) return;
+            try { await saveCustomerDetails(button); }
+            catch (error) { showStatus(error.message || 'Customer details could not be updated.', 'error'); }
+        });
+        document.querySelector('[data-orders-more]')?.addEventListener('click', async function () { try { await loadOrders(false); } catch (error) { showStatus(error.message || 'Orders could not be loaded.', 'error'); } });
+        document.querySelector('[data-orders-table]')?.addEventListener('click', async function (event) {
+            const button = event.target.closest('button[data-action]'); if (!button) return;
+            const action = button.getAttribute('data-action');
+            if (action === 'toggle-order-details') {
+                const id = button.getAttribute('data-id');
+                const details = document.querySelector('[data-order-details-row="' + CSS.escape(id) + '"]');
+                if (details) { details.hidden = !details.hidden; button.setAttribute('aria-expanded', String(!details.hidden)); button.textContent = details.hidden ? 'View details' : 'Hide details'; }
+                return;
+            }
+            try {
+                if (action === 'save-order-status') await saveOrderStatus(button);
+                else if (action === 'save-order-notes') await saveOrderNotes(button);
+            } catch (error) { showStatus(error.message || 'Order details could not be updated.', 'error'); }
+        });
 
         if (productForm) productForm.addEventListener('submit', async function (event) {
             event.preventDefault();

@@ -86,8 +86,11 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_data.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_account_sessions.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_session.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_customer_account.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_commerce.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_commerce_sync.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_shop_price_range.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_currency.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_availability_labels.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
 
@@ -124,6 +127,12 @@ def main() -> None:
         assert_ok(category["slug"] in seed,
                   f"Seed does not contain category slug {category['slug']}")
     business = json.loads((ROOT / "MultiShop/data/business-settings.json").read_text())
+    assert_ok(business.get("contact", {}).get("telephone") == "0739107295",
+              "Approved customer-service telephone is missing from the public settings")
+    assert_ok(business.get("commerce", {}).get("baseCurrency") == "KES" and business.get("commerce", {}).get("displayCurrencies") == ["KES", "USD"],
+              "The storefront must keep KES as its base and expose only KES/USD display options")
+    assert_ok(business.get("shop", {}).get("price_filter_min_kes") == 0 and business.get("shop", {}).get("price_filter_max_kes") == 10000,
+              "The default shop price-filter bounds must be 0–10,000 KES")
     serialized = json.dumps(business).lower()
     for token in ("sk_live_", "sb_secret_", "password", "private_key", "api_key"):
         assert_ok(token not in serialized, f"Possible secret in public settings: {token}")
@@ -151,6 +160,11 @@ def main() -> None:
     }
     assert_ok(required_product_names <= product_names,
               f"Admin product editor is missing crochet fields: {sorted(required_product_names - product_names)}")
+    setting_names = set(admin_doc.xpath("//form[@data-settings-form]//*[@name]/@name"))
+    assert_ok({"shop.price_filter_min_kes", "shop.price_filter_max_kes"} <= setting_names,
+              "Admin public settings must allow editing both KES price-range bounds")
+    assert_ok(bool(admin_doc.xpath("//form[@data-product-form]//textarea[@name='description']")),
+              "Admin product editor must provide a full product description field")
     detail_doc = html.parse(str(ROOT / "MultiShop/detail.html"))
     assert_ok(bool(detail_doc.xpath("//*[@data-detail-attributes]")),
               "Public product detail must expose approved product-specific specifications")
@@ -160,6 +174,8 @@ def main() -> None:
         ROOT / "supabase/migrations/20261114192000_stage1_storefront.sql",
         ROOT / "supabase/migrations/20261114214500_auth_admin_access.sql",
         ROOT / "supabase/migrations/20261115110000_admin_management_edge_helpers.sql",
+        ROOT / "supabase/migrations/20261115210000_customer_storefront_persistence.sql",
+        ROOT / "supabase/migrations/20261115213000_customer_price_filter_minimum.sql",
         ROOT / "supabase/seed/20261114192000_initial_categories.sql",
     ]
     for sql_path in migration_paths:
@@ -191,6 +207,12 @@ def main() -> None:
     assert_ok(not detail_parser.error_log,
               f"HTML parser errors in detail.html: {list(detail_parser.error_log)}")
     current_missing |= local_references(detail_doc)
+    for name in ["help.html", "faq.html", "wishlist.html"]:
+        page_path = ROOT / "MultiShop" / name
+        parser = html.HTMLParser(recover=True)
+        page_doc = html.fromstring(page_path.read_text(), parser=parser)
+        assert_ok(not parser.error_log, f"HTML parser errors in {name}: {list(parser.error_log)}")
+        current_missing |= local_references(page_doc)
     for page_path, base_dir in [
         (ROOT / "MultiShop" / "account.html", ROOT / "MultiShop"),
         (ROOT / "MultiShop" / "admin" / "index.html", ROOT / "MultiShop" / "admin"),
@@ -217,18 +239,22 @@ def main() -> None:
               "Homepage must retain all three original hero slides")
     assert_ok(len(base_doc.xpath(social_xpath)) == len(home_doc.xpath(social_xpath)),
               "Homepage footer social-icon count changed")
-    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html"]:
+    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html", "help.html", "faq.html"]:
         source = (ROOT / "MultiShop" / name).read_text()
         assert_ok("Knit&amp;Crochet by Faith" in source, f"Brand missing from {name}")
         source_doc = html.fromstring(source)
         assert_ok(not source_doc.xpath("//button[normalize-space()='EN']"), f"Language-switch control remains in {name}")
+        assert_ok(not source_doc.xpath("//*[@data-language-selector or @data-lang-toggle]"), f"Language-switch data control remains in {name}")
         assert_ok("js/pages/storefront-session.js" in source, f"Session-aware account navigation missing from {name}")
         assert_ok("js/pages/commerce.js" in source, f"Cart/favourites behavior missing from {name}")
+        assert_ok("js/pages/currency.js" in source, f"KES/USD display controller missing from {name}")
+        assert_ok(bool(source_doc.xpath("//a[@href='https://www.exchangerate-api.com']")),
+                  f"Exchange-rate source attribution footer link missing from {name}")
         needs_renderer = name in {"index.html", "shop.html", "detail.html"}
         count = source.count("js/catalog-render.js")
         assert_ok(count == (1 if needs_renderer else 0),
                   f"Unexpected catalog-render.js include count in {name}: {count}")
-    public_pages = ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html", "account.html"]
+    public_pages = ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html", "help.html", "faq.html", "account.html"]
     for name in public_pages:
         source = (ROOT / "MultiShop" / name).read_text()
         document = html.fromstring(source)
@@ -243,7 +269,30 @@ def main() -> None:
               "Shop must provide interactive minimum/maximum price sliders")
     assert_ok('data-filter-group="price"' not in shop_js,
               "Preset price bands must be replaced by a min/max filter")
-    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html"]:
+    cart_doc = html.fromstring((ROOT / "MultiShop/cart.html").read_text())
+    assert_ok(bool(cart_doc.xpath("//div[contains(concat(' ',normalize-space(@class),' '),' table-responsive ') and .//table[contains(concat(' ',normalize-space(@class),' '),' kcbf-cart-table ')]]")),
+              "Cart table must remain in a semantic responsive wrapper")
+    assert_ok(bool(cart_doc.xpath("//*[@data-cart-subtotal]")),
+              "Cart summary must expose its product subtotal")
+    assert_ok(bool(cart_doc.xpath("//*[@data-cart-total and normalize-space(.)='To be calculated']")),
+              "Cart must not present a final amount until delivery and payment are configured")
+    assert_ok(bool(cart_doc.xpath("//button[@data-cart-checkout and @disabled]")),
+              "Cart checkout must stay unavailable until live payment and delivery are configured")
+    faq_doc = html.fromstring((ROOT / "MultiShop/faq.html").read_text())
+    assert_ok(len(faq_doc.xpath("//*[@data-toggle='collapse' and @data-target]")) >= 7,
+              "FAQ questions must be interactive Bootstrap collapse controls")
+    help_source = (ROOT / "MultiShop/help.html").read_text()
+    assert_ok("tel:+254739107295" in help_source or "tel:0739107295" in help_source,
+              "Help page must provide a callable approved support number")
+    currency_js = (ROOT / "MultiShop/js/pages/currency.js").read_text()
+    assert_ok("https://open.er-api.com/v6/latest/KES" in currency_js and "checkout remains in KES" in currency_js,
+              "KES/USD conversion must be live-rate display-only and retain KES checkout amounts")
+    account_source = (ROOT / "MultiShop/account.html").read_text()
+    assert_ok("data-customer-profile-form" in account_source and "data-customer-email-form" in account_source and "data-order-history" in account_source,
+              "Customer account must expose profile, verified-email and order-history interfaces")
+    assert_ok("data-customer-payment" in account_source or "Secure payment-provider setup is pending" in account_source,
+              "Customer payment-method UI must remain honestly gated until a provider is configured")
+    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html", "help.html", "faq.html"]:
         page = html.fromstring((ROOT / "MultiShop" / name).read_text())
         assert_ok(bool(page.xpath("//*[@data-account-menu]//*[@data-account-guest and @hidden]")),
                   f"Guest links should wait for session resolution in {name}")
@@ -272,11 +321,12 @@ def main() -> None:
         paths = [
             "/", "/MultiShop/", "/MultiShop/index.html", "/MultiShop/shop.html",
             "/MultiShop/detail.html", "/MultiShop/cart.html", "/MultiShop/checkout.html",
-            "/MultiShop/contact.html", "/MultiShop/wishlist.html", "/MultiShop/data/categories.json",
+            "/MultiShop/contact.html", "/MultiShop/wishlist.html", "/MultiShop/help.html", "/MultiShop/faq.html", "/MultiShop/data/categories.json",
             "/MultiShop/account.html", "/MultiShop/admin/",
             "/MultiShop/data/products.json", "/MultiShop/data/runtime-config.json",
             "/MultiShop/js/backend.js", "/MultiShop/js/pages/account.js",
             "/MultiShop/js/pages/admin.js", "/MultiShop/js/pages/detail.js",
+            "/MultiShop/js/pages/commerce.js", "/MultiShop/js/pages/currency.js", "/MultiShop/js/pages/customer-account.js",
             "/MultiShop/css/brand-foundation.css",
         ]
         for path in paths:

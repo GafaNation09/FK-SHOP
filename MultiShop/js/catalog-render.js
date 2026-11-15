@@ -18,11 +18,21 @@
         return value ? (availabilityLabels[value] || value.replace(/[_-]+/g, ' ')) : 'Availability to be confirmed';
     }
 
+    function displayMoney(value) {
+        return typeof api.formatMoney === 'function' ? api.formatMoney(value) : api.formatKes(value);
+    }
+
+    function priceNode(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount) || amount < 0) return api.escapeHtml(displayMoney(value));
+        return '<span data-price-kes="' + String(amount) + '">' + api.escapeHtml(displayMoney(amount)) + '</span>';
+    }
+
     function itemPrice(product) {
         let price = product.priceKes;
         if (price === undefined) price = product.price_kes;
         if (price === undefined) price = product.base_price_kes;
-        if (price !== null && price !== undefined && price !== '') return api.formatKes(price);
+        if (price !== null && price !== undefined && price !== '') return displayMoney(price);
         return product.requiresQuote === true || product.requires_quote === true
             ? 'Price by quotation'
             : 'Price to be confirmed';
@@ -39,10 +49,11 @@
         if (current !== null && current !== undefined && current !== '' &&
             original !== null && original !== undefined && original !== '' &&
             Number.isFinite(currentAmount) && Number.isFinite(originalAmount) && originalAmount > currentAmount) {
-            return '<span class="text-primary">' + api.escapeHtml(api.formatKes(current)) + '</span> ' +
-                '<del class="small text-muted">' + api.escapeHtml(api.formatKes(original)) + '</del>';
+            return '<span class="text-primary">' + priceNode(current) + '</span> ' +
+                '<del class="small text-muted">' + priceNode(original) + '</del>';
         }
-        return '<span>' + api.escapeHtml(itemPrice(product)) + '</span>';
+        if (current === null || current === undefined || current === '') return '<span>' + api.escapeHtml(itemPrice(product)) + '</span>';
+        return '<span>' + priceNode(current) + '</span>';
     }
 
     function productSlug(product) {

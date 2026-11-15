@@ -11,7 +11,19 @@ const selectors = [
   '[data-facet="colors"]', '[data-facet="sizes"]', '[data-facet="availability"]',
   '[data-price-min]', '[data-price-max]', '[data-price-min-output]', '[data-price-max-output]'
 ];
-const nodes = new Map(selectors.map((selector) => [selector, { value: '', min: '0', max: '200', innerHTML: '', textContent: '', querySelectorAll() { return []; }, addEventListener() {} }]));
+const nodes = new Map(selectors.map((selector) => [selector, {
+  value: '', min: '0', max: '200', innerHTML: '', textContent: '', attributes: {},
+  querySelectorAll() { return []; }, addEventListener() {},
+  setAttribute(name, value) { this.attributes[name] = String(value); },
+  getAttribute(name) { return this.attributes[name] || null; },
+  classList: { toggle() {} }
+}]));
+const viewButtons = ['grid', 'list'].map((mode) => ({
+  attributes: { 'data-view-mode-button': mode },
+  setAttribute(name, value) { this.attributes[name] = String(value); },
+  getAttribute(name) { return this.attributes[name] || null; },
+  classList: { toggle() {} }
+}));
 nodes.get('[data-page-size]').value = '9';
 nodes.get('[data-sort-by]').value = 'relevance';
 nodes.get('[data-price-min]').value = '0';
@@ -19,7 +31,7 @@ nodes.get('[data-price-max]').value = '200';
 const listeners = {};
 const document = {
   querySelector(selector) { return nodes.get(selector) || null; },
-  querySelectorAll() { return []; },
+  querySelectorAll(selector) { return selector === '[data-view-mode-button]' ? viewButtons : []; },
   addEventListener(name, callback) { listeners[name] = callback; }
 };
 const products = [
@@ -28,7 +40,7 @@ const products = [
   { id: 'c', slug: 'custom', name: 'Custom quote', status: 'published', priceKes: null, requiresQuote: true }
 ];
 const api = {
-  ready: Promise.resolve({ products, categories: [] }),
+  ready: Promise.resolve({ products, categories: [], settings: { shop: { price_filter_min_kes: 0, price_filter_max_kes: 10000 } } }),
   availableProducts(data) { return data.products; },
   categorySlug(category) { return category.slug; },
   productCategorySlug(product) { return product.categorySlug || ''; },
@@ -37,7 +49,15 @@ const api = {
   renderProductPlaceholders() { return ''; },
   renderEmptyState() { return '<div>empty</div>'; }
 };
-const window = { KCBF: api, location: { search: '', href: 'https://store.example/multishop/shop.html' } };
+const localStorage = new Map();
+const window = {
+  KCBF: api,
+  localStorage: {
+    getItem(key) { return localStorage.has(key) ? localStorage.get(key) : null; },
+    setItem(key, value) { localStorage.set(key, String(value)); }
+  },
+  location: { search: '', href: 'https://store.example/multishop/shop.html' }
+};
 const context = vm.createContext({ window, document, URLSearchParams, Promise, Number, String, Array, Map, Set, Math, Date });
 vm.runInContext(source, context, { filename: 'shop.js' });
 await api.ready;
@@ -46,25 +66,48 @@ await Promise.resolve();
 const grid = nodes.get('[data-shop-grid]');
 const min = nodes.get('[data-price-min]');
 const max = nodes.get('[data-price-max]');
+const priceMarkup = nodes.get('[data-facet="price"]').innerHTML;
+function readInputAttributes(attributeName) {
+  const tag = priceMarkup.match(new RegExp('<input[^>]*data-price-' + (attributeName === 'min' ? 'min' : 'max') + '[^>]*>'))?.[0] || '';
+  return Object.fromEntries(['min', 'max', 'step', 'value'].map((name) => [name, tag.match(new RegExp('\\b' + name + '="([^"]*)"'))?.[1] || '']));
+}
+Object.assign(min, readInputAttributes('min'));
+Object.assign(max, readInputAttributes('max'));
+min.matches = function (selector) { return selector.includes('[data-price-min]'); };
+max.matches = function (selector) { return selector.includes('[data-price-max]'); };
 assert.match(nodes.get('[data-facet="price"]').innerHTML, /Minimum price \(KES\)/);
 assert.match(nodes.get('[data-facet="price"]').innerHTML, /Maximum price \(KES\)/);
 assert.match(nodes.get('[data-facet="availability"]').innerHTML, /Contact to confirm availability/);
 assert.match(nodes.get('[data-facet="availability"]').innerHTML, /value="contact_for_availability"/);
+assert.equal(min.min, '0');
+assert.equal(max.max, '10000');
+assert.equal(grid.getAttribute('data-view-mode'), 'grid');
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
 min.value = '100';
 max.value = '200';
-listeners.input({ target: { matches(selector) { return selector.includes('[data-price-min]'); } } });
+listeners.input({ target: min });
 assert.match(grid.innerHTML, /Pouch/, 'the inclusive lower boundary should remain in results');
 assert.match(grid.innerHTML, /Shawl/, 'the inclusive upper boundary should remain in results');
 assert.doesNotMatch(grid.innerHTML, /Custom quote/, 'unpriced quotation products should be excluded when a range is active');
 
 min.value = '200';
 max.value = '200';
-listeners.input({ target: { matches(selector) { return selector.includes('[data-price-min]'); } } });
+listeners.input({ target: min });
 assert.doesNotMatch(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/, 'an exact single-price range should work');
+
+const listButton = viewButtons.find((button) => button.getAttribute('data-view-mode-button') === 'list');
+listeners.click({ target: { closest(selector) { return selector === '[data-view-mode-button]' ? listButton : null; } } });
+assert.equal(grid.getAttribute('data-view-mode'), 'list');
+assert.equal(listButton.attributes['aria-pressed'], 'true');
+assert.equal(localStorage.get('kcbf.catalog-view.v1'), 'list', 'the view preference should persist in this browser');
+
+min.value = '1000';
+max.value = '500';
+listeners.input({ target: min });
+assert.equal(max.value, '1000', 'the upper range should follow an increased lower bound');
 
 const resetTarget = { closest(selector) { return selector === '[data-price-reset]' ? {} : null; } };
 listeners.click({ target: resetTarget });
@@ -73,4 +116,4 @@ assert.equal(max.value, max.max);
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
-console.log('PASS: shop price min/max filtering, exact inclusive boundaries, unpriced items and reset');
+console.log('PASS: shop range 0–10,000 KES, exact inclusive boundaries, range correction/reset and persisted grid/list modes');
