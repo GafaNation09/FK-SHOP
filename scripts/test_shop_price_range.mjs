@@ -23,8 +23,8 @@ const document = {
   addEventListener(name, callback) { listeners[name] = callback; }
 };
 const products = [
-  { id: 'a', slug: 'pouch', name: 'Pouch', status: 'published', priceKes: 100 },
-  { id: 'b', slug: 'shawl', name: 'Shawl', status: 'published', priceKes: 200 },
+  { id: 'a', slug: 'pouch', name: 'Pouch', status: 'published', priceKes: 100, availability: 'contact_for_availability' },
+  { id: 'b', slug: 'shawl', name: 'Shawl', status: 'published', priceKes: 200, availability: 'available' },
   { id: 'c', slug: 'custom', name: 'Custom quote', status: 'published', priceKes: null, requiresQuote: true }
 ];
 const api = {
@@ -48,6 +48,8 @@ const min = nodes.get('[data-price-min]');
 const max = nodes.get('[data-price-max]');
 assert.match(nodes.get('[data-facet="price"]').innerHTML, /Minimum price \(KES\)/);
 assert.match(nodes.get('[data-facet="price"]').innerHTML, /Maximum price \(KES\)/);
+assert.match(nodes.get('[data-facet="availability"]').innerHTML, /Contact to confirm availability/);
+assert.match(nodes.get('[data-facet="availability"]').innerHTML, /value="contact_for_availability"/);
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 

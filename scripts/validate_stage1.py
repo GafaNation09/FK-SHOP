@@ -88,6 +88,7 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_session.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_commerce.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_shop_price_range.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_availability_labels.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
 
     expected_names = [

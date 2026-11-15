@@ -4,6 +4,19 @@
 
     const api = window.KCBF = window.KCBF || {};
     const homeColumn = 'col-lg-3 col-md-4 col-sm-6 pb-1';
+    const availabilityLabels = {
+        available: 'Available',
+        in_stock: 'In stock',
+        limited_stock: 'Limited stock',
+        contact_for_availability: 'Contact to confirm availability',
+        out_of_stock: 'Out of stock',
+        to_be_confirmed: 'Availability to be confirmed'
+    };
+
+    function availabilityLabel(product) {
+        const value = String(product && (product.availability || product.availability_status) || '').trim();
+        return value ? (availabilityLabels[value] || value.replace(/[_-]+/g, ' ')) : 'Availability to be confirmed';
+    }
 
     function itemPrice(product) {
         let price = product.priceKes;
@@ -74,7 +87,7 @@
         const isSaved = Boolean(api.commerce && api.commerce.isWishlisted && api.commerce.isWishlisted(product.id || product.slug));
         const image = productImage(product);
         const price = itemPriceMarkup(product);
-        const availability = product.availability || product.availability_status || 'Availability to be confirmed';
+        const availability = availabilityLabel(product);
         const cartDisabled = canAddToCart(product) ? '' : ' disabled title="A verified price is required before adding this item to the cart."';
         return '<div class="' + columns + '">' +
             '<div class="product-item bg-light mb-4">' +
@@ -169,6 +182,7 @@
     }
 
     api.renderProductCard = renderProductCard;
+    api.availabilityLabel = availabilityLabel;
     api.renderProductPlaceholders = renderProductPlaceholders;
     api.renderEmptyState = renderEmptyState;
     api.renderCategoryCard = renderCategoryCard;

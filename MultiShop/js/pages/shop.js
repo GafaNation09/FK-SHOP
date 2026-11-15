@@ -34,7 +34,14 @@
             const checked = selectedValue === value ? ' checked' : '';
             const label = api.escapeHtml(value);
             const modeLabels = { ready_made: 'Ready-made', made_to_order: 'Made to order', customizable: 'Customisable' };
-            const displayLabel = api.escapeHtml(group === 'orderingModes' ? (modeLabels[value] || value) : value);
+            const availabilityLabels = {
+                available: 'Available', in_stock: 'In stock', limited_stock: 'Limited stock',
+                contact_for_availability: 'Contact to confirm availability', out_of_stock: 'Out of stock',
+                to_be_confirmed: 'Availability to be confirmed'
+            };
+            const displayValue = group === 'orderingModes' ? (modeLabels[value] || value) :
+                group === 'availability' ? (availabilityLabels[value] || value.replace(/[_-]+/g, ' ')) : value;
+            const displayLabel = api.escapeHtml(displayValue);
             const count = Number(counts[value] || 0);
             return '<div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">' +
                 '<input type="checkbox" class="custom-control-input" id="' + inputId + '" data-filter-group="' + group + '" value="' + label + '"' + checked + '>' +

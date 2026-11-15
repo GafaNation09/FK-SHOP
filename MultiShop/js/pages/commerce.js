@@ -149,7 +149,7 @@
         return '<tr data-cart-row="' + id + '">' +
             '<td class="align-middle text-left"><div class="d-flex align-items-center">' + imageFor(product) +
                 '<div class="ml-2"><a href="detail.html?product=' + slug + '">' + escape(product.name) + '</a>' +
-                '<div class="small text-muted">' + escape(product.availability || product.availability_status || 'Availability to be confirmed') + '</div></div></div></td>' +
+                '<div class="small text-muted">' + escape(api.availabilityLabel ? api.availabilityLabel(product) : (product.availability || product.availability_status || 'Availability to be confirmed')) + '</div></div></div></td>' +
             '<td class="align-middle">' + escape(api.formatKes(price)) + '</td>' +
             '<td class="align-middle"><input class="form-control form-control-sm mx-auto text-center" style="max-width:80px" type="number" min="1" max="' + cartLimit(product) + '" value="' + Math.min(entry.quantity, cartLimit(product)) + '" aria-label="Quantity for ' + escape(product.name) + '" data-cart-quantity="' + id + '"></td>' +
             '<td class="align-middle">' + escape(api.formatKes(subtotal)) + '</td>' +

@@ -101,7 +101,9 @@
         }
         panel.querySelector('[data-detail-description]').textContent = text(product, 'description', 'description') || 'Product description to be added.';
         panel.querySelector('[data-detail-category]').textContent = product.categoryName || product.category_name || product.categorySlug || product.category_slug || 'Category details to be confirmed';
-        panel.querySelector('[data-detail-availability]').textContent = product.availability || product.availability_status || 'Availability to be confirmed';
+        panel.querySelector('[data-detail-availability]').textContent = api.availabilityLabel
+            ? api.availabilityLabel(product)
+            : (product.availability || product.availability_status || 'Availability to be confirmed');
         const productionDays = product.productionTimeDays !== undefined ? product.productionTimeDays : product.production_time_days;
         panel.querySelector('[data-detail-production]').textContent = Number(productionDays) > 0
             ? Number(productionDays) + (Number(productionDays) === 1 ? ' day' : ' days')

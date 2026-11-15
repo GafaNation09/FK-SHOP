@@ -61,7 +61,7 @@ const document = {
 };
 const product = {
   id: 'product-1', slug: 'woven-bag', name: 'Woven bag', description: 'Handmade crochet bag',
-  categoryName: 'Bags', priceKes: 1250, originalPriceKes: 1500, availability: 'available',
+  categoryName: 'Bags', priceKes: 1250, originalPriceKes: 1500, availability: 'contact_for_availability',
   productionTimeDays: 2, materials: 'Cotton yarn', careInstructions: 'Hand wash',
   patterns: ['Floral'], personalizationOptions: ['Monogram'], measurements: '20 cm wide', weightGrams: 180,
   shippingInformation: 'Packed with care', attributes: { fiber: 'Cotton <blend>', finish: 'Handmade' },
@@ -73,6 +73,7 @@ const product = {
 const api = {
   ready: Promise.resolve({ products: [product] }),
   availableProducts(data) { return data.products; },
+  availabilityLabel(product) { return product.availability === 'contact_for_availability' ? 'Contact to confirm availability' : product.availability; },
   safeImageUrl(value) { return value; },
   escapeHtml(value) { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); },
   formatKes(value) { return 'KES ' + Number(value).toLocaleString('en-KE'); }
@@ -90,6 +91,7 @@ assert.equal(fields.get('[data-detail-cart]').disabled, false, 'priced published
 assert.equal(fields.get('[data-detail-cart]').attributes['data-product-id'], 'product-1');
 assert.equal(fields.get('[data-detail-wishlist]').disabled, false, 'published products should expose favourites');
 assert.equal(fields.get('[data-detail-name]').textContent, 'Woven bag');
+assert.equal(fields.get('[data-detail-availability]').textContent, 'Contact to confirm availability');
 assert.equal(fields.get('[data-detail-patterns]').textContent, 'Floral');
 assert.equal(fields.get('[data-detail-materials]').textContent, 'Cotton yarn');
 assert.equal(fields.get('[data-detail-attributes]').children.length, 4, 'public attributes should render as safe term/value nodes');
