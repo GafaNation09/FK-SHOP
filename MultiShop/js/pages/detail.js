@@ -24,7 +24,7 @@
             primary.url || primary.imageUrl || primary.image_url || primary.storagePath || primary.storage_path || '';
         const url = api.safeImageUrl(source);
         if (url) {
-            return '<img class="img-fluid w-100" src="' + api.escapeHtml(url) + '" alt="' +
+            return '<img class="img-fluid w-100" data-detail-main-image src="' + api.escapeHtml(url) + '" alt="' +
                 api.escapeHtml(product.mainImageAlt || product.main_image_alt || primary.altText || primary.alt_text || product.name || 'Handmade crochet item') + '" loading="lazy">';
         }
         return '<div class="kcbf-photo-placeholder kcbf-photo-placeholder--product" role="img" aria-label="Approved product photograph not yet supplied">' +
@@ -134,7 +134,33 @@
             product.attributes
         );
         const stock = product.stockQuantity !== undefined ? product.stockQuantity : product.stock_quantity;
-        if (stock !== null && stock !== undefined) panel.querySelector('[data-detail-quantity]').setAttribute('max', String(stock));
+        const quantity = panel.querySelector('[data-detail-quantity]');
+        const addCart = panel.querySelector('[data-detail-cart]');
+        const addWishlist = panel.querySelector('[data-detail-wishlist]');
+        const identifier = String(product.id || product.slug || '');
+        if (quantity) {
+            quantity.disabled = false;
+            if (stock !== null && stock !== undefined) quantity.setAttribute('max', String(stock));
+        }
+        if (addCart) {
+            addCart.setAttribute('data-product-id', identifier);
+            const available = product.availability || product.availability_status || '';
+            const cartPrice = Number(rawPrice);
+            const stockAvailable = stock === null || stock === undefined || Number(stock) > 0;
+            const canOrder = rawPrice !== null && rawPrice !== undefined && rawPrice !== '' && Number.isFinite(cartPrice) && cartPrice >= 0 &&
+                !(product.requiresQuote === true || product.requires_quote === true) && available !== 'out_of_stock' && stockAvailable;
+            addCart.disabled = !canOrder;
+            if (!canOrder) addCart.title = 'A verified price and available stock are required before adding this item to the cart.';
+            else addCart.removeAttribute('title');
+        }
+        if (addWishlist) {
+            addWishlist.setAttribute('data-product-id', identifier);
+            addWishlist.setAttribute('data-product-name', product.name || 'product');
+            addWishlist.disabled = false;
+            const saved = Boolean(api.commerce && api.commerce.isWishlisted && api.commerce.isWishlisted(identifier));
+            addWishlist.setAttribute('aria-pressed', String(saved));
+            addWishlist.innerHTML = '<i class="' + (saved ? 'fas' : 'far') + ' fa-heart mr-1" aria-hidden="true"></i>' + (saved ? 'Saved to favourites' : 'Add to favourites');
+        }
         panel.querySelector('[data-detail-quote]').href = 'contact.html?product=' + encodeURIComponent(product.slug || product.id);
 
         const photos = Array.isArray(product.images) ? product.images : [];
@@ -147,8 +173,22 @@
                 const item = typeof image === 'string' ? { url: image } : image;
                 const src = api.safeImageUrl(item.url || item.imageUrl || item.image_url || item.storagePath || item.storage_path || '');
                 if (!src) return '';
-                return '<div class="col-3"><img class="img-fluid border" src="' + api.escapeHtml(src) + '" alt="' + api.escapeHtml(item.altText || item.alt_text || product.name || 'Product image') + '" loading="lazy"></div>';
+                const index = photos.indexOf(image);
+                const alt = api.escapeHtml(item.altText || item.alt_text || product.name || 'Product image');
+                return '<div class="col-3 mb-2"><button class="btn btn-link p-0 w-100" type="button" data-detail-photo-index="' + index + '" aria-label="View product photo ' + (index + 1) + ': ' + alt + '"><img class="img-fluid border" src="' + api.escapeHtml(src) + '" alt="" loading="lazy"></button><small class="d-block text-muted text-truncate">' + alt + '</small></div>';
             }).join('');
+            gallery.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-detail-photo-index]');
+                if (!button) return;
+                const item = photos[Number(button.getAttribute('data-detail-photo-index'))];
+                if (!item) return;
+                const photo = typeof item === 'string' ? { url: item } : item;
+                const src = api.safeImageUrl(photo.url || photo.imageUrl || photo.image_url || photo.storagePath || photo.storage_path || '');
+                const mainImage = imageContainer && imageContainer.querySelector('[data-detail-main-image]');
+                if (!src || !mainImage) return;
+                mainImage.src = src;
+                mainImage.alt = photo.altText || photo.alt_text || product.name || 'Product image';
+            });
         }
     });
 }(window, document));

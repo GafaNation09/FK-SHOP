@@ -36,6 +36,17 @@
         return String(product.slug || product.id || '');
     }
 
+    function canAddToCart(product) {
+        const value = product.priceKes !== undefined ? product.priceKes :
+            (product.price_kes !== undefined ? product.price_kes : product.base_price_kes);
+        const availability = product.availability || product.availability_status || '';
+        const stock = product.stockQuantity !== undefined ? product.stockQuantity : product.stock_quantity;
+        return api.isPublished(product) && value !== null && value !== undefined && value !== '' &&
+            Number.isFinite(Number(value)) && Number(value) >= 0 &&
+            !(product.requiresQuote === true || product.requires_quote === true) && availability !== 'out_of_stock' &&
+            !(stock !== null && stock !== undefined && Number(stock) < 1);
+    }
+
     function productImage(product) {
         const gallery = Array.isArray(product.images) ? product.images : [];
         const primaryEntry = gallery.find(function (image) {
@@ -59,15 +70,18 @@
         const slug = encodeURIComponent(productSlug(product));
         const detailUrl = 'detail.html?product=' + slug;
         const name = api.escapeHtml(product.name || 'Product name to be added');
+        const id = api.escapeHtml(String(product.id || product.slug || ''));
+        const isSaved = Boolean(api.commerce && api.commerce.isWishlisted && api.commerce.isWishlisted(product.id || product.slug));
         const image = productImage(product);
         const price = itemPriceMarkup(product);
         const availability = product.availability || product.availability_status || 'Availability to be confirmed';
+        const cartDisabled = canAddToCart(product) ? '' : ' disabled title="A verified price is required before adding this item to the cart."';
         return '<div class="' + columns + '">' +
             '<div class="product-item bg-light mb-4">' +
-                '<div class="product-img position-relative overflow-hidden">' + image +
+                '<div class="product-img position-relative overflow-hidden"><a class="d-block" href="' + detailUrl + '" aria-label="View details for ' + name + '">' + image + '</a>' +
                     '<div class="product-action">' +
-                        '<button class="btn btn-outline-dark btn-square" type="button" disabled aria-label="Add ' + name + ' to cart; cart setup pending" title="Cart setup pending"><i class="fa fa-shopping-cart" aria-hidden="true"></i></button>' +
-                        '<button class="btn btn-outline-dark btn-square" type="button" disabled aria-label="Add ' + name + ' to wishlist; wishlist setup pending" title="Wishlist setup pending"><i class="far fa-heart" aria-hidden="true"></i></button>' +
+                        '<button class="btn btn-outline-dark btn-square" type="button" data-commerce-action="cart" data-product-id="' + id + '"' + cartDisabled + ' aria-label="Add ' + name + ' to cart"><i class="fa fa-shopping-cart" aria-hidden="true"></i></button>' +
+                        '<button class="btn btn-outline-dark btn-square" type="button" data-commerce-action="wishlist" data-product-id="' + id + '" data-product-name="' + name + '" aria-label="' + (isSaved ? 'Remove ' : 'Add ') + name + ' to favourites" aria-pressed="' + String(isSaved) + '" title="' + (isSaved ? 'Remove from favourites' : 'Add to favourites') + '"><i class="' + (isSaved ? 'fas' : 'far') + ' fa-heart" aria-hidden="true"></i></button>' +
                         '<a class="btn btn-outline-dark btn-square" href="' + detailUrl + '" aria-label="View details for ' + name + '"><i class="fa fa-search" aria-hidden="true"></i></a>' +
                     '</div>' +
                 '</div>' +

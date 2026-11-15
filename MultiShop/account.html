@@ -51,7 +51,7 @@
                             <h2 class="h4 mb-3">Sign in</h2>
                             <form data-auth-form="signin" novalidate>
                                 <div class="form-group"><label for="signin-email">Email address</label><input class="form-control" id="signin-email" name="email" type="email" autocomplete="email" required></div>
-                                <div class="form-group"><label for="signin-password">Password</label><input class="form-control" id="signin-password" name="password" type="password" autocomplete="current-password" required></div>
+                                <div class="form-group"><label for="signin-password">Password</label><input class="form-control" id="signin-password" name="password" type="password" autocomplete="current-password" required><small class="form-text text-muted">Your browser may offer to remember your password. The store never keeps a readable copy.</small></div>
                                 <button class="btn btn-primary btn-block py-2" type="submit">Sign in</button>
                             </form>
                         </section>
@@ -89,6 +89,7 @@
                         <h2 class="h4 mb-3">You are signed in</h2>
                         <p class="text-muted">Your customer session is active. You can continue shopping or sign out to use a different account.</p>
                         <a class="btn btn-primary" href="shop.html">Continue shopping</a>
+                        <div class="alert alert-info mt-4 mb-0" role="note">Saved payment methods are not available yet. Use only a secure payment-provider flow when enabled; this site will never store your card number or security code.</div>
                     </div>
                 </section>
                 <p class="text-center small text-muted mt-4 mb-0"><a href="index.html">Return to the storefront</a></p>

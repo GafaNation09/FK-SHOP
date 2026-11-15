@@ -85,6 +85,9 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_backend_config.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_data.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_account_sessions.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_storefront_session.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_commerce.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_shop_price_range.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
 
     expected_names = [
@@ -135,6 +138,8 @@ def main() -> None:
     if owner_email:
         assert_ok(owner_email not in public_source.lower(), "Configured owner identity appears in public source")
     admin_doc = html.fromstring((ROOT / "MultiShop/admin/index.html").read_text())
+    assert_ok(bool(admin_doc.xpath("//input[@name='photo' and @multiple]")),
+              "Admin product editor must allow multiple photos per product")
     setting_names = admin_doc.xpath("//form[@data-settings-form]//*[@name]/@name")
     assert_ok(all(re.fullmatch(r"[a-z][a-z0-9_.-]{0,99}", name) for name in setting_names),
               "Admin public setting names must satisfy the database's lowercase key constraint")
@@ -211,14 +216,18 @@ def main() -> None:
               "Homepage must retain all three original hero slides")
     assert_ok(len(base_doc.xpath(social_xpath)) == len(home_doc.xpath(social_xpath)),
               "Homepage footer social-icon count changed")
-    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html"]:
+    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html"]:
         source = (ROOT / "MultiShop" / name).read_text()
         assert_ok("Knit&amp;Crochet by Faith" in source, f"Brand missing from {name}")
+        source_doc = html.fromstring(source)
+        assert_ok(not source_doc.xpath("//button[normalize-space()='EN']"), f"Language-switch control remains in {name}")
+        assert_ok("js/pages/storefront-session.js" in source, f"Session-aware account navigation missing from {name}")
+        assert_ok("js/pages/commerce.js" in source, f"Cart/favourites behavior missing from {name}")
         needs_renderer = name in {"index.html", "shop.html", "detail.html"}
         count = source.count("js/catalog-render.js")
         assert_ok(count == (1 if needs_renderer else 0),
                   f"Unexpected catalog-render.js include count in {name}: {count}")
-    public_pages = ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "account.html"]
+    public_pages = ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html", "account.html"]
     for name in public_pages:
         source = (ROOT / "MultiShop" / name).read_text()
         document = html.fromstring(source)
@@ -228,6 +237,17 @@ def main() -> None:
     account_doc = html.fromstring((ROOT / "MultiShop/account.html").read_text())
     assert_ok(bool(account_doc.xpath("//*[@data-auth-guest]")) and bool(account_doc.xpath("//*[@data-auth-session]")),
               "Account page must provide distinct guest and signed-in states")
+    shop_js = (ROOT / "MultiShop/js/pages/shop.js").read_text()
+    assert_ok("data-price-min" in shop_js and "data-price-max" in shop_js and 'type="range"' in shop_js,
+              "Shop must provide interactive minimum/maximum price sliders")
+    assert_ok('data-filter-group="price"' not in shop_js,
+              "Preset price bands must be replaced by a min/max filter")
+    for name in ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "wishlist.html"]:
+        page = html.fromstring((ROOT / "MultiShop" / name).read_text())
+        assert_ok(bool(page.xpath("//*[@data-account-menu]//*[@data-account-guest and @hidden]")),
+                  f"Guest links should wait for session resolution in {name}")
+        assert_ok(bool(page.xpath("//*[@data-account-menu]//*[@data-account-signout and @hidden]")),
+                  f"Sign out should wait for session resolution in {name}")
     admin_html = (ROOT / "MultiShop/admin/index.html").read_text()
     assert_ok('data-admin-signin' not in admin_html and 'data-admin-owner-bootstrap' not in admin_html,
               "Admin page must not expose a public sign-in or owner-bootstrap panel")
@@ -251,7 +271,7 @@ def main() -> None:
         paths = [
             "/", "/MultiShop/", "/MultiShop/index.html", "/MultiShop/shop.html",
             "/MultiShop/detail.html", "/MultiShop/cart.html", "/MultiShop/checkout.html",
-            "/MultiShop/contact.html", "/MultiShop/data/categories.json",
+            "/MultiShop/contact.html", "/MultiShop/wishlist.html", "/MultiShop/data/categories.json",
             "/MultiShop/account.html", "/MultiShop/admin/",
             "/MultiShop/data/products.json", "/MultiShop/data/runtime-config.json",
             "/MultiShop/js/backend.js", "/MultiShop/js/pages/account.js",

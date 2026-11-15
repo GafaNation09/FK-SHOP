@@ -11,14 +11,19 @@ class Element {
     this.children = [];
     this.attributes = {};
     this.hidden = false;
+    this.disabled = true;
     this.textContent = '';
     this.innerHTML = '';
     this.className = '';
     this.href = '';
+    this.listeners = {};
   }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.children = nodes; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
+  removeAttribute(name) { delete this.attributes[name]; }
+  getAttribute(name) { return this.attributes[name] ?? null; }
+  addEventListener(name, handler) { this.listeners[name] = handler; }
   closest() { return this.optionalRow || null; }
   get childElementCount() { return this.children.length; }
 }
@@ -28,7 +33,8 @@ const selectors = [
   '[data-detail-category]', '[data-detail-availability]', '[data-detail-production]', '[data-detail-materials]',
   '[data-detail-care]', '[data-detail-colors]', '[data-detail-sizes]', '[data-detail-patterns]',
   '[data-detail-personalization]', '[data-detail-measurements]', '[data-detail-weight]', '[data-detail-shipping]',
-  '[data-detail-attributes]', '[data-detail-attributes-container]', '[data-detail-quantity]', '[data-detail-quote]'
+  '[data-detail-attributes]', '[data-detail-attributes-container]', '[data-detail-quantity]', '[data-detail-quote]',
+  '[data-detail-cart]', '[data-detail-wishlist]'
 ];
 const panel = new Element();
 const fields = new Map(selectors.map((selector) => [selector, new Element()]));
@@ -39,6 +45,8 @@ for (const name of ['colors', 'sizes', 'patterns', 'personalization', 'measureme
 panel.querySelector = (selector) => fields.get(selector) || null;
 const empty = new Element();
 const image = new Element();
+const mainImage = new Element();
+image.querySelector = (selector) => selector === '[data-detail-main-image]' ? mainImage : null;
 const gallery = new Element();
 const document = {
   querySelector(selector) {
@@ -57,7 +65,10 @@ const product = {
   productionTimeDays: 2, materials: 'Cotton yarn', careInstructions: 'Hand wash',
   patterns: ['Floral'], personalizationOptions: ['Monogram'], measurements: '20 cm wide', weightGrams: 180,
   shippingInformation: 'Packed with care', attributes: { fiber: 'Cotton <blend>', finish: 'Handmade' },
-  images: [{ url: 'https://images.example/bag.webp', isMain: true, altText: 'Woven bag' }]
+  images: [
+    { url: 'https://images.example/bag.webp', isMain: true, altText: 'Woven bag front' },
+    { url: 'https://images.example/bag-back.webp', isMain: false, altText: 'Woven bag back' }
+  ]
 };
 const api = {
   ready: Promise.resolve({ products: [product] }),
@@ -74,6 +85,10 @@ await Promise.resolve();
 
 assert.equal(panel.hidden, false, 'published product detail panel should become visible');
 assert.match(image.innerHTML, /images\.example\/bag\.webp/, 'product image must render in its sibling container');
+assert.match(gallery.innerHTML, /data-detail-photo-index="1"/, 'secondary product images should render as selectable thumbnails');
+assert.equal(fields.get('[data-detail-cart]').disabled, false, 'priced published products should expose add-to-cart');
+assert.equal(fields.get('[data-detail-cart]').attributes['data-product-id'], 'product-1');
+assert.equal(fields.get('[data-detail-wishlist]').disabled, false, 'published products should expose favourites');
 assert.equal(fields.get('[data-detail-name]').textContent, 'Woven bag');
 assert.equal(fields.get('[data-detail-patterns]').textContent, 'Floral');
 assert.equal(fields.get('[data-detail-materials]').textContent, 'Cotton yarn');
@@ -83,4 +98,10 @@ assert.equal(fields.get('[data-detail-attributes-container]').hidden, false);
 assert.equal(fields.get('[data-detail-quantity]').attributes.max, undefined);
 assert.equal(fields.get('[data-detail-quote]').href, 'contact.html?product=woven-bag');
 
-console.log('PASS: live product image, crochet metadata and safe public specifications render on the detail page');
+gallery.listeners.click({ target: { closest(selector) {
+  return selector === '[data-detail-photo-index]' ? { getAttribute() { return '1'; } } : null;
+} } });
+assert.equal(mainImage.src, 'https://images.example/bag-back.webp', 'clicking a thumbnail should switch the hero photo');
+assert.equal(mainImage.alt, 'Woven bag back', 'hero alt text should track the selected photo');
+
+console.log('PASS: detail metadata, safe specifications, active actions and selectable multi-photo gallery');

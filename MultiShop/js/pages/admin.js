@@ -115,7 +115,7 @@
 
     async function loadProducts() {
         const { data, error } = await client.from('products')
-            .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name)')
+            .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main)')
             .order('updated_at', { ascending: false });
         if (error) throw error;
         allProducts = data || [];
@@ -195,7 +195,31 @@
         if (status) status.value = 'draft';
         const availability = form.querySelector('[name="availability_status"]');
         if (availability) availability.value = 'to_be_confirmed';
+        renderProductImages('', []);
         fillCategoryOptions();
+    }
+
+    function renderProductImages(productId, images) {
+        const container = document.querySelector('[data-product-images]');
+        if (!container) return;
+        if (!productId) {
+            container.innerHTML = '<p class="small text-muted mb-0">Save the product first to manage its photos.</p>';
+            return;
+        }
+        if (!images || !images.length) {
+            container.innerHTML = '<p class="small text-muted mb-0">No photos have been saved for this product yet.</p>';
+            return;
+        }
+        container.innerHTML = images.slice().sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); }).map(function (image) {
+            const url = api.safeImageUrl(image.image_url);
+            if (!url) return '';
+            const alt = api.escapeHtml(image.alt_text || 'Product photo');
+            return '<div class="col-6 col-md-3 mb-3"><div class="border bg-white p-2 h-100">' +
+                '<img class="img-fluid mb-2" src="' + api.escapeHtml(url) + '" alt="' + alt + '" loading="lazy">' +
+                '<small class="d-block mb-2">' + (image.is_main ? 'Main photo' : alt) + '</small>' +
+                (image.is_main ? '' : '<button class="btn btn-sm btn-outline-dark mb-1" type="button" data-action="set-main-image" data-id="' + api.escapeHtml(image.id) + '">Make main</button> ') +
+                '<button class="btn btn-sm btn-outline-danger mb-1" type="button" data-action="remove-product-image" data-id="' + api.escapeHtml(image.id) + '">Remove</button></div></div>';
+        }).join('');
     }
 
     function populateProductForm(product) {
@@ -230,43 +254,55 @@
             const input = form.querySelector('[name="ordering_modes"][value="' + mode + '"]');
             if (input) input.checked = true;
         });
+        renderProductImages(product.id, product.product_images || []);
         document.querySelector('[data-product-form-title]').textContent = 'Edit product';
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    async function uploadProductPhoto(productId, file) {
-        if (!file) return;
-        if (!validImageTypes.includes(file.type)) throw new Error('Choose a JPG, PNG or WebP image.');
-        if (file.size > 5 * 1024 * 1024) throw new Error('Product images must be 5 MB or smaller.');
-        const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
-        const path = productId + '/' + crypto.randomUUID() + '.' + extension;
-        const { error: uploadError } = await client.storage.from(bucketName).upload(path, file, {
-            cacheControl: '3600',
-            contentType: file.type,
-            upsert: false
+    async function uploadProductPhotos(productId, files) {
+        const selected = Array.from(files || []);
+        if (!selected.length) return { uploaded: 0, failed: [] };
+        selected.forEach(function (file) {
+            if (!validImageTypes.includes(file.type)) throw new Error('Choose JPG, PNG or WebP product photos only.');
+            if (file.size > 5 * 1024 * 1024) throw new Error('Each product photo must be 5 MB or smaller.');
         });
-        if (uploadError) throw uploadError;
-        const { data: publicData } = client.storage.from(bucketName).getPublicUrl(path);
         const { data: existing, error: readError } = await client.from('product_images')
-            .select('id,sort_order')
+            .select('id,sort_order,is_main')
             .eq('product_id', productId)
-            .order('sort_order', { ascending: false })
-            .limit(1);
+            .order('sort_order', { ascending: true });
         if (readError) throw readError;
-        const nextOrder = existing && existing.length ? Number(existing[0].sort_order) + 1 : 0;
-        const { error: clearMainError } = await client.from('product_images')
-            .update({ is_main: false })
-            .eq('product_id', productId)
-            .eq('is_main', true);
-        if (clearMainError) throw clearMainError;
-        const { error: imageError } = await client.from('product_images').insert({
-            product_id: productId,
-            image_url: publicData.publicUrl,
-            alt_text: document.querySelector('#product-name').value.trim(),
-            sort_order: nextOrder,
-            is_main: true
-        });
-        if (imageError) throw imageError;
+        let nextOrder = (existing || []).reduce(function (max, image) { return Math.max(max, Number(image.sort_order) || 0); }, -1) + 1;
+        let hasMain = (existing || []).some(function (image) { return image.is_main; });
+        let uploaded = 0;
+        const failed = [];
+        for (const file of selected) {
+            const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+            const path = productId + '/' + crypto.randomUUID() + '.' + extension;
+            let objectUploaded = false;
+            try {
+                const { error: uploadError } = await client.storage.from(bucketName).upload(path, file, {
+                    cacheControl: '3600', contentType: file.type, upsert: false
+                });
+                if (uploadError) throw uploadError;
+                objectUploaded = true;
+                const { data: publicData } = client.storage.from(bucketName).getPublicUrl(path);
+                const { error: imageError } = await client.from('product_images').insert({
+                    product_id: productId,
+                    image_url: publicData.publicUrl,
+                    alt_text: document.querySelector('#product-name').value.trim() + ' — photo ' + (nextOrder + 1),
+                    sort_order: nextOrder,
+                    is_main: !hasMain
+                });
+                if (imageError) throw imageError;
+                hasMain = true;
+                nextOrder += 1;
+                uploaded += 1;
+            } catch (error) {
+                if (objectUploaded) await client.storage.from(bucketName).remove([path]).catch(function () {});
+                failed.push(file.name || 'Selected photo');
+            }
+        }
+        return { uploaded: uploaded, failed: failed };
     }
 
     async function saveProduct(form) {
@@ -356,11 +392,15 @@
             : await client.from('products').insert(row).select('id').single();
         if (result.error) throw result.error;
         const savedId = result.data.id;
-        const file = form.elements.photo.files && form.elements.photo.files[0];
-        if (file) await uploadProductPhoto(savedId, file);
+        form.elements.id.value = savedId;
+        const files = form.elements.photo.files;
+        const photoResult = await uploadProductPhotos(savedId, files);
         clearProductForm();
         await Promise.all([loadProducts(), loadCategories()]);
-        showStatus('Product saved. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.', 'success');
+        const photoMessage = photoResult.uploaded ? ' with ' + photoResult.uploaded + ' photo' + (photoResult.uploaded === 1 ? '' : 's') : '';
+        const failureMessage = photoResult.failed.length ? ' These photos could not be uploaded: ' + photoResult.failed.join(', ') + '.' : '';
+        showStatus('Product saved' + photoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.' + failureMessage,
+            photoResult.failed.length ? 'warning' : 'success');
     }
 
     async function saveSettings(form) {
@@ -463,6 +503,64 @@
                     showStatus('Product status changed to ' + next + '.', 'success');
                 }
             } catch (error) { showStatus(error.message || 'Product action failed.', 'error'); }
+        });
+
+        document.querySelector('[data-product-images]')?.addEventListener('click', async function (event) {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+            const productId = String(productForm.elements.id.value || '').trim();
+            const product = allProducts.find(function (item) { return item.id === productId; });
+            const image = product && (product.product_images || []).find(function (item) { return item.id === button.getAttribute('data-id'); });
+            if (!product || !image) return;
+            try {
+                if (button.getAttribute('data-action') === 'set-main-image') {
+                    const previous = (product.product_images || []).find(function (item) { return item.is_main; });
+                    const { error: clearError } = await client.from('product_images').update({ is_main: false }).eq('product_id', productId).eq('is_main', true);
+                    if (clearError) throw clearError;
+                    const { error: setError } = await client.from('product_images').update({ is_main: true }).eq('id', image.id).eq('product_id', productId);
+                    if (setError) {
+                        if (previous) await client.from('product_images').update({ is_main: true }).eq('id', previous.id).eq('product_id', productId);
+                        throw setError;
+                    }
+                    await loadProducts();
+                    const refreshed = allProducts.find(function (item) { return item.id === productId; });
+                    renderProductImages(productId, refreshed && refreshed.product_images || []);
+                    showStatus('Main product photo updated.', 'success');
+                } else if (button.getAttribute('data-action') === 'remove-product-image') {
+                    if (!window.confirm('Remove this photo from the product gallery?')) return;
+                    let storageCleanupWarning = false;
+                    const { error: deleteError } = await client.from('product_images').delete().eq('id', image.id).eq('product_id', productId);
+                    if (deleteError) throw deleteError;
+                    const prefix = '/storage/v1/object/public/' + bucketName + '/';
+                    const baseUrl = api.backendConfig && api.backendConfig.supabaseUrl;
+                    let storagePath = '';
+                    try {
+                        const imageUrl = new URL(image.image_url);
+                        const backendUrl = new URL(baseUrl);
+                        if (imageUrl.origin === backendUrl.origin && imageUrl.pathname.includes(prefix)) {
+                            const candidate = decodeURIComponent(imageUrl.pathname.split(prefix).pop());
+                            if (candidate.startsWith(productId + '/')) storagePath = candidate;
+                        }
+                    } catch (error) { storagePath = ''; }
+                    if (storagePath) {
+                        const { error: storageError } = await client.storage.from(bucketName).remove([storagePath]);
+                        storageCleanupWarning = Boolean(storageError);
+                    }
+                    await loadProducts();
+                    const refreshed = allProducts.find(function (item) { return item.id === productId; });
+                    const remaining = refreshed && refreshed.product_images || [];
+                    if (remaining.length && !remaining.some(function (item) { return item.is_main; })) {
+                        const { error: mainError } = await client.from('product_images').update({ is_main: true }).eq('id', remaining[0].id).eq('product_id', productId);
+                        if (mainError) throw mainError;
+                        await loadProducts();
+                    }
+                    const finalProduct = allProducts.find(function (item) { return item.id === productId; });
+                    renderProductImages(productId, finalProduct && finalProduct.product_images || []);
+                    showStatus(storageCleanupWarning
+                        ? 'Photo removed from the gallery, but its stored file could not be deleted.'
+                        : 'Photo removed from the product gallery.', storageCleanupWarning ? 'warning' : 'success');
+                }
+            } catch (error) { showStatus(error.message || 'Product photo action failed.', 'error'); }
         });
 
         document.querySelector('[data-categories-table]')?.addEventListener('click', function (event) {

@@ -92,18 +92,16 @@
         } else {
             const min = Math.min.apply(null, prices);
             const max = Math.max.apply(null, prices);
-            const step = Math.max(100, Math.ceil((max - min || max || 100) / 5 / 100) * 100);
-            const ranges = [];
-            for (let start = Math.floor(min / step) * step; start <= max; start += step) {
-                ranges.push({ label: 'KES ' + start.toLocaleString('en-KE') + ' – KES ' + (start + step - 1).toLocaleString('en-KE'), min: start, max: start + step - 1 });
-            }
-            priceFilter.innerHTML = ranges.map(function (range, index) {
-                return '<div class="custom-control custom-checkbox d-flex align-items-center justify-content-between mb-3">' +
-                    '<input type="checkbox" class="custom-control-input" id="filter-price-' + index + '" data-filter-group="price" value="' + range.min + ':' + range.max + '">' +
-                    '<label class="custom-control-label" for="filter-price-' + index + '">' + api.escapeHtml(range.label) + '</label>' +
-                    '<span class="badge border font-weight-normal">' + prices.filter(function (price) { return price >= range.min && price <= range.max; }).length + '</span>' +
-                '</div>';
-            }).join('');
+            const lowerBound = Math.min(0, Math.floor(min / 100) * 100);
+            const upperBound = Math.max(100, Math.ceil(max / 100) * 100);
+            const step = 1;
+            priceFilter.innerHTML = '<div class="form-group mb-3">' +
+                '<label for="filter-price-min">Minimum price (KES) <output data-price-min-output>' + lowerBound.toLocaleString('en-KE') + '</output></label>' +
+                '<input class="custom-range" id="filter-price-min" type="range" min="' + lowerBound + '" max="' + upperBound + '" step="' + step + '" value="' + lowerBound + '" data-price-min aria-label="Minimum price in Kenya shillings">' +
+                '</div><div class="form-group mb-2">' +
+                '<label for="filter-price-max">Maximum price (KES) <output data-price-max-output>' + upperBound.toLocaleString('en-KE') + '</output></label>' +
+                '<input class="custom-range" id="filter-price-max" type="range" min="' + lowerBound + '" max="' + upperBound + '" step="' + step + '" value="' + upperBound + '" data-price-max aria-label="Maximum price in Kenya shillings">' +
+                '</div><button class="btn btn-sm btn-outline-secondary" type="button" data-price-reset>Reset price range</button>';
         }
 
         const modes = uniqueSorted(published.flatMap(function (product) { return valuesFor(product, 'orderingModes', 'ordering_modes'); }));
@@ -139,14 +137,13 @@
             if (checkedSizes.length && !checkedSizes.some(function (size) { return valuesFor(product, 'sizes', 'sizes').includes(size); })) return false;
             const checkedAvailability = selected('availability');
             if (checkedAvailability.length && !checkedAvailability.includes(product.availability || product.availability_status || '')) return false;
-            const checkedPrices = selected('price');
-            if (checkedPrices.length) {
-                const price = productPrice(product);
-                if (price === null || !checkedPrices.some(function (range) {
-                    const parts = range.split(':').map(Number);
-                    return price >= parts[0] && price <= parts[1];
-                })) return false;
-            }
+            const price = productPrice(product);
+            const minimumPrice = document.querySelector('[data-price-min]');
+            const maximumPrice = document.querySelector('[data-price-max]');
+            if (minimumPrice && maximumPrice && price !== null &&
+                (price < Number(minimumPrice.value) || price > Number(maximumPrice.value))) return false;
+            if (minimumPrice && maximumPrice && price === null &&
+                (Number(minimumPrice.value) > Number(minimumPrice.min) || Number(maximumPrice.value) < Number(maximumPrice.max))) return false;
             return true;
         }
 
@@ -192,10 +189,40 @@
         }
 
         document.addEventListener('change', function (event) {
-            if (event.target.matches('[data-filter-group], [data-sort-by], [data-page-size]')) {
+            if (event.target.matches('[data-filter-group], [data-sort-by], [data-page-size], [data-price-min], [data-price-max]')) {
                 currentPage = 1;
                 render();
             }
+        });
+        document.addEventListener('input', function (event) {
+            if (!event.target.matches('[data-price-min], [data-price-max]')) return;
+            const low = document.querySelector('[data-price-min]');
+            const high = document.querySelector('[data-price-max]');
+            if (!low || !high) return;
+            if (Number(low.value) > Number(high.value)) {
+                if (event.target === low) high.value = low.value;
+                else low.value = high.value;
+            }
+            const lowOutput = document.querySelector('[data-price-min-output]');
+            const highOutput = document.querySelector('[data-price-max-output]');
+            if (lowOutput) lowOutput.value = Number(low.value).toLocaleString('en-KE');
+            if (highOutput) highOutput.value = Number(high.value).toLocaleString('en-KE');
+            currentPage = 1;
+            render();
+        });
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('[data-price-reset]')) return;
+            const low = document.querySelector('[data-price-min]');
+            const high = document.querySelector('[data-price-max]');
+            if (!low || !high) return;
+            low.value = low.min;
+            high.value = high.max;
+            const lowOutput = document.querySelector('[data-price-min-output]');
+            const highOutput = document.querySelector('[data-price-max-output]');
+            if (lowOutput) lowOutput.value = Number(low.value).toLocaleString('en-KE');
+            if (highOutput) highOutput.value = Number(high.value).toLocaleString('en-KE');
+            currentPage = 1;
+            render();
         });
         if (searchInput) searchInput.addEventListener('input', function () { currentPage = 1; render(); });
         if (searchInput && searchInput.form) {

@@ -86,6 +86,20 @@
     display: none !important;
 }
 
+[data-account-menu] [hidden] {
+    display: none !important;
+}
+
+.kcbf-commerce-toast {
+    position: fixed;
+    z-index: 1080;
+    right: 1rem;
+    bottom: 1rem;
+    max-width: min(26rem, calc(100vw - 2rem));
+    margin: 0;
+    box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.18);
+}
+
 @media (max-width: 991.98px) {
     .kcbf-photo-placeholder--product {
         min-height: 210px;
