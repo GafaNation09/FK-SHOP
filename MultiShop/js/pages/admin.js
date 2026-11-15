@@ -4,11 +4,7 @@
 
     const api = window.KCBF = window.KCBF || {};
     const statusBox = document.querySelector('[data-admin-status]');
-    const accessPanel = document.querySelector('[data-admin-access]');
-    const ownerPanel = document.querySelector('[data-admin-owner-bootstrap]');
-    const deniedPanel = document.querySelector('[data-admin-denied]');
     const shell = document.querySelector('[data-admin-shell]');
-    const signinLink = document.querySelector('[data-admin-signin]');
     const signoutButton = document.querySelector('[data-admin-signout]');
     const bucketName = 'kcbf-product-media';
     const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -59,12 +55,10 @@
         return row;
     }
 
-    function showAccessDenied() {
-        setVisible(shell, false);
-        setVisible(ownerPanel, false);
-        setVisible(deniedPanel, true);
-        setVisible(accessPanel, false);
-        showStatus('This confirmed account does not have an active administrator role.', 'error');
+    function redirectToAccount() {
+        const account = new URL('../account.html', window.location.href);
+        account.searchParams.set('returnTo', '/multishop/admin/');
+        window.location.replace(account.toString());
     }
 
     async function getAccessToken() {
@@ -536,82 +530,46 @@
     async function initialize() {
         client = await api.backendReady;
         if (!client) {
-            setVisible(accessPanel, true);
-            setVisible(signinLink, true);
-            showStatus('Authentication is not configured. No sign-in or role changes can be made until a Supabase project is authorized and configured.', 'warning');
+            redirectToAccount();
             return;
         }
 
         const { data: authData, error: authError } = await client.auth.getUser();
         if (authError || !authData || !authData.user) {
-            const login = new URL('../account.html', window.location.href);
-            login.searchParams.set('returnTo', '/multishop/admin/');
-            if (signinLink) signinLink.href = login.toString();
-            setVisible(accessPanel, true);
-            showStatus('Sign in with your confirmed account to continue. Customer accounts do not receive administrator access.', 'info');
+            redirectToAccount();
             return;
         }
         currentUser = authData.user;
         if (!currentUser.email_confirmed_at) {
-            setVisible(accessPanel, true);
-            setVisible(signinLink, false);
-            setVisible(signoutButton, true);
-            showStatus('Confirm the email address for this account before accessing the administrator portal.', 'warning');
+            redirectToAccount();
             return;
         }
-        setVisible(signinLink, false);
-        setVisible(signoutButton, true);
-        const identity = document.querySelector('[data-admin-identity]');
-        if (identity) identity.textContent = currentUser.email || 'Verified account';
 
         const { data: roleData, error: roleError } = await client.from('admin_memberships')
             .select('user_id,email,role,permissions,status')
             .eq('user_id', currentUser.id)
             .maybeSingle();
-        if (roleError) {
-            setVisible(accessPanel, true);
-            showStatus('Administrator role storage is not ready. Apply and test the approved access migration before granting dashboard access.', 'warning');
+        if (roleError || !roleData || roleData.status !== 'active' || !['super_admin', 'admin'].includes(roleData.role)) {
+            redirectToAccount();
             return;
         }
         membership = roleData;
-        if (!membership) {
-            setVisible(ownerPanel, true);
-            setVisible(accessPanel, false);
-            showStatus('No administrator role is attached to this account. The first-owner bootstrap, if eligible, is checked by the trusted server.', 'info');
-        } else if (membership.status !== 'active') {
-            showAccessDenied();
-        } else {
-            setVisible(shell, true);
-            setVisible(accessPanel, false);
-            setVisible(ownerPanel, false);
-            setVisible(deniedPanel, false);
-            const roleLabel = document.querySelector('[data-admin-role]');
-            if (roleLabel) roleLabel.textContent = membership.role.replace('_', ' ');
-            activateTabs();
-            bindForms();
-            try {
-                await loadDashboardData();
-                if (isAllowed('admins:manage')) await refreshAdminList();
-                showStatus('Administrator access verified. Product, category and public-content writes use the signed-in user’s RLS permissions.', 'success');
-            } catch (error) {
-                showStatus(error.message || 'Dashboard data could not be loaded. Check the database migration and role permissions.', 'error');
-            }
+        setVisible(signoutButton, true);
+        const identity = document.querySelector('[data-admin-identity]');
+        if (identity) identity.textContent = currentUser.email || 'Verified account';
+        setVisible(shell, true);
+        const roleLabel = document.querySelector('[data-admin-role]');
+        if (roleLabel) roleLabel.textContent = membership.role.replace('_', ' ');
+        activateTabs();
+        bindForms();
+        try {
+            await loadDashboardData();
+            if (isAllowed('admins:manage')) await refreshAdminList();
+            showStatus('Administrator access verified. Product, category and public-content writes use the signed-in user’s RLS permissions.', 'success');
+        } catch (error) {
+            showStatus(error.message || 'Dashboard data could not be loaded. Check the database migration and role permissions.', 'error');
         }
     }
-
-    document.querySelector('[data-admin-bootstrap]')?.addEventListener('click', async function (event) {
-        const button = event.currentTarget;
-        button.disabled = true;
-        try {
-            showStatus('Checking the confirmed account with the trusted bootstrap service…', 'info');
-            await callAdminFunction('bootstrap-super-admin', 'POST', {});
-            window.location.reload();
-        } catch (error) {
-            showStatus(error.message || 'Owner bootstrap is not configured. No Super Admin role was created.', 'error');
-        } finally {
-            button.disabled = false;
-        }
-    });
 
     signoutButton?.addEventListener('click', async function () {
         if (!client) return;
@@ -621,6 +579,6 @@
     });
 
     api.backendReady.then(function () { return initialize(); }).catch(function (error) {
-        showStatus(error.message || 'Administrator portal could not be initialized.', 'error');
+        redirectToAccount();
     });
 }(window, document));

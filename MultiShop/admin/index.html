@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Store Administration | Knit&Crochet by Faith</title>
+    <title>Knit&Crochet by Faith</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex,nofollow">
-    <meta name="description" content="Protected store administration for Knit&Crochet by Faith.">
+    <meta name="description" content="Knit&Crochet by Faith customer services.">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
@@ -19,41 +19,16 @@
             <a href="../index.html" class="text-decoration-none kcbf-brand-mark" aria-label="Knit&Crochet by Faith storefront">
                 <span class="text-uppercase text-primary bg-dark px-2 py-1">Knit&amp;Crochet</span>
                 <span class="text-uppercase text-dark bg-primary px-2 py-1">by Faith</span>
-                <span class="ml-3 small text-muted">Administration</span>
             </a>
             <div class="d-flex align-items-center mt-2 mt-md-0">
                 <a class="btn btn-sm btn-outline-dark mr-2" href="../index.html">View storefront</a>
-                <a class="btn btn-sm btn-outline-dark mr-2" data-admin-signin href="../account.html?returnTo=%2Fmultishop%2Fadmin%2F">Sign in</a>
                 <button class="btn btn-sm btn-outline-dark" type="button" data-admin-signout hidden>Sign out</button>
             </div>
         </div>
     </header>
 
     <main class="container-fluid px-xl-5 py-4">
-        <div class="alert alert-info kcbf-admin-status" data-admin-status role="status" aria-live="polite">Checking administrator access…</div>
-
-        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-access hidden>
-            <div class="card-body p-4 p-md-5">
-                <h1 class="h3 mb-3">Administrator sign-in</h1>
-                <p class="text-muted">Sign in with your confirmed account. Customer accounts do not have administrator permissions.</p>
-                <a class="btn btn-primary" data-admin-login-link href="../account.html?returnTo=%2Fmultishop%2Fadmin%2F">Continue to sign in</a>
-            </div>
-        </section>
-
-        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-owner-bootstrap hidden>
-            <div class="card-body p-4 p-md-5">
-                <h1 class="h3 mb-3">Set up the first administrator</h1>
-                <p class="text-muted">If this is the confirmed owner account, request the one-time Super Admin setup. The server verifies the account against protected project configuration; this page never grants itself a role.</p>
-                <button class="btn btn-primary" type="button" data-admin-bootstrap>Verify owner account</button>
-            </div>
-        </section>
-
-        <section class="card kcbf-admin-card mx-auto my-5" style="max-width: 760px;" data-admin-denied hidden>
-            <div class="card-body p-4 p-md-5">
-                <h1 class="h3 mb-3">Administrator access required</h1>
-                <p class="text-muted mb-0">This confirmed account has no active administrator membership. Contact the store owner if you believe this is a mistake.</p>
-            </div>
-        </section>
+        <div class="alert alert-info kcbf-admin-status" data-admin-status role="status" aria-live="polite">Loading account…</div>
 
         <section data-admin-shell hidden>
             <div class="kcbf-admin-shell">

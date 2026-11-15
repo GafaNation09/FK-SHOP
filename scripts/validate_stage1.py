@@ -84,6 +84,7 @@ def main() -> None:
     print(f"PASS: JavaScript syntax ({len(js_files)} files)")
     subprocess.run(["node", str(ROOT / "scripts/test_backend_config.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_data.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_account_sessions.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
 
     expected_names = [
@@ -216,6 +217,23 @@ def main() -> None:
         count = source.count("js/catalog-render.js")
         assert_ok(count == (1 if needs_renderer else 0),
                   f"Unexpected catalog-render.js include count in {name}: {count}")
+    public_pages = ["index.html", "shop.html", "detail.html", "cart.html", "checkout.html", "contact.html", "account.html"]
+    for name in public_pages:
+        source = (ROOT / "MultiShop" / name).read_text()
+        document = html.fromstring(source)
+        admin_links = document.xpath("//a[contains(translate(@href,'ADMIN','admin'),'admin')]")
+        assert_ok(not admin_links, f"Public page advertises an admin route: {name}")
+        assert_ok("Administrator portal" not in source, f"Public page names the admin portal: {name}")
+    account_doc = html.fromstring((ROOT / "MultiShop/account.html").read_text())
+    assert_ok(bool(account_doc.xpath("//*[@data-auth-guest]")) and bool(account_doc.xpath("//*[@data-auth-session]")),
+              "Account page must provide distinct guest and signed-in states")
+    admin_html = (ROOT / "MultiShop/admin/index.html").read_text()
+    assert_ok('data-admin-signin' not in admin_html and 'data-admin-owner-bootstrap' not in admin_html,
+              "Admin page must not expose a public sign-in or owner-bootstrap panel")
+    account_js = (ROOT / "MultiShop/js/pages/account.js").read_text()
+    assert_ok("admin_memberships" in account_js and "/multishop/admin/" in account_js,
+              "Account sign-in must check active membership before routing administrators")
+    print("PASS: account guest/session state, role-based admin routing, no public admin links/panels")
     checkout = (ROOT / "MultiShop/checkout.html").read_text().lower()
     for sample in ["john", "doe", "new york", "123 street", "example@email.com",
                    "$150", "$160", "direct check", "bank transfer", "paypal"]:

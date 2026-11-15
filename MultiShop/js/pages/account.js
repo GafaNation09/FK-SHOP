@@ -6,10 +6,16 @@
     const forms = Array.from(document.querySelectorAll('[data-auth-form]'));
     const panels = Array.from(document.querySelectorAll('[data-auth-panel]'));
     const modeButtons = Array.from(document.querySelectorAll('[data-auth-mode]'));
+    const modeTabs = document.querySelector('[data-auth-tabs]');
+    const guestCard = document.querySelector('[data-auth-guest]');
+    const sessionCard = document.querySelector('[data-auth-session]');
+    const guestCopy = document.querySelector('[data-auth-guest-copy]');
+    const sessionCopy = document.querySelector('[data-auth-session-copy]');
     const statusBox = document.querySelector('[data-auth-status]');
     const signoutButton = document.querySelector('[data-auth-signout]');
     let supabase = null;
     let recoveryActive = false;
+    let redirecting = false;
 
     function showStatus(message, kind) {
         if (!statusBox) return;
@@ -35,11 +41,31 @@
         });
     }
 
+    function setSignedIn(signedIn, inRecoveryFlow) {
+        const showSession = Boolean(signedIn && !inRecoveryFlow);
+        if (guestCard) guestCard.hidden = showSession;
+        if (sessionCard) sessionCard.hidden = !showSession;
+        if (guestCopy) guestCopy.hidden = Boolean(signedIn);
+        if (sessionCopy) sessionCopy.hidden = !showSession;
+        if (modeTabs) modeTabs.hidden = Boolean(inRecoveryFlow);
+        if (signoutButton) signoutButton.hidden = !signedIn;
+    }
+
     function accountUrl(query) {
         const url = new URL('account.html', window.location.href);
-        if (query) url.search = query;
+        url.search = query || '';
         url.hash = '';
         return url.toString();
+    }
+
+    function isAdminDestination(value) {
+        try {
+            const target = new URL(value, window.location.origin);
+            const path = target.pathname.replace(/\/+$/, '');
+            return target.origin === window.location.origin && (path === '/multishop/admin' || path.startsWith('/multishop/admin/'));
+        } catch (error) {
+            return false;
+        }
     }
 
     function safeReturnTo() {
@@ -76,21 +102,75 @@
         else showStatus('Account services are connected and email confirmation is required. Public customer confirmation and recovery emails still need a verified SMTP sender.', 'info');
     }
 
-    function setSignedIn(signedIn) {
-        if (signoutButton) signoutButton.hidden = !signedIn;
+    async function isActiveAdministrator(userId) {
+        if (!supabase || !userId) return false;
+        const result = await supabase.from('admin_memberships')
+            .select('role,status')
+            .eq('user_id', userId)
+            .maybeSingle();
+        if (result.error) throw result.error;
+        const membership = result.data;
+        return Boolean(membership && membership.status === 'active' &&
+            (membership.role === 'super_admin' || membership.role === 'admin'));
+    }
+
+    async function routeAuthenticatedSession(session) {
+        if (!session || !session.user) {
+            setSignedIn(false, false);
+            return false;
+        }
+        setSignedIn(true, recoveryActive);
+        if (recoveryActive || redirecting) return redirecting;
+        if (!session.user.email_confirmed_at) {
+            setSignedIn(false, false);
+            if (signoutButton) signoutButton.hidden = false;
+            showStatus('Please confirm your email address before continuing. Check your inbox, then return and sign in.', 'info');
+            return false;
+        }
+
+        let isAdmin = false;
+        try {
+            isAdmin = await isActiveAdministrator(session.user.id);
+        } catch (error) {
+            showStatus('You are signed in, but account status could not be checked. Please refresh and try again.', 'error');
+            return false;
+        }
+
+        if (isAdmin) {
+            redirecting = true;
+            window.location.replace(new URL('/multishop/admin/', window.location.origin).toString());
+            return true;
+        }
+
+        const destination = safeReturnTo();
+        if (destination && !isAdminDestination(destination)) {
+            redirecting = true;
+            window.location.assign(destination);
+            return true;
+        }
+
+        showStatus('You are signed in. Continue shopping below, or sign out to switch accounts.', 'success');
+        return false;
     }
 
     function subscribeToAuthEvents() {
         supabase.auth.onAuthStateChange(function (event, session) {
             if (event === 'PASSWORD_RECOVERY') {
                 recoveryActive = true;
+                setSignedIn(Boolean(session), true);
                 setMode('update-password');
                 showStatus('Recovery link verified. Choose a new password for your account.', 'success');
             } else if (event === 'SIGNED_IN' && session && !recoveryActive) {
-                setSignedIn(true);
-                showStatus('You are signed in. Profile, order and wishlist tools are not available yet; administrator access is checked separately.', 'success');
+                window.setTimeout(function () {
+                    routeAuthenticatedSession(session).catch(function () {
+                        showStatus('You are signed in, but account status could not be checked. Please refresh and try again.', 'error');
+                    });
+                }, 0);
             } else if (event === 'SIGNED_OUT') {
-                setSignedIn(false);
+                recoveryActive = false;
+                redirecting = false;
+                setSignedIn(false, false);
+                setMode('signin');
             }
         });
     }
@@ -104,38 +184,64 @@
 
     api.backendReady.then(async function (client) {
         supabase = client;
-        const query = new URLSearchParams(window.location.search);
-        if (query.get('mode') === 'signup' || query.get('mode') === 'recovery') setMode(query.get('mode'));
         if (!supabase) {
             setConfigured(false);
+            setSignedIn(false, false);
             return;
         }
         setConfigured(true);
         subscribeToAuthEvents();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const hasSession = Boolean(sessionData && sessionData.session);
-        setSignedIn(hasSession);
 
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('mode') === 'signup' || query.get('mode') === 'recovery') setMode(query.get('mode'));
         if (query.get('signedOut') === '1') {
             await supabase.auth.signOut();
-            setSignedIn(false);
+            setSignedIn(false, false);
+            setMode('signin');
             showStatus('You are signed out.', 'success');
-        } else if (query.get('confirmed') === '1') {
-            showStatus(hasSession ? 'Email confirmed. Your sign-in session is active.' : 'Email confirmation received. You can now sign in.', 'success');
-            setMode('signin');
-        } else if (query.get('invite') === '1') {
-            showStatus(hasSession ? 'Administrator invitation accepted. Your role is checked separately.' : 'Administrator invitation accepted. Sign in to continue; access is checked separately.', 'success');
-            setMode('signin');
-        } else if (query.get('flow') === 'recovery') {
-            if (hasSession) {
+            return;
+        }
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            setSignedIn(false, false);
+            showStatus('Account session could not be loaded. Please refresh and try again.', 'error');
+            return;
+        }
+        const session = sessionData && sessionData.session;
+
+        if (query.get('flow') === 'recovery') {
+            if (session) {
                 recoveryActive = true;
+                setSignedIn(true, true);
                 setMode('update-password');
                 showStatus('Recovery link verified. Choose a new password for your account.', 'success');
             } else {
+                setSignedIn(false, false);
                 setMode('recovery');
                 showStatus('That recovery link could not establish a session. Request a new link and use the latest email.', 'error');
             }
+            return;
         }
+
+        if (session) {
+            const redirected = await routeAuthenticatedSession(session);
+            if (redirected) return;
+        } else {
+            setSignedIn(false, false);
+        }
+
+        if (query.get('confirmed') === '1') {
+            showStatus(session ? 'Email confirmed. Your account is active.' : 'Email confirmation received. You can now sign in.', 'success');
+            if (!session) setMode('signin');
+        } else if (query.get('invite') === '1') {
+            showStatus(session ? 'Your account is active. Continue shopping or sign out below.' : 'Your account is ready. Sign in to continue.', 'success');
+            if (!session) setMode('signin');
+        }
+    }).catch(function () {
+        setConfigured(false);
+        setSignedIn(false, false);
+        showStatus('Account services could not be initialized. Please refresh and try again.', 'error');
     });
 
     forms.forEach(function (form) {
@@ -164,8 +270,9 @@
                     });
                     if (error) throw error;
                     if (data && data.session) {
-                        showStatus('Account created and email confirmed. You are signed in.', 'success');
+                        await routeAuthenticatedSession(data.session);
                     } else {
+                        setMode('signin');
                         showStatus('Account request received. Check your email and confirm the address before signing in.', 'success');
                     }
                 } else if (kind === 'signin') {
@@ -175,9 +282,7 @@
                     });
                     if (error) throw error;
                     if (!data || !data.session) throw new Error('Sign-in did not create a session. Confirm your email and try again.');
-                    const destination = safeReturnTo();
-                    if (destination) window.location.assign(destination);
-                    else showStatus('You are signed in. Profile, order and wishlist tools are not available yet; administrator access is checked separately.', 'success');
+                    await routeAuthenticatedSession(data.session);
                 } else if (kind === 'recovery') {
                     const { error } = await supabase.auth.resetPasswordForEmail(String(values.email).trim(), {
                         redirectTo: accountUrl('?flow=recovery')
@@ -191,9 +296,15 @@
                     const { error } = await supabase.auth.updateUser({ password: values.password });
                     if (error) throw error;
                     recoveryActive = false;
-                    window.history.replaceState({}, document.title, accountUrl(''));
-                    setMode('signin');
-                    showStatus('Password updated. Sign in with your new password.', 'success');
+                    window.history.replaceState({}, document.title || '', accountUrl(''));
+                    const { data: currentSession } = await supabase.auth.getSession();
+                    if (currentSession && currentSession.session) {
+                        await routeAuthenticatedSession(currentSession.session);
+                    } else {
+                        setSignedIn(false, false);
+                        setMode('signin');
+                        showStatus('Password updated. Sign in with your new password.', 'success');
+                    }
                 }
             } catch (error) {
                 showStatus(explainError(error), 'error');
@@ -209,7 +320,10 @@
         try {
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
-            setSignedIn(false);
+            recoveryActive = false;
+            redirecting = false;
+            setSignedIn(false, false);
+            setMode('signin');
             showStatus('You are signed out.', 'success');
         } catch (error) {
             showStatus(explainError(error), 'error');
