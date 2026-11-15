@@ -61,28 +61,21 @@
         window.location.replace(account.toString());
     }
 
-    async function getAccessToken() {
-        if (!client) return '';
-        const { data, error } = await client.auth.getSession();
-        if (error || !data || !data.session) return '';
-        return data.session.access_token || '';
-    }
-
     async function callAdminFunction(name, method, payload) {
-        const token = await getAccessToken();
-        if (!token) throw new Error('Your session has expired. Sign in again.');
-        const response = await fetch('/.netlify/functions/' + name, {
+        if (!client) throw new Error('Your session is unavailable. Sign in again.');
+        const { data, error } = await client.functions.invoke(name, {
             method: method,
-            credentials: 'same-origin',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            body: payload === undefined ? undefined : JSON.stringify(payload)
+            body: payload
         });
-        const result = await response.json().catch(function () { return {}; });
-        if (!response.ok) throw new Error(result.error || 'The trusted administrator service is not available.');
-        return result;
+        if (error) {
+            let message = '';
+            if (error.context && typeof error.context.clone === 'function') {
+                const responseBody = await error.context.clone().json().catch(function () { return {}; });
+                message = responseBody && responseBody.error ? responseBody.error : '';
+            }
+            throw new Error(message || error.message || 'The trusted administrator service is not available.');
+        }
+        return data || {};
     }
 
     function fillCategoryOptions() {
@@ -390,12 +383,15 @@
         body.replaceChildren();
         (result.admins || []).forEach(function (admin) {
             const permissions = Array.isArray(admin.permissions) ? admin.permissions.join(', ') : '';
+            const status = admin.status === 'active' && admin.email_confirmed === false
+                ? 'Awaiting email confirmation'
+                : admin.status;
             const actions = [];
             if (admin.role !== 'super_admin') {
                 actions.push(makeButton(admin.status === 'suspended' ? 'Activate' : 'Suspend', 'toggle-admin', admin.user_id));
                 actions.push(makeButton('Remove access', 'remove-admin', admin.user_id, 'btn-outline-danger'));
             }
-            body.appendChild(tableRow([admin.email, admin.role, permissions || 'None', admin.status], actions));
+            body.appendChild(tableRow([admin.email, admin.role, permissions || 'None', status], actions));
         });
     }
 
@@ -494,14 +490,20 @@
             if (!permissions.length) { showStatus('Choose at least one permission for the invited administrator.', 'error'); return; }
             try {
                 showStatus('Sending verified administrator invitation…', 'info');
-                await callAdminFunction('admin-management', 'POST', {
+                const result = await callAdminFunction('admin-management', 'POST', {
                     action: 'invite',
                     email: form.elements.email.value.trim(),
                     permissions: permissions
                 });
                 form.reset();
                 await refreshAdminList();
-                showStatus('Invitation sent. The new administrator must accept the email invitation before signing in.', 'success');
+                if (result.invited) {
+                    showStatus('Invitation sent. The new administrator must confirm their email before administrator access becomes available.', 'success');
+                } else if (result.emailConfirmed) {
+                    showStatus('Administrator access was granted to the existing confirmed account. They can use the customer sign-in page.', 'success');
+                } else {
+                    showStatus('The account exists but is not email-confirmed. Administrator access will remain blocked until that person confirms their email.', 'warning');
+                }
             } catch (error) {
                 showStatus(error.message || 'The invitation service is not configured. No invitation was sent.', 'error');
             }

@@ -4,32 +4,35 @@ Research and project verification date: 2026-11-15. External page content is tre
 
 ## Official platform guidance
 
-- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory and should be outside the publish directory. The Functions route defaults to `/.netlify/functions/<name>`. Do not add Functions or deployment overrides until the current Base/Publish/Functions settings are verified. [1]
-- Supabase publishable keys are public browser credentials constrained by grants and RLS; secret keys are privileged and must stay server-side. The browser may use only the restricted publishable key. [2]
+- Netlify's default Functions directory is `netlify/functions` relative to the site's base directory and should be outside the publish directory. Do not change deployment settings until the current Base/Publish/Functions configuration has been read. [1]
+- Supabase publishable keys are public browser credentials constrained by grants and RLS; secret keys are privileged and must stay server-side. [2]
 - Supabase requires table grants and row-level security together. Public read policies should expose only intended rows, and user-owned records should be scoped to `auth.uid()`. [3]
 - Supabase Auth supports email/password signup, confirmation, sign-in, sign-out and password recovery. Redirects must match the configured allow-list. [4]
-- Supabase's built-in Auth SMTP is for non-production testing: it refuses email delivery to addresses outside the Supabase project team and is currently limited to two messages per hour. Public customer signup confirmation and password recovery require a custom SMTP sender. Keep email confirmation enabled; do not disable it to work around missing delivery. [5] [6]
-- Supabase's GitHub integration can run repository migrations on Supabase branches and, if enabled, production. Migration files without a matching database history entry are treated as unapplied and can be run again. The project migration versions must be reconciled with the repository before enabling automatic deployment. [7]
+- Supabase's built-in Auth SMTP is for non-production testing: it refuses delivery to addresses outside the Supabase project team and is currently limited to two messages per hour. Public customer signup confirmation, password recovery and invitations to new accounts require custom SMTP. Keep email confirmation enabled. [5] [6]
+- Supabase Edge Functions can hold server-only secrets and run trusted administrator operations. Browser code should invoke a function with the user's session; keep JWT verification enabled and restrict CORS to the production origin. The Auth Admin invite API must not run in the browser. [8] [9] [10] [11] [12]
+- Supabase's GitHub integration can run repository migrations on branches and, if enabled, production. Migration files without matching database history may be treated as unapplied. Reconcile the project's recorded versions with repository files before enabling automatic production migration deployment. [7]
 
 ## Verified project and production observations
 
 - Netlify site: `fkshopping`, customer route `https://fkshopping.netlify.app/multishop/`; account route `https://fkshopping.netlify.app/multishop/account.html`.
-- Netlify published main commit `9dd497624911f1230f27190b7f4a4e1aa95c3f41` (short SHA `9dd4976`) as Ready, production context, deploy ID `6af8d6f15a50ee276230e1b3`. The deployment contains no Netlify Functions.
-- The live runtime-config endpoint returns HTTP 200 and contains only the selected Supabase HTTPS URL and publishable key. The account page and auth scripts return HTTP 200.
-- Browser verification found `window.KCBF.backendReady` resolved to a Supabase client. All four account forms—sign-in, signup, recovery and password update—have enabled submit buttons. The Sign in, Create account and Forgot password panels were opened successfully. No credentials were entered and no form was submitted.
-- Supabase project `bifvzlqeznyhbwoxkgvq` is healthy. Public Auth settings show email sign-in enabled, signup enabled (`disable_signup: false`) and email confirmation required (`mailer_autoconfirm: false`).
-- Auth dashboard settings have been saved with Site URL `https://fkshopping.netlify.app/multishop/` and the account callback pattern `https://fkshopping.netlify.app/multishop/account.html**`.
-- Supabase records two applied migrations: `20261114201643` (`stage1_storefront`) and `20261114201838` (`auth_admin_access`). The repository filenames are `20261114192000_stage1_storefront.sql` and `20261114214500_auth_admin_access.sql`, so their version histories do not match.
-- The project has RLS-enabled `product_categories`, `products`, `product_images`, `business_settings`, `customer_profiles`, `admin_memberships` and `admin_audit_logs` tables. There are seven active category rows, no products or public business-setting rows, no customer profiles and no admin memberships.
-- No custom SMTP sender was configured or verified in this release. The owner cannot access the intended Super Admin mailbox, so no user or admin membership has been provisioned. No signup or recovery email has been sent.
-- The repository has no `netlify.toml` or `netlify/functions/`. The Netlify integration does not expose Base/Publish/Functions settings; trusted server-side admin bootstrap/invitations are not deployed.
-- The Supabase GitHub integration is not enabled. It is optional for the website's runtime connection. Do not enable automatic production migration deployment until the migration-history mismatch is reconciled.
+- The last verified production application deployment before this main update was commit `e7edfd1` on `main`, Netlify deploy ID `6af964a8af5d128563af519b`, state `ready`. The latest local main source change connects the admin team UI to a Supabase Edge Function; its Netlify publication is being verified separately.
+- The public runtime config contains only the selected Supabase HTTPS URL and publishable key. No service-role or secret key is in browser assets.
+- Supabase project `bifvzlqeznyhbwoxkgvq` is healthy. Email/password signup is enabled and email confirmation is required. Auth Site URL is `https://fkshopping.netlify.app/multishop/`; the account callback allow-list is `https://fkshopping.netlify.app/multishop/account.html**`.
+- The repository's catalog and auth/RLS migrations were already applied. A further additive migration, `admin_management_edge_helpers`, is now applied; its Auth lookup and membership-list helpers are executable only by `service_role`.
+- A privacy-preserving aggregate query returned one administrator membership, one active Super Admin, and one email-confirmed admin. The exact email and any credentials were not returned or saved to repository source.
+- Supabase Edge Function `admin-management` is active, version 1, with `verify_jwt=true`. It authenticates the caller, verifies confirmed email and active membership/permission, and performs team operations with server-only credentials.
+- Function transport tests passed: production-origin `OPTIONS` returned 204 with the exact allowed origin and methods; an unauthenticated `GET` returned 401. A real signed-in `GET`/invitation/update has not yet been tested in the user's browser.
+- The local account-session behavior tests confirm that guest forms and signed-in account state are distinct, confirmed active administrators route to the admin page, and unauthorized users are redirected. Public HTML has no visible admin link. Production verification with the owner's actual signed-in session is still pending.
+- No custom SMTP sender was configured or verified. No new customer signup or password-recovery message was sent. Existing confirmed users can sign in, but public confirmation/recovery and invitations to new addresses remain email-provider dependent.
+- The Netlify project has no deployed Netlify Functions; the team-management endpoint is implemented with Supabase Edge Functions. The Supabase GitHub integration is not enabled and is optional for the runtime website connection.
 
 ## Implementation consequences
 
-The public account page now connects to Supabase and its forms are enabled. This verifies the client configuration and UI state, not real signup, confirmation-email delivery, sign-in or password recovery. Public customer email flows require custom SMTP and a test mailbox the tester can access. Error messages now explain the SMTP limitation rather than hiding it.
+The account page uses the public Supabase client for customer authentication. Guest sign-in, signup and recovery controls are separate from the signed-in account state. Admins use the same customer sign-in form; after confirmation, active members with administrator access are sent to `/multishop/admin/`. The admin route is not advertised to public visitors and sends guests back to the customer account flow.
 
-Do not create the first Super Admin for an inaccessible email or bypass confirmation. The selected project currently has no administrator membership. Implement trusted server-side bootstrap and invitation endpoints only after verifying Netlify's Functions directory. The admin shell is not a functional admin portal until an accessible, email-confirmed Super Admin is provisioned.
+Administrator listing, invitation, suspension/reactivation and removal use the JWT-protected `admin-management` Edge Function. Database helpers are restricted to `service_role`; no privileged key is included in client code. New invitations require working custom SMTP, and the browser session test is still pending. Orders, customer management, custom orders, payments and other unbuilt commerce workflows remain out of scope for this verification.
+
+Do not enable automatic Supabase GitHub migration deployment until the existing database migration history is reconciled with the repository. Do not disable email confirmation or grant administrator roles based solely on an unverified email address.
 
 ### References
 
@@ -40,3 +43,8 @@ Do not create the first Super Admin for an inaccessible email or bypass confirma
 [5]: https://supabase.com/docs/guides/auth/auth-smtp "Supabase custom SMTP configuration"
 [6]: https://supabase.com/docs/guides/auth/rate-limits "Supabase Auth rate limits"
 [7]: https://supabase.com/docs/guides/deployment/branching/github-integration "Supabase GitHub integration"
+[8]: https://supabase.com/docs/guides/functions "Supabase Edge Functions"
+[9]: https://supabase.com/docs/reference/javascript/functions-invoke "Supabase JavaScript Functions invoke"
+[10]: https://supabase.com/docs/guides/functions/secrets "Supabase Edge Function secrets"
+[11]: https://supabase.com/docs/guides/functions/cors "Supabase Edge Function CORS"
+[12]: https://supabase.com/docs/reference/javascript/auth-admin-inviteuserbyemail "Supabase Admin invitation API"

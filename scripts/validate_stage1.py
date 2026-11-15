@@ -153,6 +153,7 @@ def main() -> None:
     migration_paths = [
         ROOT / "supabase/migrations/20261114192000_stage1_storefront.sql",
         ROOT / "supabase/migrations/20261114214500_auth_admin_access.sql",
+        ROOT / "supabase/migrations/20261115110000_admin_management_edge_helpers.sql",
         ROOT / "supabase/seed/20261114192000_initial_categories.sql",
     ]
     for sql_path in migration_paths:
