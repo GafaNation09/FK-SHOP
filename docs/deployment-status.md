@@ -1,21 +1,35 @@
 # Netlify Deployment Status
 
-**Checked:** 2026-11-14, 21:01 EAT. **Site:** `fkshopping`. **Published commit:** [`f59e82d`](https://github.com/GafaNation09/FK-SHOP/commit/f59e82dbea6b1dda47c07baad3883972e549775d). **Deployment:** Ready, production context, branch `main`. **Public app path:** [`https://fkshopping.netlify.app/multishop/`](https://fkshopping.netlify.app/multishop/).
+**Checked:** 2026-11-16 03:01 EAT. **Site:** `fkshopping`. **Application commit published:** [`b6e02ec`](https://github.com/GafaNation09/FK-SHOP/commit/b6e02ec85ade70348319a4608bae58752beb8b2d). **Netlify deploy:** `6afa1caed838c871a60e1ef6`, Ready, production context, branch `main`, published 2026-11-15 20:57:27 UTC. **Public app:** [`https://fkshopping.netlify.app/multishop/`](https://fkshopping.netlify.app/multishop/). A later documentation-only update does not change the application code in `b6e02ec`.
 
 ## Confirmed in production
 
-The Netlify reader reports that commit `f59e82d` is the current Ready production deployment. The deploy record reports six page files and 21 assets changed, with no Netlify Functions deployed. The deployment-specific URL is [`https://6af8a1099a6348f87a3b99d1--fkshopping.netlify.app/multishop/`](https://6af8a1099a6348f87a3b99d1--fkshopping.netlify.app/multishop/). The root site and the preserved `/multishop/` path serve the new branded storefront.
+The Netlify deploy record matches the full `b6e02ec` commit SHA and reports Ready with no build error. The deployment uploaded the new Help and FAQ pages, account/profile modules, currency controller, customer commerce modules and supporting assets. No Netlify Functions were deployed; administrator team operations continue to use the separately deployed Supabase Edge Function `admin-management`.
 
-A browser smoke check confirmed that the Home page loads the seven category records after its asynchronous JSON request completes. It retains twelve category slots, with seven real categories and five clearly marked expansion placeholders. Featured and Recent each render eight empty product placeholders. The Shop page loads seven category filters and nine empty product cards; its cart, wishlist and detail actions are disabled while no products exist. The new Detail route opens and reports that no product is selected or published. The public JSON contains no products, so no demo item, price, rating or review is represented as real.
+Read-only browser checks confirmed that the public Shop, product-detail, Cart, Help and FAQ routes load. The existing MultiShop page sections and responsive layout remain in place. The Shop displays the live inclusive price range **KES 0–10,000**, and the Grid/List controls switch state and can be restored to Grid. The currency switch displayed the existing KES product price as USD and back to KES; KES remains the base/order currency, and the page shows the exchange-rate source link. The language selector is absent.
 
-A first non-cache-busted alias read returned an older page snapshot. The exact deployment URL and a cache-busted `/multishop/` read both showed commit `f59e82d`, and the live browser showed the new pages. The earlier response was stale cache content, not the current deployment.
+The Shop currently contains **one published product**. Its detail page opens from the card and shows its price, available product fields and description area. That record currently has one saved photo and a placeholder description; the new admin editor supports multiple photos and the detail gallery supports selectable thumbnails, but a real owner-authenticated upload/edit has not been performed.
 
-## Still unknown; no settings changed
+The Cart page renders a responsive table/empty state and distinguishes the KES product subtotal from a final amount. Shipping remains “To be configured,” the final total remains “To be calculated,” and checkout is disabled. No payment or delivery provider is active, and no test-mode success flow is exposed. Adding a product only saves cart data; it does not create an order.
 
-The read-only Netlify project reader does not expose the Base directory, Publish directory, build command, Functions directory or environment-variable names. The Netlify dashboard still requires account sign-in to inspect those values. No Netlify settings or secrets were read or changed. There is no `netlify.toml`, no `netlify/functions/` folder and no configured Supabase project. Do not add deployment overrides or claim authentication, database, orders, payments or backend functions are operational until the actual project configuration and provider setup are verified.
+The Help page contains a working callable phone link for **0739107295** (`tel:+254739107295`); the FAQ accordion opens and the answers explain current payment, account and cart limits. The owner confirmed the Netlify badge was already removed in the Netlify dashboard; no code workaround was added.
 
-The current production site is a catalog foundation with honest placeholders, not a live checkout. The empty catalog and disabled actions are intentional until real product information and backend services are configured.
+The signed-in browser session shows the member-only **My profile** and **Sign out** controls while hiding guest sign-in/create-account actions. The session inspected does not have an administrator-membership row, so it is not evidence of Super Admin access. No email address, password, token, local storage value, customer record or cart contents were read during these checks.
 
-## Sign-in steps for the next configuration check
+## Automated verification
 
-Use the secure browser handoff when it is opened for the Netlify dashboard. Sign in to the Netlify account that owns `fkshopping`, choosing the existing login provider shown on that page (for example, GitHub if that is how the account was created), and complete any email or multi-factor check inside the browser. Do not send passwords, recovery codes or one-time codes in chat. Once the dashboard opens, the current Base/Publish/Functions/build settings and environment-variable names can be read without changing production configuration.
+The repository validator and focused tests passed before publication:
+
+- `python3 scripts/validate_stage1.py` — JavaScript syntax, HTML parsing/section order, local static routes/assets, PostgreSQL SQL parsing, and existing configuration/data checks.
+- Deterministic tests cover account menu and sign-out state, profile updates/email verification, cross-device cart/favourites synchronization and guest-to-account merge in isolated browser fixtures, stock-capped cart behavior, exact inclusive price-range boundaries, saved Grid/List mode, KES/USD conversion with KES fallback, product descriptions and a selectable multi-photo gallery, and human-readable availability labels.
+- `git diff --check` passed; the supplied administrator identity and private Supabase credentials are absent from public source.
+
+These tests are not a substitute for the owner's authenticated production flow. No customer signup, recovery message, payment, order, admin photo upload, or real two-device customer-data mutation was executed against production.
+
+## Remaining owner/provider dependencies
+
+1. Sign in through the normal account page with the existing owner Super Admin account and verify admin routing/team listing, then create or update a real product description and multiple photos. Do not share passwords or verification codes in chat. The signed-in customer account tested above is not an administrator.
+2. Configure a verified SMTP sender/domain before relying on public confirmation, recovery or administrator-invitation email. Keep email confirmation enabled.
+3. Select and onboard the real payment provider(s) (for example, an eligible live M-Pesa merchant and/or card provider) and provide credentials through secure provider settings. Add verified server-side payment callbacks and delivery rules before enabling checkout or saved methods. Until then, payment methods, order creation and final totals intentionally remain unavailable.
+4. Reconcile Supabase's generated migration-history versions with the repository filenames before enabling automated GitHub-to-Supabase production DDL. The applied RLS policies and public KES/telephone settings were verified without reading customer records.
+5. Netlify's Base/Publish/build/Functions configuration and environment-variable names have not been read or changed. The current `/multishop/` app and root route continue to work; no deployment override was introduced.

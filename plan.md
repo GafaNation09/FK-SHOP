@@ -44,7 +44,7 @@ Do not copy all of `MultiShop/` into a second web root. Keep the public site pat
 
 ### Stage 1 — Audit and foundation — **Complete**
 
-The repository/live-site audit and recoverable checkpoint are complete. A static, editable brand/catalog foundation, seven approved category records, page-scoped catalog scripts, preserved page sections and the missing Shop Detail route are committed and deployed. The selected Supabase project has the Stage 1 schema and seven categories. The products and public business-settings tables are currently empty.
+The repository/live-site audit and recoverable checkpoint are complete. A static, editable brand/catalog foundation, seven approved category records, page-scoped catalog scripts, preserved page sections and the missing Shop Detail route are committed and deployed. At the Stage 1 handoff the selected Supabase project had the Stage 1 schema and seven categories with an empty catalog; its current published product and public settings are described in Stage 2 and `docs/deployment-status.md`.
 
 ### Stage 2 — Customer commerce and access foundation — **In progress; account-owned shopping/profile UI and database tables implemented, owner-session verification pending**
 
