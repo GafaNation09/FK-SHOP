@@ -51,6 +51,22 @@
     "terms": null,
     "ownerApprovalRequired": true
   },
+  "help": {
+    "faqs": [
+      {"question":"How do I view a product and its photos?","answer":"Select the product photo, name or view-details button. The detail page shows its description, available product information and a selectable gallery of saved photos."},
+      {"question":"Can I use my cart and favourites on another device?","answer":"Yes. Sign in to sync them to your customer account. Guests can keep a browser-local cart and favourites on the same device only."},
+      {"question":"What do the KES and USD prices mean?","answer":"KES is the store's base and future order currency. USD is an approximate display conversion using a daily exchange-rate estimate. It does not change the amount due."},
+      {"question":"Can I pay online or save a payment method?","answer":"Not yet. Online payment is unavailable until a live merchant provider is selected and securely configured. Never send card numbers, CVV or banking passwords to the store."},
+      {"question":"Where can I see my paid, pending or revoked orders?","answer":"Sign in and open your account's Order history. It shows genuine records saved for your account. No order is created by adding a product to the cart."},
+      {"question":"Can I update my profile or email?","answer":"You can update your name and telephone after signing in. Email changes are submitted through Supabase Auth and require confirmation before the new address becomes the sign-in email."},
+      {"question":"Does the store save my password?","answer":"The store never displays or saves a readable password. Your browser or password manager may offer to save it. Use the Forgot password link to request a secure reset email."},
+      {"question":"Why might confirmation or recovery email not arrive?","answer":"Check your spam folder and use the most recent link. Public email delivery still depends on the store's verified SMTP sender configuration."},
+      {"question":"How do I contact Knit&Crochet by Faith?","answer":"Call 0739107295 or visit the Help page."}
+    ],
+    "sections": [
+      {"title":"Product and order help","body":"Open a product from the shop to read its description and view every saved photo. Availability, materials, sizing and production details are shown when the owner has entered them.\n\nNew online checkout and payment are not enabled yet. The cart can be saved to a signed-in account, but it is not an order and no payment is taken. For an existing order, sign in and check its current status or call the store."}
+    ]
+  },
   "siteNotices": {
     "contactPlaceholder": "Additional business contact details will be added after owner confirmation.",
     "commercePlaceholder": "KES is the order currency. USD is an estimated display conversion only; payment and delivery need verified live providers."

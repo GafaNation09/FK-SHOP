@@ -325,6 +325,7 @@
             }, defaults);
             if (field.name === 'shop.price_filter_min_kes') field.value = Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) < 1000000 ? String(value) : '0';
             else if (field.name === 'shop.price_filter_max_kes') field.value = Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 1000000 ? String(value) : '10000';
+            else if (field.name === 'help.faqs' || field.name === 'help.sections') field.value = JSON.stringify(Array.isArray(value) ? value : [], null, 2);
             else if (typeof value === 'string') field.value = value;
         });
     }
@@ -583,12 +584,33 @@
             !Number.isInteger(maximum) || maximum < 1 || maximum > 1000000 || minimum >= maximum) {
             throw new Error('Set a valid KES price range with a non-negative minimum below the maximum.');
         }
+        function parseContentList(settingName, maxItems, firstKey, firstLimit, secondKey, secondLimit) {
+            let items;
+            try { items = JSON.parse(form.querySelector('[name="' + settingName + '"]').value); }
+            catch (error) { throw new Error(settingName === 'help.faqs' ? 'FAQs must be a valid JSON list.' : 'Help sections must be a valid JSON list.'); }
+            if (!Array.isArray(items) || items.length > maxItems) throw new Error(settingName + ' must be a JSON list of no more than ' + maxItems + ' entries.');
+            return items.map(function (item, index) {
+                if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Content entry ' + (index + 1) + ' must be an object.');
+                const first = typeof item[firstKey] === 'string' ? item[firstKey].trim() : '';
+                const second = typeof item[secondKey] === 'string' ? item[secondKey].trim() : '';
+                if (!first || !second || first.length > firstLimit || second.length > secondLimit) {
+                    throw new Error('Content entry ' + (index + 1) + ' needs a ' + firstKey + ' up to ' + firstLimit + ' characters and a ' + secondKey + ' up to ' + secondLimit + ' characters.');
+                }
+                return { [firstKey]: first, [secondKey]: second };
+            });
+        }
+        const managedValues = {
+            'help.faqs': parseContentList('help.faqs', 40, 'question', 240, 'answer', 2000),
+            'help.sections': parseContentList('help.sections', 20, 'title', 120, 'body', 3000)
+        };
         const rows = Array.from(form.querySelectorAll('[name]')).map(function (field) {
             let settingValue = field.value.trim();
             if (field.name === 'shop.price_filter_min_kes' || field.name === 'shop.price_filter_max_kes') {
                 const number = Number(settingValue);
                 if (!Number.isInteger(number) || number < 0 || number > 1000000) throw new Error('Price filter bounds must be whole Kenyan shillings.');
                 settingValue = number;
+            } else if (Object.prototype.hasOwnProperty.call(managedValues, field.name)) {
+                settingValue = managedValues[field.name];
             }
             return { setting_key: field.name, setting_value: settingValue, is_public: true };
         });

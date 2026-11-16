@@ -50,3 +50,8 @@ Read-only live browser smoke checks confirmed the production Home route with the
 ### Limitations remain
 
 The successful deploy is not full acceptance or production readiness. Checkout/order creation/payment/delivery remain disabled. Help/FAQ are not admin-managed. Clean `/product/{slug}` routes, redirects and Open Graph previews remain outstanding. Admin metrics still represent loaded subsets rather than complete financial/business totals; comprehensive order, inventory, finance, reporting, export and audit workflows are not implemented. Account email and invitations require verified SMTP. The Supabase migration-history timestamp mismatch and unknown Netlify Base/Publish/build/Functions settings remain documented limitations. See [`master-prompt-progress.md`](master-prompt-progress.md) for the complete phased status and priority register.
+
+
+### Documentation follow-up deploy — 2026-11-16 21:24 EAT
+
+Documentation follow-up commit [`0991b7e1bc88c901778dfa9c98a9a5ff4b833261`](https://github.com/GafaNation09/FK-SHOP/commit/0991b7e1bc88c901778dfa9c98a9a5ff4b833261) is now `main`/`origin/main`. Netlify deploy [`6afb4a49f698e9c03cd6faa4`](https://app.netlify.com/projects/fkshopping/deploys/6afb4a49f698e9c03cd6faa4) is Ready for that exact documentation commit. It uploaded documentation/static assets only; application behavior is unchanged from the code commit `db0415232f8452b697271caedefb97d37397b87c` verified above. No live database, hosting, content or provider settings were changed.

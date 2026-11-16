@@ -303,3 +303,9 @@
         justify-content: center !important;
     }
 }
+
+
+/* Managed Help/FAQ copy is plain text; preserve authored line breaks without HTML rendering. */
+.kcbf-preserve-lines {
+    white-space: pre-line;
+}

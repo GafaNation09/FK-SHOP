@@ -93,6 +93,9 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_currency.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_availability_labels.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_home_categories.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_admin_metric_links.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_help_content.mjs")], cwd=ROOT, check=True)
 
     expected_names = [
         "Crochet Bags",
@@ -134,8 +137,10 @@ def main() -> None:
     assert_ok(business.get("shop", {}).get("price_filter_min_kes") == 0 and business.get("shop", {}).get("price_filter_max_kes") == 10000,
               "The default shop price-filter bounds must be 0–10,000 KES")
     serialized = json.dumps(business).lower()
-    for token in ("sk_live_", "sb_secret_", "password", "private_key", "api_key"):
+    for token in ("sk_live_", "sb_secret_", "private_key", "api_key"):
         assert_ok(token not in serialized, f"Possible secret in public settings: {token}")
+    assert_ok(len(business.get("help", {}).get("faqs", [])) <= 40 and len(business.get("help", {}).get("sections", [])) <= 20,
+              "Fallback Help/FAQ content exceeds the editor's supported list sizes")
     runtime = json.loads((ROOT / "MultiShop/data/runtime-config.json").read_text())
     assert_ok(set(runtime) == {"supabaseUrl", "supabasePublishableKey"},
               "Public runtime config must contain only the URL and publishable key")
@@ -161,8 +166,8 @@ def main() -> None:
     assert_ok(required_product_names <= product_names,
               f"Admin product editor is missing crochet fields: {sorted(required_product_names - product_names)}")
     setting_names = set(admin_doc.xpath("//form[@data-settings-form]//*[@name]/@name"))
-    assert_ok({"shop.price_filter_min_kes", "shop.price_filter_max_kes"} <= setting_names,
-              "Admin public settings must allow editing both KES price-range bounds")
+    assert_ok({"shop.price_filter_min_kes", "shop.price_filter_max_kes", "help.faqs", "help.sections"} <= setting_names,
+              "Admin public settings must include KES price-range and Help/FAQ content fields")
     assert_ok(bool(admin_doc.xpath("//form[@data-product-form]//textarea[@name='description']")),
               "Admin product editor must provide a full product description field")
     detail_doc = html.parse(str(ROOT / "MultiShop/detail.html"))

@@ -39,7 +39,7 @@ Users with `catalog:write` can create and edit category name, URL slug, descript
 
 ### Store content — **Implemented**
 
-Users with `content:write` can save the public brand description, public contact email, public telephone, physical address, and whole-KES minimum/maximum shop price-filter bounds. The approved brand identity is fixed in the UI. Saved values are written as public settings and read by the storefront data loader. Anything entered here is intended for public display; do not enter private contact details unless approved for publication.
+Users with `content:write` can save the public brand description, public contact email, public telephone, physical address, and whole-KES minimum/maximum shop price-filter bounds. The form also has JSON-list editors for FAQ question/answer pairs and Help guide title/body sections, bounded to 40 FAQs and 20 help sections. Validation rejects malformed lists, empty values, and overlong entries. These arrays are written to the existing `business_settings` table under `help.faqs` and `help.sections`; the existing public-read/content-write RLS policies apply, so no new table or privilege was introduced. Public pages construct the FAQ accordions and Help text using text nodes, not `innerHTML`, and reload published content when the page is refreshed. Fallback copy remains in `business-settings.json`. A full live admin content edit/save/public re-read has not yet been performed. All saved values are intended for public display; do not enter private contact details or confidential information unless it is approved for publication.
 
 ### Customers — **Partially implemented**
 
@@ -60,7 +60,7 @@ Invitation email depends on a correctly configured, verified SMTP sender. Reposi
 ## Incomplete or unavailable functions
 
 - **Dashboard metrics — Partially implemented:** loaded-record counts only; not complete totals, live analytics, revenue, or accounting figures.
-- **FAQ content management — Not implemented:** the public FAQ page exists, but the inspected admin has no FAQ editor or CMS action. FAQ changes therefore require the appropriate source/content deployment process, not a fictional admin button.
+- **FAQ/Help content management — Implemented, not fully tested:** JSON editors and safe public rendering now exist through `business_settings`; local tests cover the default records, plain-text insertion, malformed-data fallback and editor wiring. A live authorized save and public reload still needs confirmation. There are no draft/publish states, rich-text editor, per-record reorder controls, or separate FAQ authoring permissions beyond `content:write`.
 - **Payments and financial operations — Not implemented:** payment activity is read-only. No capture, refund, reconciliation, settlement, or financial export control exists.
 - **Order creation and checkout — Blocked:** admin order management is limited to existing records; customer checkout is intentionally unavailable until verified payment and delivery providers and the necessary server-side flow are configured.
 - **Exports — Not implemented:** no customer, order, catalog, or financial export action appears in the admin UI.
@@ -72,7 +72,7 @@ Invitation email depends on a correctly configured, verified SMTP sender. Reposi
 
 Product, photo, category, and public-settings changes save to the configured Supabase database/storage. The public catalog/settings loader (`MultiShop/js/storefront-data.js`, with rendering in `MultiShop/js/catalog-render.js` and page modules under `MultiShop/js/pages/`) reads approved public data. The admin success notices instruct the operator to refresh the storefront; a full page refresh/reload is the reliable way to see saved updates. Published products and active categories are the public-facing records; drafts, archived products, and inactive categories are not presented as active public catalog content. Photo records and object storage both need to succeed for gallery changes to display properly.
 
-The checked-in JSON under `MultiShop/data/` is a separate fallback/reference data source and is not automatically updated by admin saves. Editing those JSON files is not the same as saving a live database record. Public content changes take effect through the configured live data loader after save and refresh; static markup changes such as FAQ copy require a code/deployment update. Do not publish until changed prices, descriptions, availability, contact details, and photos have been reviewed for accuracy.
+The checked-in JSON under `MultiShop/data/` is a separate fallback/reference data source and is not automatically updated by admin saves. Editing those JSON files is not the same as saving a live database record. Public content changes (including managed FAQ/Help copy) take effect through the configured live data loader after save and refresh; static layout changes still require a code/deployment update. Do not publish until changed prices, descriptions, availability, contact details, and photos have been reviewed for accuracy.
 
 ## Relevant implementation and reference files
 
@@ -88,4 +88,4 @@ The checked-in JSON under `MultiShop/data/` is a separate fallback/reference dat
 - `supabase/functions/admin-management/index.ts` — server-side administrator invitation and membership management.
 - `docs/auth-ux-verification-20261115.md`, `docs/deployment-status.md`, `docs/supabase-auth-setup.md`, `docs/catalog-data-contract.md` — verification limits, dependencies, and data/auth references.
 
-Repository documentation reports the public storefront deploy as Ready, but also says no live owner-authenticated admin product-photo edit was performed, the inspected customer session did not have admin membership, and production invitation/email/payment setup still has dependencies. This guide consequently documents code-backed capabilities without certifying every operation as tested against live production data.
+The current continuation deployment is Ready and a read-only authenticated admin route/metric-shortcut smoke test succeeded. No product/photo or customer/order data was changed, and a live Help/FAQ save, account email, invitation, payment or checkout workflow has not been verified. Production invitation/email/payment setup still has dependencies. This guide consequently documents code-backed capabilities without certifying every operation as tested against live production data.
