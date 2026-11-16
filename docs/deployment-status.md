@@ -55,3 +55,10 @@ The successful deploy is not full acceptance or production readiness. Checkout/o
 ### Documentation follow-up deploy — 2026-11-16 21:24 EAT
 
 Documentation follow-up commit [`0991b7e1bc88c901778dfa9c98a9a5ff4b833261`](https://github.com/GafaNation09/FK-SHOP/commit/0991b7e1bc88c901778dfa9c98a9a5ff4b833261) is now `main`/`origin/main`. Netlify deploy [`6afb4a49f698e9c03cd6faa4`](https://app.netlify.com/projects/fkshopping/deploys/6afb4a49f698e9c03cd6faa4) is Ready for that exact documentation commit. It uploaded documentation/static assets only; application behavior is unchanged from the code commit `db0415232f8452b697271caedefb97d37397b87c` verified above. No live database, hosting, content or provider settings were changed.
+
+
+### Managed Help/FAQ release — 2026-11-16 21:30–21:33 EAT
+
+Commits `7ce19c2` (bounded Help/FAQ JSON editors and public text renderer) and `e17a9cb` (admin fallback-data loader fix) were pushed to `main`. Local `python3 scripts/validate_stage1.py` passes with the new `test_help_content.mjs`, which checks defaults, editor wiring, DOM text-node rendering, malformed-data fallback, and the nested admin settings fallback path. No SQL migration was added: the editor uses existing public `business_settings` JSONB and `content:write`/public-read RLS.
+
+After the pushes, production browser checks showed the FAQ list and Help section rendering from the current managed-content data model. The authorized Store content panel displayed populated FAQ/help JSON arrays from the fallback data rather than blank arrays, confirming the nested-page fallback bug is corrected. No settings were submitted, and no product, profile, order, customer or payment records were changed. A live authorized settings save and public re-read is still outstanding; this release must not be described as having tested a database content write. The Netlify deploy metadata for the exact `e17a9cb` commit was not independently captured in this check, so the browser result is the evidence for the live route; do not infer a deploy ID from the earlier deploy records.
