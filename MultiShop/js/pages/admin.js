@@ -642,6 +642,17 @@
                 });
             });
         });
+        document.querySelectorAll('[data-admin-tab-link]').forEach(function (button) {
+            const permission = button.getAttribute('data-requires-permission');
+            if (permission && !isAllowed(permission)) button.hidden = true;
+            if (button.getAttribute('data-requires-role') === 'store-admin') {
+                button.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
+            }
+            button.addEventListener('click', function () {
+                const target = nav.querySelector('[data-admin-tab="' + button.getAttribute('data-admin-tab-link') + '"]');
+                if (target && !target.hidden) target.click();
+            });
+        });
     }
 
     function bindForms() {

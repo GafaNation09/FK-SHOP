@@ -16,10 +16,20 @@ For another static host, either upload the **contents** of `MultiShop/` into the
 - [`MultiShop/data/product-record.template.json`](MultiShop/data/product-record.template.json) describes product fields; it is a draft template, not a real listing.
 - [`MultiShop/data/README.md`](MultiShop/data/README.md) explains the fallback-data boundaries. Never place credentials, customer data or orders in these public files.
 
-The browser-side Shop search, filters, sorting and product detail page operate only on published fallback records currently supplied to the static site. There is not yet an administrator interface; static JSON edits update only the public fallback.
+When Supabase is configured, its active categories, published products and public settings are the storefront source of truth. JSON records are a bounded fallback/reference source, not a second live admin catalogue. The protected admin interface can edit products, categories, product photos, selected public settings, customer profile details, orders and administrator access within its current permissions. See the guides below for verified scope and limitations.
 
 ## Current commerce limitation
 
-This is **not yet a connected ecommerce system**. No Supabase project or Netlify Function is active. Cart, wishlist and checkout actions are disabled; there is no persistent cart, order creation/tracking, custom-order quotation workflow, customer account, real inventory enforcement, newsletter delivery, contact-message delivery or configured M-Pesa/card provider. Forms explicitly report that they are not connected and do not save/send submissions. Do not collect payment or treat the current site as a live checkout.
+The site has connected Supabase Auth/catalogue and account-owned cart/favourites, customer profile, product gallery and role-gated administration code. Automated local tests cover these modules and related functionality, but they do not prove every live account/admin operation. KES/USD is display conversion only. Checkout is intentionally disabled: there is no verified live payment/delivery provider, trusted order creation, customer order placement or final payable total. Customer email delivery also depends on SMTP setup. Help and FAQ pages exist, but their text is not yet admin-managed. Homepage categories now render from active records without fixed empty slots. Cart rows have larger contained images, direct product links and stock-capped plus/minus controls; these changes require production deployment and browser verification before being called live.
 
-The SQL files in [`supabase/`](supabase/) are an unapplied foundation only; they have not been run against a database. Read [`plan.md`](plan.md), [`TODO.md`](TODO.md), [`docs/stage1-progress.md`](docs/stage1-progress.md) and [`docs/deployment-status.md`](docs/deployment-status.md) for implementation status, verified checks and the remaining secure setup steps. Do not change Netlify's publish/base configuration until its current values have been read and recorded.
+The repository contains applied-schema documentation as well as versioned migration files. Supabase's generated migration history does not exactly match some repository timestamps; reconcile it before automatic production migration deployment. The deployed Netlify app and hosted configuration need to be independently verified after pushing any changes. Do not change Netlify's publish/base configuration until its current values have been read and recorded.
+
+## Technical guides and validation
+
+- [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — current folders, feature modules and routes.
+- [`DATABASE_ARCHITECTURE.md`](DATABASE_ARCHITECTURE.md) — Supabase tables, relationships, RLS and known gaps.
+- [`ADMIN_GUIDE.md`](ADMIN_GUIDE.md) — current admin sections, actions and limitations.
+- [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) — local validation, configuration, migration and deployment cautions.
+- [`docs/master-prompt-progress.md`](docs/master-prompt-progress.md) — phased acceptance status for the latest master prompt.
+
+Run `python3 scripts/validate_stage1.py` from the repository root for the automated static and behavioral suite. It does not apply SQL, exercise hosted auth, test live payments or replace authenticated browser testing. Read [`plan.md`](plan.md), [`TODO.md`](TODO.md), [`docs/stage1-progress.md`](docs/stage1-progress.md), [`docs/deployment-status.md`](docs/deployment-status.md), and [`docs/supabase-auth-setup.md`](docs/supabase-auth-setup.md) before making live changes.

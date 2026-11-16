@@ -325,14 +325,21 @@
         const id = escape(entry.id);
         const slug = encodeURIComponent(product.slug || product.id);
         const price = productPrice(product);
-        const subtotal = price * entry.quantity;
         const limit = Math.max(1, cartLimit(product));
+        const quantity = Math.min(entry.quantity, limit);
+        const subtotal = price * quantity;
+        const image = imageFor(product) || '<span class="kcbf-cart-no-image" aria-hidden="true"><i class="fas fa-layer-group"></i></span>';
         return '<tr data-cart-row="' + id + '">' +
-            '<td class="align-middle text-left kcbf-cart-product-cell" data-label="Product"><div class="d-flex align-items-center kcbf-cart-product">' + imageFor(product) +
-                '<div class="ml-2"><a href="detail.html?product=' + slug + '">' + escape(product.name) + '</a>' +
-                '<div class="small text-muted">' + escape(api.availabilityLabel ? api.availabilityLabel(product) : (product.availability || product.availability_status || 'Availability to be confirmed')) + '</div></div></div></td>' +
+            '<td class="align-middle text-left kcbf-cart-product-cell" data-label="Product"><div class="d-flex align-items-center kcbf-cart-product">' +
+                '<a class="kcbf-cart-product-image" href="detail.html?product=' + slug + '" aria-label="View ' + escape(product.name) + '">' + image + '</a>' +
+                '<div class="kcbf-cart-product-details"><a class="kcbf-cart-product-name" href="detail.html?product=' + slug + '">' + escape(product.name) + '</a>' +
+                '<div class="small text-muted">' + escape(api.availabilityLabel ? api.availabilityLabel(product) : (product.availability || product.availability_status || 'Availability to be confirmed')) + '</div>' +
+                '<a class="small" href="detail.html?product=' + slug + '">View product</a></div></div></td>' +
             '<td class="align-middle" data-label="Price">' + priceNode(price) + '</td>' +
-            '<td class="align-middle" data-label="Quantity"><input class="form-control form-control-sm mx-auto text-center kcbf-cart-quantity" type="number" min="1" max="' + limit + '" value="' + Math.min(entry.quantity, limit) + '" aria-label="Quantity for ' + escape(product.name) + '" data-cart-quantity="' + id + '"></td>' +
+            '<td class="align-middle" data-label="Quantity"><div class="kcbf-quantity-control" role="group" aria-label="Quantity for ' + escape(product.name) + '">' +
+                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="-1" data-product-id="' + id + '" aria-label="Decrease quantity of ' + escape(product.name) + '"' + (quantity <= 1 ? ' disabled' : '') + '><i class="fas fa-minus" aria-hidden="true"></i></button>' +
+                '<input class="form-control text-center kcbf-cart-quantity" type="number" min="1" max="' + limit + '" value="' + quantity + '" aria-label="Quantity for ' + escape(product.name) + '" data-cart-quantity="' + id + '">' +
+                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="1" data-product-id="' + id + '" aria-label="Increase quantity of ' + escape(product.name) + '"' + (quantity >= limit ? ' disabled' : '') + '><i class="fas fa-plus" aria-hidden="true"></i></button></div></td>' +
             '<td class="align-middle" data-label="Total">' + priceNode(subtotal) + '</td>' +
             '<td class="align-middle" data-label="Remove"><button class="btn btn-sm btn-outline-danger" type="button" data-commerce-action="remove-cart" data-product-id="' + id + '" aria-label="Remove ' + escape(product.name) + '"><i class="fa fa-times" aria-hidden="true"></i></button></td>' +
             '</tr>';
@@ -392,6 +399,22 @@
                 '<button type="button" class="btn btn-sm btn-outline-dark" data-commerce-action="wishlist" data-product-id="' + id + '" data-product-name="' + escape(product.name) + '" aria-pressed="true" title="Remove from favourites"><i class="fas fa-heart" aria-hidden="true"></i><span class="sr-only">Remove from favourites</span></button></div></div></div>';
         }).join('');
         syncWishlistButtons();
+    }
+
+    function updateCartQuantity(id, requested) {
+        const product = findProduct(appData, id);
+        const items = currentCart();
+        const item = items.find(function (entry) { return entry.id === id; });
+        if (!product || !item) return false;
+        const limit = Math.max(1, cartLimit(product));
+        const quantity = Math.max(1, Math.min(limit, Math.floor(Number(requested) || 1)));
+        if (quantity === item.quantity) return false;
+        item.quantity = quantity;
+        item.updated_at = new Date().toISOString();
+        persistList('cart', items);
+        renderCart(appData);
+        announce('Cart quantity updated to ' + quantity + '.');
+        return true;
     }
 
     function renderCurrentViews() {
@@ -538,6 +561,13 @@
         setPersistenceMessage();
 
         document.addEventListener('click', function (event) {
+            const quantityStep = event.target.closest('[data-cart-quantity-adjust]');
+            if (quantityStep) {
+                const id = quantityStep.getAttribute('data-product-id');
+                const item = currentCart().find(function (entry) { return entry.id === id; });
+                if (item) updateCartQuantity(id, item.quantity + Number(quantityStep.getAttribute('data-cart-quantity-adjust')));
+                return;
+            }
             const button = event.target.closest('[data-commerce-action]');
             if (!button) return;
             const action = button.getAttribute('data-commerce-action');
@@ -577,17 +607,10 @@
             const input = event.target.closest('[data-cart-quantity]');
             if (!input) return;
             const id = input.getAttribute('data-cart-quantity');
+            updateCartQuantity(id, input.value);
             const product = findProduct(data, id);
             const quantity = Math.max(1, Math.min(product ? Math.max(1, cartLimit(product)) : MAX_QUANTITY, Math.floor(Number(input.value) || 1)));
             input.value = String(quantity);
-            const items = currentCart();
-            const item = items.find(function (entry) { return entry.id === id; });
-            if (item) {
-                item.quantity = quantity;
-                item.updated_at = new Date().toISOString();
-            }
-            persistList('cart', items);
-            renderCart(data);
         });
 
         window.addEventListener('storage', function (event) {

@@ -70,6 +70,31 @@
     font-size: 1.75rem;
 }
 
+.kcbf-admin-metric-link {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.kcbf-admin-metric-link:hover,
+.kcbf-admin-metric-link:focus-visible {
+    background: #f4f1e8;
+    border-color: #c7b98d;
+    outline: 2px solid #987b32;
+    outline-offset: 2px;
+}
+
+.kcbf-admin-metric-link > span:last-child {
+    margin-top: auto;
+    color: #665938;
+    text-decoration: underline;
+}
+
 .kcbf-admin-table-wrap {
     overflow-x: auto;
 }

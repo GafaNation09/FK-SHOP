@@ -62,6 +62,9 @@ assert.equal(commerce.readCart()[0].quantity, 1);
 assert.equal(cartBadge.textContent, '1');
 assert.match(cartBody.innerHTML, /Woven bag/);
 assert.equal(subtotal.textContent, 'KES 1,250');
+assert.match(cartBody.innerHTML, /View product/, 'cart products must have a direct view-product action');
+assert.match(cartBody.innerHTML, /data-cart-quantity-adjust="-1"/, 'cart rows must provide an accessible decrement control');
+assert.match(cartBody.innerHTML, /data-cart-quantity-adjust="1"/, 'cart rows must provide an accessible increment control');
 assert.equal(total.textContent, 'To be calculated', 'the product subtotal must not be represented as a final payable total');
 assert.equal(checkout.disabled, true, 'checkout remains disabled until verified providers are configured');
 
@@ -76,6 +79,11 @@ listeners.change({ target: quantityInput });
 assert.equal(commerce.readCart()[0].quantity, 2, 'cart quantity must not exceed verified stock');
 assert.equal(subtotal.textContent, 'KES 2,500');
 assert.equal(total.textContent, 'To be calculated');
+
+const decreaseButton = { getAttribute(name) { return name === 'data-product-id' ? 'prod-1' : '-1'; } };
+listeners.click({ target: { closest(selector) { return selector === '[data-cart-quantity-adjust]' ? decreaseButton : null; } } });
+assert.equal(commerce.readCart()[0].quantity, 1, 'minus control must decrement cart quantity');
+assert.equal(subtotal.textContent, 'KES 1,250', 'minus control must immediately recalculate the subtotal');
 
 const removeButton = { getAttribute(name) { return name === 'data-commerce-action' ? 'remove-cart' : 'prod-1'; } };
 listeners.click({ target: { closest(selector) { return selector === '[data-commerce-action]' ? removeButton : null; } } });

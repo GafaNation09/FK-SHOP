@@ -29,6 +29,13 @@
     font-size: 0.72rem;
 }
 
+.kcbf-category-icon {
+    min-height: 100px;
+    color: #6b6258;
+    background: #f1eee8;
+    font-size: 1.8rem;
+}
+
 .kcbf-photo-placeholder--product {
     min-height: 245px;
 }
@@ -107,7 +114,7 @@
 }
 
 .kcbf-cart-table {
-    min-width: 600px;
+    min-width: 760px;
     table-layout: auto;
 }
 
@@ -116,11 +123,60 @@
     vertical-align: middle;
 }
 
-.kcbf-cart-product img {
-    width: 76px;
-    height: 76px;
-    flex: 0 0 76px;
-    object-fit: cover;
+.kcbf-cart-product-image,
+.kcbf-cart-no-image {
+    display: flex;
+    width: 124px;
+    height: 124px;
+    flex: 0 0 124px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #fff;
+}
+
+.kcbf-cart-product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.kcbf-cart-no-image {
+    color: #6b6258;
+    background: #f1eee8;
+    font-size: 1.7rem;
+}
+
+.kcbf-cart-product-details {
+    min-width: 0;
+    margin-left: 1rem;
+}
+
+.kcbf-cart-product-name {
+    display: inline-block;
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.kcbf-quantity-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.kcbf-quantity-step {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid #ddd;
+}
+
+.kcbf-cart-quantity {
+    width: 3.6rem;
+    min-width: 3.6rem;
+    height: 44px;
+    padding: 0.35rem;
 }
 
 .kcbf-cart-product a {
@@ -170,9 +226,7 @@
 }
 
 @media (max-width: 767.98px) {
-    .kcbf-cart-table {
-        min-width: 0;
-    }
+    .kcbf-cart-table { min-width: 680px; }
 
     .kcbf-cart-table thead {
         display: none;
@@ -212,6 +266,15 @@
         display: block;
         text-align: left !important;
     }
+
+    .kcbf-cart-product-image,
+    .kcbf-cart-no-image {
+        width: 104px;
+        height: 104px;
+        flex-basis: 104px;
+    }
+
+    .kcbf-cart-product-details { margin-left: 0.75rem; }
 
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) td.kcbf-cart-product-cell::before {
         display: block;

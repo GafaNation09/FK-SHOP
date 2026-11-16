@@ -52,10 +52,10 @@
                             <span class="badge badge-light p-2" data-admin-role></span>
                         </div>
                         <div class="row">
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Published products</span><strong data-metric-products>—</strong></div></div>
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Active categories</span><strong data-metric-categories>—</strong></div></div>
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Orders</span><strong data-metric-orders>0 loaded</strong></div></div>
-                            <div class="col-sm-6 col-xl-3 mb-3"><div class="p-3 kcbf-admin-metric"><span class="small text-muted">Payments</span><strong data-metric-payments>—</strong></div></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><button class="p-3 kcbf-admin-metric kcbf-admin-metric-link" type="button" data-admin-tab-link="products" data-requires-permission="catalog:write"><span class="small text-muted">Published products</span><strong data-metric-products>—</strong><span class="small">Open product management</span></button></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><button class="p-3 kcbf-admin-metric kcbf-admin-metric-link" type="button" data-admin-tab-link="categories" data-requires-permission="catalog:write"><span class="small text-muted">Active categories</span><strong data-metric-categories>—</strong><span class="small">Open category management</span></button></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><button class="p-3 kcbf-admin-metric kcbf-admin-metric-link" type="button" data-admin-tab-link="orders" data-requires-role="store-admin"><span class="small text-muted">Orders reviewed</span><strong data-metric-orders>0 loaded</strong><span class="small">Open order records</span></button></div>
+                            <div class="col-sm-6 col-xl-3 mb-3"><button class="p-3 kcbf-admin-metric kcbf-admin-metric-link" type="button" data-admin-tab-link="orders" data-requires-role="store-admin"><span class="small text-muted">Payments (loaded orders)</span><strong data-metric-payments>—</strong><span class="small">Open read-only payment activity</span></button></div>
                         </div>
                         <div class="alert alert-light mt-3 mb-0">Counts reflect records loaded into this session. Payment state is displayed read-only.</div>
                     </section>

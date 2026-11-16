@@ -68,10 +68,15 @@
     function renderCategoryNavigation(categories) {
         document.querySelectorAll('[data-category-nav]').forEach(function (container) {
             const active = categories
-                .filter(function (category) { return category.status === 'active'; })
+                .filter(function (category) {
+                    return category.status === 'active' && String(category.name || '').trim() && String(category.slug || category.id || '').trim();
+                })
                 .slice()
                 .sort(function (a, b) { return Number(a.displayOrder || 0) - Number(b.displayOrder || 0); });
-            if (!active.length) return;
+            if (!active.length) {
+                container.innerHTML = '';
+                return;
+            }
             container.innerHTML = active.map(function (category) {
                 const slug = categorySlug(category);
                 return '<a class="nav-item nav-link" href="shop.html?category=' + encodeURIComponent(slug) + '">' +

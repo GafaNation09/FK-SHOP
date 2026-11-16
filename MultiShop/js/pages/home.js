@@ -19,10 +19,6 @@
             const cards = categories.map(function (category) {
                 return api.renderCategoryCard(category, api.categoryCount(category, products));
             });
-            const originalSlots = 12;
-            for (let i = cards.length; i < originalSlots; i += 1) {
-                cards.push(api.renderCategoryPlaceholder());
-            }
             categoryGrid.innerHTML = cards.length
                 ? cards.join('')
                 : api.renderEmptyState('No categories are configured yet.', 'Approved categories will appear here after they are added.');
