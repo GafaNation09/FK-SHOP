@@ -14,7 +14,7 @@ Status terms follow the prompt exactly:
 - **IMPLEMENTED AND TESTED:** Existing multi-page site, shared catalog/config loader, page-scoped JavaScript, admin portal, Supabase migrations/RLS, customer account/cart persistence, and deployed app evidence were inspected using repository files and prior dated deployment/setup reports. The repository remains on `main`; the pre-change commit is the recoverable checkpoint.
 - **IMPLEMENTED AND TESTED:** The supplied SalesSync dashboard inspiration was visually reviewed. It has left-side grouped navigation, a clear top work area, structured forms, product imagery and pricing/stock panels. The existing admin already has a left sidebar and responsive section navigation; the present work adds actions to selected dashboard metric cards rather than replacing the portal.
 - **IMPLEMENTED AND TESTED:** Developer documentation created: [`PROJECT_STRUCTURE.md`](../PROJECT_STRUCTURE.md), [`DATABASE_ARCHITECTURE.md`](../DATABASE_ARCHITECTURE.md), [`ADMIN_GUIDE.md`](../ADMIN_GUIDE.md), and [`DEVELOPER_GUIDE.md`](../DEVELOPER_GUIDE.md). [`README.md`](../README.md) was corrected because it described Supabase, Auth, carts, and admin pages as absent even though later code and deployment records show otherwise.
-- **BLOCKED:** Netlify's current Base/Publish/build/Functions settings are not known. The production deploy record in `docs/deployment-status.md` predates these working-tree changes. A new main push and matching Ready deploy must be verified before reporting production updates.
+- **BLOCKED:** Netlify's current Base/Publish/build/Functions settings are not known. The exact deployed commit is verified in the continuation update in `docs/deployment-status.md`, but configuration remains uninspected and unchanged.
 - **BLOCKED:** Supabase repository migration timestamp history requires reconciliation before automatic migration deployment. No new DDL was applied as part of this work.
 
 ## Phase 2 — Customer storefront
@@ -29,8 +29,8 @@ Status terms follow the prompt exactly:
 
 ## Phase 3 — Admin dashboard and content
 
-- **IMPLEMENTED, NOT FULLY TESTED:** Existing admin has a permission-gated sidebar for Overview, Products, Categories, Store content, Customers, Orders and Administrator access. The new overview metric shortcuts call the existing authorized tab navigation for Products, Categories or Orders, and permission/role-inaccessible shortcuts are hidden. Counts still reflect loaded records rather than complete business totals; these are not revenue or complete analytics.
-- **IMPLEMENTED, NOT FULLY TESTED:** Existing product/category forms, multi-photo upload code and permissions are present; owner-authenticated end-to-end product editing and real photo upload remain unverified.
+- **IMPLEMENTED AND TESTED:** Existing admin has a permission-gated sidebar for Overview, Products, Categories, Store content, Customers, Orders and Administrator access. The new overview metric shortcuts call the existing authorized tab navigation for Products, Categories or Orders, and permission/role-inaccessible shortcuts are hidden. `scripts/test_admin_metric_links.mjs` passes, and a read-only authenticated production click opened Product management. Counts still reflect loaded records rather than complete business totals; these are not revenue or complete analytics.
+- **IMPLEMENTED, NOT FULLY TESTED:** Existing product/category forms, multi-photo upload code and permissions are present. The deployed admin shell showed authorized access and product records, but no product data or photos were edited/uploaded during this verification.
 - **NOT IMPLEMENTED:** FAQ and Help CMS/editor, category subcategories, category search/filter/delete, category photo upload workflow, product video support, reordering photos, product variant records, slug change redirect history, and robust sidebar groups/mobile drawer beyond existing responsive navigation.
 - **NOT IMPLEMENTED:** Full SalesSync-inspired analytics/overview: real totals, date filters, revenue charts, low stock, best sellers, recent activity, pending/completed/cancelled orders, sales/finance screens, clickable filtered reports and full mobile navigation refinements.
 
@@ -51,8 +51,9 @@ Status terms follow the prompt exactly:
 ## Phase 6 — Testing and deployment
 
 - **IMPLEMENTED AND TESTED:** All `scripts/test_*.mjs` tests passed after the current code edits. `python3 scripts/validate_stage1.py` passed JS syntax, existing behavioral tests, static HTML/section checks, SQL parsing, local route/asset smoke tests and diff whitespace validation. Focused category and cart tests passed. Validator reports the known baseline-only missing `img/favicon.ico` reference and states it does not apply SQL or test live services.
-- **NOT IMPLEMENTED:** Dedicated interactive browser tests for the new cart controls/admin metric links, multi-size device visual review, keyboard/screen-reader audit, live owner/admin photo upload, live account signup/recovery email, end-to-end checkout/payment or cross-device browser mutation.
-- **BLOCKED:** Production deployment verification for this working-tree change. A successful local test is not evidence of a new Netlify deployment.
+- **IMPLEMENTED AND TESTED:** Read-only browser smoke checks confirmed the deployed Home route/category display and Cart item with product link/quantity controls. The role-gated admin route rendered for the existing authorized browser session, and clicking the Published products metric opened the Products section. No catalog/customer/order data was changed.
+- **NOT IMPLEMENTED:** Multi-size device visual review, keyboard/screen-reader audit, live owner/admin photo upload, live account signup/recovery email, end-to-end checkout/payment or cross-device browser mutation.
+- **IMPLEMENTED AND TESTED:** Main commit `db0415232f8452b697271caedefb97d37397b87c` was pushed; Netlify production deploy `6afb495c50e5b5f0ab168836` reports Ready for the exact commit. Netlify Base/Publish/build/Functions configuration was not changed.
 
 ## Priority acceptance backlog
 
@@ -61,11 +62,11 @@ Status terms follow the prompt exactly:
 3. **High — NOT IMPLEMENTED:** Supabase-backed Help/FAQ editing with publication/order controls, safe text rendering, RLS and public propagation.
 4. **High — NOT IMPLEMENTED:** Real operational dashboard: complete server-side totals, date filters, filtered record views, orders/custom requests/inventory/reports/finance, audit logs and exports.
 5. **High — NOT IMPLEMENTED:** Custom-order request/quotation lifecycle; order/customer messaging, delivery rules and tracking.
-6. **High — BLOCKED:** Verify owner-authorized admin route and product/photo edit, account signup/password recovery delivery, and SMTP invitation email in the live project with the owner-controlled session/provider.
+6. **High — BLOCKED:** Test a real authorized admin product/photo edit without using fabricated public data; verify account signup/password recovery delivery and SMTP invitation email with approved live configuration.
 7. **Medium — NOT IMPLEMENTED:** Category subcategories/search/publishing distinctions; product variants/video/support for multiple option selections, image reordering, optimization and richer share/gallery behavior.
 8. **Medium — NOT IMPLEMENTED:** Actual responsive/browser/accessibility/performance measurements and safe load testing; document infrastructure caps instead of promising target scale.
 9. **Medium — BLOCKED:** Reconcile migration history and verify live Netlify configuration before enabling automated SQL deployments or hosting changes.
 
 ## Change record for this continuation
 
-The work in the current local `main` checkout includes category placeholder removal, category navigation cleanup, cart presentation/quantity controls, clickable permission-aware admin metric shortcuts, focused tests and documentation. It is not yet committed/pushed/deployed as of this register. The immediate finalization gate is to run the validator and tests, update stale project records, review the exact `main` diff for secrets/customer information, then push and verify the matching Netlify deploy. Further backlog remains open after that release; the master prompt's overall final acceptance is **NOT IMPLEMENTED** until the critical flows and live verification above are completed.
+The continuation is released from `main` as `db0415232f8452b697271caedefb97d37397b87c`; Netlify reports production deploy `6afb495c50e5b5f0ab168836` Ready for that commit. Local Node tests, the repository validator and `git diff --check` passed. Read-only production smoke tests verified Home/categories, Cart layout/controls, the admin access gate and the metric-to-Products navigation. No product, customer, order, payment or profile records were mutated. Further backlog remains open; the master prompt's overall final acceptance is **NOT IMPLEMENTED** until the critical flows and live verification above are completed.

@@ -21,7 +21,7 @@ The browser uses the public Supabase project configuration in `MultiShop/data/ru
 
 ### Overview — **Partially implemented**
 
-The overview shows published-product and active-category counts when catalog data loads, plus order and payment counts for records loaded in the current browser session. These are not full-store totals or financial reports. Order/payment indicators say “loaded”; they reflect the pages fetched so far (50 records per page), and more records are fetched only when the corresponding list is paged. Payment state is displayed read-only. A failed data load can leave values blank or stale; do not use these cards for accounting or reconciliation.
+The overview shows published-product and active-category counts when catalog data loads, plus order and payment counts for records loaded in the current browser session. Product/category/order metric cards link to their existing permission-gated panels. These figures are not full-store totals or financial reports. Order/payment indicators say “loaded”; they reflect the pages fetched so far (50 records per page), and more records are fetched only when the corresponding list is paged. Payment state is displayed read-only. A failed data load can leave values blank or stale; do not use these cards for accounting or reconciliation. A read-only production click on the Published products card opened Product management; this is not evidence of the remaining admin workflows being fully tested.
 
 ### Products — **Implemented**
 

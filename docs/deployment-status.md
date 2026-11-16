@@ -33,3 +33,20 @@ These tests are not a substitute for the owner's authenticated production flow. 
 3. Select and onboard the real payment provider(s) (for example, an eligible live M-Pesa merchant and/or card provider) and provide credentials through secure provider settings. Add verified server-side payment callbacks and delivery rules before enabling checkout or saved methods. Until then, payment methods, order creation and final totals intentionally remain unavailable.
 4. Reconcile Supabase's generated migration-history versions with the repository filenames before enabling automated GitHub-to-Supabase production DDL. The applied RLS policies and public KES/telephone settings were verified without reading customer records.
 5. Netlify's Base/Publish/build/Functions configuration and environment-variable names have not been read or changed. The current `/multishop/` app and root route continue to work; no deployment override was introduced.
+
+
+## Continuation release — 2026-11-16 21:20 EAT
+
+**Main commit:** [`db0415232f8452b697271caedefb97d37397b87c`](https://github.com/GafaNation09/FK-SHOP/commit/db0415232f8452b697271caedefb97d37397b87c) (`Improve dynamic categories cart and admin overview`). **Netlify production deploy:** [`6afb495c50e5b5f0ab168836`](https://app.netlify.com/projects/fkshopping/deploys/6afb495c50e5b5f0ab168836), state Ready, branch `main`, production context, commit ref matches the full SHA above, no error, published 2026-11-16 18:20:21 UTC. No Netlify Functions or redirects were deployed and no hosting settings were changed.
+
+### Changes and verification
+
+The homepage now renders only active managed category records (or an actual empty state) rather than padding the section to 12 slots. Category cards without an image use an icon tile rather than a blank photo placeholder. The cart shows a larger contained product image, product links and stock-capped plus/minus controls; quantity edits recalculate the item and cart subtotal, while delivery/chargeable totals remain unavailable. Admin overview product/category/order shortcuts now navigate through the existing permission-gated tabs.
+
+All focused `scripts/test_*.mjs` tests passed, including category, cart and admin metric-link regression checks. `python3 scripts/validate_stage1.py` passed JavaScript syntax, behavior tests, static HTML/section checks, SQL parsing and a local static route/asset smoke test. `git diff --check` passed. The validator notes one baseline-only missing local `img/favicon.ico`; it does not apply SQL or test hosted services.
+
+Read-only live browser smoke checks confirmed the production Home route with the seven configured active categories and no synthetic category slots, and the Cart page with the product row, detail link and visible +/- controls. The protected admin route loaded for the existing authorized browser session; clicking the Published products metric opened the Products panel. No product, image, customer, order, payment or profile data was changed. This was not an end-to-end media upload, checkout, email or order test, and no customer or administrator secrets are recorded here.
+
+### Limitations remain
+
+The successful deploy is not full acceptance or production readiness. Checkout/order creation/payment/delivery remain disabled. Help/FAQ are not admin-managed. Clean `/product/{slug}` routes, redirects and Open Graph previews remain outstanding. Admin metrics still represent loaded subsets rather than complete financial/business totals; comprehensive order, inventory, finance, reporting, export and audit workflows are not implemented. Account email and invitations require verified SMTP. The Supabase migration-history timestamp mismatch and unknown Netlify Base/Publish/build/Functions settings remain documented limitations. See [`master-prompt-progress.md`](master-prompt-progress.md) for the complete phased status and priority register.
