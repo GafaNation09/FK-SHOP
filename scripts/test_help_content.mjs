@@ -17,6 +17,8 @@ assert.match(adminHtml, /name="help\.faqs"/);
 assert.match(adminHtml, /name="help\.sections"/);
 assert.match(adminJs, /parseContentList\('help\.faqs', 40/);
 assert.match(adminJs, /parseContentList\('help\.sections', 20/);
+assert.match(adminJs, /fetch\(new URL\('\.\.\/data\/business-settings\.json'/, 'nested admin must load the existing public settings fallback');
+assert.match(adminJs, /!defaults \|\| !defaults\.help/, 'admin must not initialize managed content as an empty array when fallback data exists');
 assert.match(adminJs, /from\('business_settings'\)[\s\S]*?\.upsert\(rows/);
 assert.match(faqHtml, /data-managed-faq-list/);
 assert.match(faqHtml, /js\/pages\/help-content\.js/);

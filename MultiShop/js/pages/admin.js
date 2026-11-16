@@ -318,7 +318,12 @@
             .order('setting_key', { ascending: true });
         if (error) throw error;
         const values = new Map((data || []).map(function (row) { return [row.setting_key, row.setting_value]; }));
-        const defaults = api.data && api.data.settings || {};
+        let defaults = api.data && api.data.settings || null;
+        if (!defaults || !defaults.help) {
+            const response = await fetch(new URL('../data/business-settings.json', window.location.href).toString(), { credentials: 'same-origin' });
+            if (!response.ok) throw new Error('Public fallback settings could not be loaded. No settings were changed.');
+            defaults = await response.json();
+        }
         document.querySelectorAll('[data-settings-form] [name]').forEach(function (field) {
             const value = values.has(field.name) ? values.get(field.name) : field.name.split('.').reduce(function (result, part) {
                 return result && result[part];
