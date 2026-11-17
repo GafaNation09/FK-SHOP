@@ -398,6 +398,100 @@
         if (!toField.value) toField.value = inputDate(today);
     }
 
+    function helpListConfig(settingName) {
+        return settingName === 'help.faqs'
+            ? { kind: 'faqs', firstKey: 'question', secondKey: 'answer', firstLabel: 'Question', secondLabel: 'Answer', firstLimit: 240, secondLimit: 2000, maxItems: 40 }
+            : { kind: 'sections', firstKey: 'title', secondKey: 'body', firstLabel: 'Section title', secondLabel: 'Section text', firstLimit: 120, secondLimit: 3000, maxItems: 20 };
+    }
+
+    function collectHelpEditorItems(settingName) {
+        const config = helpListConfig(settingName);
+        const container = document.querySelector('[data-help-list="' + config.kind + '"]');
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('[data-help-item]')).map(function (card, index) {
+            const first = card.querySelector('[data-help-field="' + config.firstKey + '"]');
+            const second = card.querySelector('[data-help-field="' + config.secondKey + '"]');
+            const status = card.querySelector('[data-help-field="status"]');
+            return {
+                [config.firstKey]: String(first && first.value || '').trim(),
+                [config.secondKey]: String(second && second.value || '').trim(),
+                status: status && status.value === 'published' ? 'published' : 'draft',
+                sort_order: index
+            };
+        });
+    }
+
+    function renderHelpEditorList(settingName, records) {
+        const config = helpListConfig(settingName);
+        const container = document.querySelector('[data-help-list="' + config.kind + '"]');
+        const hiddenField = document.querySelector('[data-settings-form] [name="' + settingName + '"]');
+        if (!container || !hiddenField) return;
+        const items = Array.isArray(records) ? records.slice(0, config.maxItems) : [];
+        hiddenField.value = JSON.stringify(items);
+        container.replaceChildren();
+        items.forEach(function (item, index) {
+            const card = document.createElement('div');
+            card.className = 'border bg-white p-3 mb-3';
+            card.setAttribute('data-help-item', '');
+            const title = document.createElement('h3');
+            title.className = 'h6 mb-3';
+            title.textContent = (config.kind === 'faqs' ? 'FAQ ' : 'Help section ') + (index + 1);
+            card.appendChild(title);
+
+            [[config.firstKey, config.firstLabel, config.firstLimit], [config.secondKey, config.secondLabel, config.secondLimit]].forEach(function (field, fieldIndex) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-group';
+                const label = document.createElement('label');
+                label.textContent = field[1];
+                const input = document.createElement('textarea');
+                input.className = 'form-control';
+                input.rows = fieldIndex === 0 ? 2 : 4;
+                input.maxLength = field[2];
+                input.value = typeof item[field[0]] === 'string' ? item[field[0]] : '';
+                input.setAttribute('data-help-field', field[0]);
+                input.setAttribute('aria-label', field[1] + ' ' + (index + 1));
+                label.appendChild(input);
+                wrapper.appendChild(label);
+                card.appendChild(wrapper);
+            });
+
+            const controls = document.createElement('div');
+            controls.className = 'd-flex align-items-end justify-content-between flex-wrap';
+            const statusWrapper = document.createElement('div');
+            statusWrapper.className = 'form-group mb-2 mr-3';
+            const statusLabel = document.createElement('label');
+            statusLabel.textContent = 'Publication status';
+            const status = document.createElement('select');
+            status.className = 'custom-select';
+            status.setAttribute('data-help-field', 'status');
+            status.add(new Option('Draft — hidden from public pages', 'draft'));
+            status.add(new Option('Published — visible on public pages', 'published'));
+            status.value = item.status === 'draft' ? 'draft' : 'published';
+            statusLabel.appendChild(status);
+            statusWrapper.appendChild(statusLabel);
+            controls.appendChild(statusWrapper);
+
+            const actions = document.createElement('div');
+            actions.className = 'mb-2';
+            [['Move up', 'move-up', index === 0], ['Move down', 'move-down', index === items.length - 1], ['Remove', 'remove', false]].forEach(function (action) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn btn-sm ' + (action[1] === 'remove' ? 'btn-outline-danger' : 'btn-outline-dark') + ' mr-1';
+                button.textContent = action[0];
+                button.disabled = action[2];
+                button.setAttribute('data-help-action', action[1]);
+                button.setAttribute('data-help-index', String(index));
+                button.setAttribute('data-help-kind', config.kind);
+                actions.appendChild(button);
+            });
+            controls.appendChild(actions);
+            card.appendChild(controls);
+            container.appendChild(card);
+        });
+        const addButton = document.querySelector('[data-help-add="' + config.kind + '"]');
+        if (addButton) addButton.disabled = items.length >= config.maxItems;
+    }
+
     async function loadSettings() {
         const { data, error } = await client.from('business_settings')
             .select('setting_key,setting_value,is_public')
@@ -416,8 +510,14 @@
             }, defaults);
             if (field.name === 'shop.price_filter_min_kes') field.value = Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) < 1000000 ? String(value) : '0';
             else if (field.name === 'shop.price_filter_max_kes') field.value = Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 1000000 ? String(value) : '10000';
-            else if (field.name === 'help.faqs' || field.name === 'help.sections') field.value = JSON.stringify(Array.isArray(value) ? value : [], null, 2);
+            else if (field.name === 'help.faqs' || field.name === 'help.sections') field.value = JSON.stringify(Array.isArray(value) ? value : []);
             else if (typeof value === 'string') field.value = value;
+        });
+        ['help.faqs', 'help.sections'].forEach(function (settingName) {
+            const field = document.querySelector('[data-settings-form] [name="' + settingName + '"]');
+            let records = [];
+            try { records = JSON.parse(field && field.value || '[]'); } catch (error) { records = []; }
+            renderHelpEditorList(settingName, records);
         });
     }
 
@@ -684,6 +784,10 @@
     }
 
     async function saveSettings(form) {
+        ['help.faqs', 'help.sections'].forEach(function (settingName) {
+            const field = form.querySelector('[name="' + settingName + '"]');
+            if (field) field.value = JSON.stringify(collectHelpEditorItems(settingName));
+        });
         const minimum = Number(form.querySelector('[name="shop.price_filter_min_kes"]')?.value);
         const maximum = Number(form.querySelector('[name="shop.price_filter_max_kes"]')?.value);
         if (!Number.isInteger(minimum) || minimum < 0 || minimum >= 1000000 ||
@@ -699,10 +803,12 @@
                 if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Content entry ' + (index + 1) + ' must be an object.');
                 const first = typeof item[firstKey] === 'string' ? item[firstKey].trim() : '';
                 const second = typeof item[secondKey] === 'string' ? item[secondKey].trim() : '';
-                if (!first || !second || first.length > firstLimit || second.length > secondLimit) {
+                const status = item.status === undefined ? 'published' : item.status;
+                if (!['draft', 'published'].includes(status)) throw new Error('Content entry ' + (index + 1) + ' has an invalid publication status.');
+                if (first.length > firstLimit || second.length > secondLimit || (status === 'published' && (!first || !second))) {
                     throw new Error('Content entry ' + (index + 1) + ' needs a ' + firstKey + ' up to ' + firstLimit + ' characters and a ' + secondKey + ' up to ' + secondLimit + ' characters.');
                 }
-                return { [firstKey]: first, [secondKey]: second };
+                return { [firstKey]: first, [secondKey]: second, status: status, sort_order: index };
             });
         }
         const managedValues = {
@@ -980,6 +1086,32 @@
         const productForm = document.querySelector('[data-product-form]');
         const categoryForm = document.querySelector('[data-category-form]');
         const settingsForm = document.querySelector('[data-settings-form]');
+        if (settingsForm) {
+            settingsForm.querySelectorAll('[data-help-add]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const kind = button.getAttribute('data-help-add');
+                    const settingName = kind === 'faqs' ? 'help.faqs' : 'help.sections';
+                    const config = helpListConfig(settingName);
+                    const records = collectHelpEditorItems(settingName);
+                    if (records.length >= config.maxItems) return;
+                    records.push({ [config.firstKey]: '', [config.secondKey]: '', status: 'draft' });
+                    renderHelpEditorList(settingName, records);
+                });
+            });
+            settingsForm.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-help-action]');
+                if (!button) return;
+                const kind = button.getAttribute('data-help-kind');
+                const settingName = kind === 'faqs' ? 'help.faqs' : 'help.sections';
+                const records = collectHelpEditorItems(settingName);
+                const index = Number(button.getAttribute('data-help-index'));
+                const action = button.getAttribute('data-help-action');
+                if (action === 'remove') records.splice(index, 1);
+                else if (action === 'move-up' && index > 0) [records[index - 1], records[index]] = [records[index], records[index - 1]];
+                else if (action === 'move-down' && index < records.length - 1) [records[index], records[index + 1]] = [records[index + 1], records[index]];
+                renderHelpEditorList(settingName, records);
+            });
+        }
         if (productForm) {
             const nameField = productForm.elements.name;
             const slugField = productForm.elements.slug;

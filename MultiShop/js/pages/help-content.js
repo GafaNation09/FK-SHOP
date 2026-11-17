@@ -5,14 +5,30 @@
     function cleanRecords(value, firstKey, secondKey, firstLimit, secondLimit, maxItems) {
         if (!Array.isArray(value) || value.length > maxItems) return null;
         const result = [];
-        for (const item of value) {
+        for (let index = 0; index < value.length; index += 1) {
+            const item = value[index];
             if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+            const status = item.status === undefined ? 'published' : item.status;
+            if (status !== 'draft' && status !== 'published') return null;
+            if (status === 'draft') continue;
             const first = typeof item[firstKey] === 'string' ? item[firstKey].trim() : '';
             const second = typeof item[secondKey] === 'string' ? item[secondKey].trim() : '';
             if (!first || !second || first.length > firstLimit || second.length > secondLimit) return null;
-            result.push({ [firstKey]: first, [secondKey]: second });
+            const rawOrder = Number(item.sort_order);
+            result.push({
+                [firstKey]: first,
+                [secondKey]: second,
+                sort_order: Number.isSafeInteger(rawOrder) && rawOrder >= 0 ? rawOrder : index,
+                source_order: index
+            });
         }
-        return result;
+        return result.sort(function (a, b) {
+            return a.sort_order - b.sort_order || a.source_order - b.source_order;
+        }).map(function (item) {
+            delete item.sort_order;
+            delete item.source_order;
+            return item;
+        });
     }
 
     function renderFaqs(records) {

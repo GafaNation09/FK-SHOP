@@ -15,8 +15,13 @@ assert.ok(Array.isArray(settings.help.faqs) && settings.help.faqs.length >= 5, '
 assert.ok(Array.isArray(settings.help.sections) && settings.help.sections.length >= 1, 'fallback Help sections must be editable');
 assert.match(adminHtml, /name="help\.faqs"/);
 assert.match(adminHtml, /name="help\.sections"/);
+assert.match(adminHtml, /data-help-add="faqs"/);
+assert.match(adminHtml, /data-help-add="sections"/);
 assert.match(adminJs, /parseContentList\('help\.faqs', 40/);
 assert.match(adminJs, /parseContentList\('help\.sections', 20/);
+assert.match(adminJs, /function renderHelpEditorList/);
+assert.match(adminJs, /data-help-action/);
+assert.match(adminJs, /status: status, sort_order: index/);
 assert.match(adminJs, /fetch\(new URL\('\.\.\/data\/business-settings\.json'/, 'nested admin must load the existing public settings fallback');
 assert.match(adminJs, /!defaults \|\| !defaults\.help/, 'admin must not initialize managed content as an empty array when fallback data exists');
 assert.match(adminJs, /from\('business_settings'\)[\s\S]*?\.upsert\(rows/);
@@ -72,4 +77,29 @@ await new Promise(resolveTick => setTimeout(resolveTick, 0));
 assert.equal(staticFaq.children.length, 1, 'malformed public data must leave the static fallback untouched');
 assert.equal(staticHelp.children.length, 1, 'malformed Help data must leave the static fallback untouched');
 
-console.log('PASS: Help/FAQ defaults, admin JSON persistence, plain-text rendering and malformed-data fallback');
+const publicationFaq = makeElement('div');
+const publicationHelp = makeElement('div');
+const publicationDocument = { querySelector(selector) { return selector === '[data-managed-faq-list]' ? publicationFaq : selector === '[data-managed-help-content]' ? publicationHelp : null; }, createElement(tagName) { return makeElement(tagName); } };
+const publicationData = { settings: { help: {
+  faqs: [
+    { question: 'Later question?', answer: 'Later answer.', status: 'published', sort_order: 5 },
+    { question: 'Unpublished draft?', answer: 'Hidden draft answer.', status: 'draft', sort_order: 0 },
+    { question: 'First question?', answer: 'First answer.', status: 'published', sort_order: 1 },
+    { question: 'Legacy published question?', answer: 'Legacy answer.' }
+  ],
+  sections: [
+    { title: 'Later section', body: 'Later text.', status: 'published', sort_order: 2 },
+    { title: 'Draft section', body: 'Hidden guidance.', status: 'draft', sort_order: 0 },
+    { title: 'First section', body: 'First text.', status: 'published', sort_order: 1 }
+  ]
+} } };
+vm.runInNewContext(source, { window: { KCBF: { ready: Promise.resolve(publicationData) } }, document: publicationDocument, console });
+await new Promise(resolveTick => setTimeout(resolveTick, 0));
+assert.equal(publicationFaq.children.length, 3, 'published and legacy FAQ entries render, while draft entries remain hidden');
+assert.equal(publicationFaq.children[0].children[0].children[0].textContent, 'First question?', 'FAQ order follows sort_order');
+assert.equal(publicationFaq.children[1].children[0].children[0].textContent, 'Legacy published question?', 'existing entries without status remain published');
+assert.equal(collectText(publicationFaq).includes('Unpublished draft?'), false, 'draft FAQ text is absent from public output');
+assert.equal(publicationHelp.children[0].textContent, 'First section', 'Help sections follow sort_order');
+assert.equal(collectText(publicationHelp).includes('Draft section'), false, 'draft Help text is absent from public output');
+
+console.log('PASS: Help/FAQ admin-managed drafts, publish status, reorder controls, public filtering, backwards compatibility and text-only rendering');
