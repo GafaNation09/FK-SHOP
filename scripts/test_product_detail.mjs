@@ -34,7 +34,8 @@ const selectors = [
   '[data-detail-care]', '[data-detail-colors]', '[data-detail-sizes]', '[data-detail-patterns]',
   '[data-detail-personalization]', '[data-detail-measurements]', '[data-detail-weight]', '[data-detail-shipping]',
   '[data-detail-attributes]', '[data-detail-attributes-container]', '[data-detail-quantity]', '[data-detail-quote]',
-  '[data-detail-cart]', '[data-detail-wishlist]'
+  '[data-detail-cart]', '[data-detail-wishlist]', '[data-detail-share-status]', '[data-detail-share-whatsapp]',
+  '[data-detail-native-share]', '[data-detail-copy-link]'
 ];
 const panel = new Element();
 const fields = new Map(selectors.map((selector) => [selector, new Element()]));
@@ -48,13 +49,20 @@ const image = new Element();
 const mainImage = new Element();
 image.querySelector = (selector) => selector === '[data-detail-main-image]' ? mainImage : null;
 const gallery = new Element();
+const metadataSelectors = ['#product-meta-description', '#product-canonical', '#product-og-title', '#product-og-description', '#product-og-url', '#product-og-image', '#product-twitter-title', '#product-twitter-description', '#product-twitter-image'];
+const metadata = new Map(metadataSelectors.map((selector) => [selector, new Element()]));
+let jsonLdNode = null;
 const document = {
+  title: '',
+  baseURI: 'https://store.example/multishop/',
+  head: { appendChild(node) { jsonLdNode = node; } },
   querySelector(selector) {
     return {
       '[data-detail-empty]': empty,
       '[data-detail-content]': panel,
       '[data-detail-image]': image,
-      '[data-detail-gallery]': gallery
+      '[data-detail-gallery]': gallery,
+      ...Object.fromEntries(metadata)
     }[selector] || null;
   },
   createElement() { return new Element(); }
@@ -74,12 +82,13 @@ const api = {
   ready: Promise.resolve({ products: [product] }),
   availableProducts(data) { return data.products; },
   availabilityLabel(product) { return product.availability === 'contact_for_availability' ? 'Contact to confirm availability' : product.availability; },
+  productUrl(slug) { return '/multishop/product/' + encodeURIComponent(slug); },
   safeImageUrl(value) { return value; },
   escapeHtml(value) { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); },
   formatKes(value) { return 'KES ' + Number(value).toLocaleString('en-KE'); }
 };
-const window = { KCBF: api, location: { search: '?product=woven-bag' } };
-const context = vm.createContext({ window, document, URLSearchParams, Promise, Number, String, Object, Array, encodeURIComponent });
+const window = { KCBF: api, location: { search: '?product=woven-bag', pathname: '/multishop/detail.html', origin: 'https://store.example' }, history: { replaceState() {} }, isSecureContext: true };
+const context = vm.createContext({ window, document, navigator: {}, URL, URLSearchParams, Promise, Number, String, Object, Array, encodeURIComponent });
 vm.runInContext(source, context, { filename: 'detail.js' });
 await api.ready;
 await Promise.resolve();
@@ -99,6 +108,9 @@ assert.equal(fields.get('[data-detail-attributes]').children[1].textContent, 'Co
 assert.equal(fields.get('[data-detail-attributes-container]').hidden, false);
 assert.equal(fields.get('[data-detail-quantity]').attributes.max, undefined);
 assert.equal(fields.get('[data-detail-quote]').href, 'contact.html?product=woven-bag');
+assert.equal(document.title, 'Woven bag | Knit&Crochet by Faith');
+assert.equal(metadata.get('#product-og-url').attributes.content, 'https://store.example/multishop/product/woven-bag');
+assert.match(jsonLdNode.textContent, /"@type":"Product"/);
 
 gallery.listeners.click({ target: { closest(selector) {
   return selector === '[data-detail-photo-index]' ? { getAttribute() { return '1'; } } : null;

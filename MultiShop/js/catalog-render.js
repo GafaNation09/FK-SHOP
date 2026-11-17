@@ -92,7 +92,9 @@
     function renderProductCard(product, columnClass) {
         const columns = typeof columnClass === 'string' ? columnClass : homeColumn;
         const slug = encodeURIComponent(productSlug(product));
-        const detailUrl = 'detail.html?product=' + slug;
+        const detailUrl = typeof api.productUrl === 'function'
+            ? api.productUrl(productSlug(product))
+            : 'detail.html?product=' + slug;
         const name = api.escapeHtml(product.name || 'Product name to be added');
         const id = api.escapeHtml(String(product.id || product.slug || ''));
         const isSaved = Boolean(api.commerce && api.commerce.isWishlisted && api.commerce.isWishlisted(product.id || product.slug));

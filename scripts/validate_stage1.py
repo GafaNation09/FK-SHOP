@@ -81,6 +81,7 @@ def main() -> None:
     assert_ok(bool(js_files), "No JavaScript files were found")
     for script in js_files:
         subprocess.run(["node", "--check", str(script)], cwd=ROOT, check=True)
+    subprocess.run(["node", "--check", str(ROOT / "netlify/functions/product-page.mjs")], cwd=ROOT, check=True)
     print(f"PASS: JavaScript syntax ({len(js_files)} files)")
     subprocess.run(["node", str(ROOT / "scripts/test_backend_config.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_storefront_data.mjs")], cwd=ROOT, check=True)
@@ -93,6 +94,7 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_currency.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_availability_labels.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_product_detail.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_product_routes.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_home_categories.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_admin_metric_links.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_help_content.mjs")], cwd=ROOT, check=True)

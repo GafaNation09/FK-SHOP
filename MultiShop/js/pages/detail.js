@@ -9,6 +9,118 @@
         return product[camel] || product[snake] || '';
     }
 
+    function setMeta(selector, value) {
+        const element = document.querySelector(selector);
+        if (element) element.setAttribute('content', value || '');
+    }
+
+    function updateProductMetadata(product) {
+        const slug = String(product.slug || product.id || '');
+        const route = typeof api.productUrl === 'function' ? api.productUrl(slug) : 'detail.html?product=' + encodeURIComponent(slug);
+        const canonical = new URL(route, window.location.origin).toString();
+        const title = (product.name || 'Product') + ' | Knit&Crochet by Faith';
+        const description = String(product.shortDescription || product.short_description || product.description ||
+            'View this handmade product from Knit&Crochet by Faith.').replace(/\s+/g, ' ').trim().slice(0, 300);
+        document.title = title;
+        setMeta('#product-meta-description', description);
+        setMeta('#product-og-title', title);
+        setMeta('#product-og-description', description);
+        setMeta('#product-og-url', canonical);
+        setMeta('#product-twitter-title', title);
+        setMeta('#product-twitter-description', description);
+        const canonicalLink = document.querySelector('#product-canonical');
+        if (canonicalLink) canonicalLink.href = canonical;
+
+        const photos = Array.isArray(product.images) ? product.images : [];
+        const primary = photos.find(function (image) { return image && typeof image === 'object' && (image.isMain === true || image.is_main === true); }) || photos[0];
+        const imageRecord = typeof primary === 'string' ? { url: primary } : (primary || {});
+        const imageSource = imageRecord.url || imageRecord.image_url || imageRecord.imageUrl || '';
+        const safeImage = api.safeImageUrl(imageSource);
+        const absoluteImage = safeImage ? new URL(safeImage, document.baseURI).toString() : '';
+        if (absoluteImage && new URL(absoluteImage).protocol === 'https:') {
+            setMeta('#product-og-image', absoluteImage);
+            setMeta('#product-twitter-image', absoluteImage);
+        }
+
+        const jsonLd = {
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: String(product.name || 'Product'),
+            description: description,
+            image: absoluteImage ? [absoluteImage] : undefined,
+            category: product.categoryName || product.category_name || undefined,
+            brand: { '@type': 'Brand', name: 'Knit&Crochet by Faith' },
+            url: canonical
+        };
+        const price = product.priceKes !== undefined ? product.priceKes : product.base_price_kes;
+        if (price !== null && price !== undefined && price !== '' && Number.isFinite(Number(price)) && Number(price) >= 0 &&
+            !(product.requiresQuote === true || product.requires_quote === true)) {
+            jsonLd.offers = {
+                '@type': 'Offer',
+                priceCurrency: 'KES',
+                price: Number(price).toFixed(2),
+                url: canonical
+            };
+        }
+        const stock = product.stockQuantity !== undefined ? product.stockQuantity : product.stock_quantity;
+        const availability = product.availability || product.availability_status || '';
+        if (availability === 'out_of_stock' || (stock !== null && stock !== undefined && Number(stock) === 0)) {
+            if (jsonLd.offers) jsonLd.offers.availability = 'https://schema.org/OutOfStock';
+        } else if (availability === 'available' || availability === 'in_stock' ||
+            (stock !== null && stock !== undefined && Number(stock) > 0)) {
+            if (jsonLd.offers) jsonLd.offers.availability = 'https://schema.org/InStock';
+        }
+        let jsonLdNode = document.querySelector('#product-jsonld');
+        if (!jsonLdNode) {
+            jsonLdNode = document.createElement('script');
+            jsonLdNode.id = 'product-jsonld';
+            jsonLdNode.type = 'application/ld+json';
+            document.head.appendChild(jsonLdNode);
+        }
+        jsonLdNode.textContent = JSON.stringify(jsonLd, function (key, value) { return value === undefined ? undefined : value; })
+            .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+        return canonical;
+    }
+
+    function bindProductSharing(product, canonicalUrl, panel) {
+        const shareStatus = panel.querySelector('[data-detail-share-status]');
+        const shareTitle = String(product.name || 'Handmade crochet product');
+        const whatsapp = panel.querySelector('[data-detail-share-whatsapp]');
+        if (whatsapp) whatsapp.href = 'https://wa.me/?text=' + encodeURIComponent(shareTitle + ' — ' + canonicalUrl);
+        const nativeButton = panel.querySelector('[data-detail-native-share]');
+        if (nativeButton && typeof navigator.share === 'function') nativeButton.hidden = false;
+        const copyButton = panel.querySelector('[data-detail-copy-link]');
+        if (copyButton) copyButton.addEventListener('click', async function () {
+            try {
+                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(canonicalUrl);
+                else {
+                    const input = document.createElement('textarea');
+                    input.value = canonicalUrl;
+                    input.setAttribute('readonly', '');
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.select();
+                    const copied = document.execCommand('copy');
+                    input.remove();
+                    if (!copied) throw new Error('Clipboard unavailable');
+                }
+                if (shareStatus) shareStatus.textContent = 'Product link copied.';
+            } catch (error) {
+                if (shareStatus) shareStatus.textContent = 'Could not copy the link. Please copy the address from your browser.';
+            }
+        });
+        if (nativeButton) nativeButton.addEventListener('click', async function () {
+            if (typeof navigator.share !== 'function') return;
+            try {
+                await navigator.share({ title: shareTitle, text: 'View this handmade product from Knit&Crochet by Faith.', url: canonicalUrl });
+                if (shareStatus) shareStatus.textContent = 'Product shared.';
+            } catch (error) {
+                if (error && error.name !== 'AbortError' && shareStatus) shareStatus.textContent = 'The product could not be shared from this device.';
+            }
+        });
+    }
+
     function listText(value) {
         if (Array.isArray(value)) return value.filter(Boolean).join(', ');
         return typeof value === 'string' ? value.trim() : '';
@@ -62,10 +174,14 @@
 
     api.ready.then(function (data) {
         const params = new URLSearchParams(window.location.search);
-        const requested = params.get('product') || params.get('id') || '';
+        const routeMatch = window.location.pathname.match(/\/product\/([^/]+)\/?$/);
+        let pathSlug = '';
+        try { pathSlug = routeMatch ? decodeURIComponent(routeMatch[1]) : ''; } catch (error) { pathSlug = ''; }
+        const requested = params.get('product') || params.get('id') || pathSlug;
         const products = api.availableProducts(data);
         const product = products.find(function (item) {
-            return String(item.slug || item.id) === requested;
+            return String(item.slug || '') === requested || String(item.id || '') === requested ||
+                (Array.isArray(item.previousSlugs) && item.previousSlugs.includes(requested));
         });
         const empty = document.querySelector('[data-detail-empty]');
         const panel = document.querySelector('[data-detail-content]');
@@ -76,6 +192,11 @@
 
         if (empty) empty.hidden = true;
         panel.hidden = false;
+        if (routeMatch && product.slug && product.slug !== requested && typeof api.productUrl === 'function') {
+            window.history.replaceState(window.history.state, '', api.productUrl(product.slug));
+        }
+        const canonicalUrl = updateProductMetadata(product);
+        bindProductSharing(product, canonicalUrl, panel);
         const imageContainer = document.querySelector('[data-detail-image]');
         if (imageContainer) imageContainer.innerHTML = productImage(product);
         panel.querySelector('[data-detail-name]').textContent = product.name || 'Product name to be added';

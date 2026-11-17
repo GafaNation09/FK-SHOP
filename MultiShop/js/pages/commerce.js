@@ -323,7 +323,9 @@
 
     function cartRow(product, entry) {
         const id = escape(entry.id);
-        const slug = encodeURIComponent(product.slug || product.id);
+        const productHref = escape(typeof api.productUrl === 'function'
+            ? api.productUrl(product.slug || product.id)
+            : 'detail.html?product=' + encodeURIComponent(product.slug || product.id));
         const price = productPrice(product);
         const limit = Math.max(1, cartLimit(product));
         const quantity = Math.min(entry.quantity, limit);
@@ -331,10 +333,10 @@
         const image = imageFor(product) || '<span class="kcbf-cart-no-image" aria-hidden="true"><i class="fas fa-layer-group"></i></span>';
         return '<tr data-cart-row="' + id + '">' +
             '<td class="align-middle text-left kcbf-cart-product-cell" data-label="Product"><div class="d-flex align-items-center kcbf-cart-product">' +
-                '<a class="kcbf-cart-product-image" href="detail.html?product=' + slug + '" aria-label="View ' + escape(product.name) + '">' + image + '</a>' +
-                '<div class="kcbf-cart-product-details"><a class="kcbf-cart-product-name" href="detail.html?product=' + slug + '">' + escape(product.name) + '</a>' +
+                '<a class="kcbf-cart-product-image" href="' + productHref + '" aria-label="View ' + escape(product.name) + '">' + image + '</a>' +
+                '<div class="kcbf-cart-product-details"><a class="kcbf-cart-product-name" href="' + productHref + '">' + escape(product.name) + '</a>' +
                 '<div class="small text-muted">' + escape(api.availabilityLabel ? api.availabilityLabel(product) : (product.availability || product.availability_status || 'Availability to be confirmed')) + '</div>' +
-                '<a class="small" href="detail.html?product=' + slug + '">View product</a></div></div></td>' +
+                '<a class="small" href="' + productHref + '">View product</a></div></div></td>' +
             '<td class="align-middle" data-label="Price">' + priceNode(price) + '</td>' +
             '<td class="align-middle" data-label="Quantity"><div class="kcbf-quantity-control" role="group" aria-label="Quantity for ' + escape(product.name) + '">' +
                 '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="-1" data-product-id="' + id + '" aria-label="Decrease quantity of ' + escape(product.name) + '"' + (quantity <= 1 ? ' disabled' : '') + '><i class="fas fa-minus" aria-hidden="true"></i></button>' +
@@ -389,11 +391,13 @@
             return;
         }
         grid.innerHTML = items.map(function (product) {
-            const slug = encodeURIComponent(product.slug || product.id);
+            const productHref = escape(typeof api.productUrl === 'function'
+                ? api.productUrl(product.slug || product.id)
+                : 'detail.html?product=' + encodeURIComponent(product.slug || product.id));
             const id = escape(productId(product));
             const price = productPrice(product);
-            return '<div class="col-lg-3 col-md-4 col-sm-6 pb-1"><div class="product-item bg-white mb-4"><a class="d-block" href="detail.html?product=' + slug + '">' + imageFor(product) + '</a>' +
-                '<div class="text-center py-3"><a class="h6 text-decoration-none" href="detail.html?product=' + slug + '">' + escape(product.name) + '</a>' +
+            return '<div class="col-lg-3 col-md-4 col-sm-6 pb-1"><div class="product-item bg-white mb-4"><a class="d-block" href="' + productHref + '">' + imageFor(product) + '</a>' +
+                '<div class="text-center py-3"><a class="h6 text-decoration-none" href="' + productHref + '">' + escape(product.name) + '</a>' +
                 '<p class="mb-2">' + (price === null ? 'Price to be confirmed' : priceNode(price)) + '</p>' +
                 '<button type="button" class="btn btn-sm btn-primary mr-1" data-commerce-action="cart" data-product-id="' + id + '"' + (canAddToCart(product) ? '' : ' disabled title="A confirmed price and available stock are required before adding to cart."') + '>Add to cart</button>' +
                 '<button type="button" class="btn btn-sm btn-outline-dark" data-commerce-action="wishlist" data-product-id="' + id + '" data-product-name="' + escape(product.name) + '" aria-pressed="true" title="Remove from favourites"><i class="fas fa-heart" aria-hidden="true"></i><span class="sr-only">Remove from favourites</span></button></div></div></div>';

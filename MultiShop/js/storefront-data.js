@@ -39,6 +39,21 @@
         return category && (category.slug || category.id) || '';
     }
 
+    function productUrl(productOrSlug) {
+        const slug = productOrSlug && typeof productOrSlug === 'object'
+            ? (productOrSlug.slug || productOrSlug.id)
+            : productOrSlug;
+        if (!slug) return 'detail.html';
+        const base = document.querySelector('base')?.href || new URL('.', window.location.href).href;
+        const netlifyHost = String(window.location.hostname || '').toLowerCase().endsWith('.netlify.app');
+        if (!netlifyHost) {
+            const queryUrl = new URL('detail.html', base);
+            queryUrl.searchParams.set('product', String(slug));
+            return queryUrl.pathname + queryUrl.search;
+        }
+        return new URL('product/' + encodeURIComponent(String(slug)), base).pathname;
+    }
+
     function productCategorySlug(product) {
         return product && (product.categorySlug || product.category_slug || product.categoryId || product.category_id) || '';
     }
@@ -142,6 +157,14 @@
     function mapProduct(row) {
         const category = Array.isArray(row.product_categories) ? row.product_categories[0] : row.product_categories;
         const images = Array.isArray(row.product_images) ? row.product_images.slice() : [];
+        const storedAttributes = row.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes) ? row.attributes : {};
+        const previousSlugs = Array.isArray(storedAttributes.previousSlugs)
+            ? Array.from(new Set(storedAttributes.previousSlugs.filter(function (slug) {
+                return typeof slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+            }))).slice(-20)
+            : [];
+        const publicAttributes = Object.assign({}, storedAttributes);
+        delete publicAttributes.previousSlugs;
         images.sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); });
         return {
             id: row.id,
@@ -183,7 +206,8 @@
             care_instructions: row.care_instructions || '',
             shippingInformation: row.shipping_information || '',
             shipping_information: row.shipping_information || '',
-            attributes: row.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes) ? row.attributes : {},
+            attributes: publicAttributes,
+            previousSlugs: previousSlugs,
             images: images.map(function (image) {
                 return {
                     url: image.image_url,
@@ -242,6 +266,7 @@
     namespace.safeImageUrl = safeImageUrl;
     namespace.isPublished = isPublished;
     namespace.categorySlug = categorySlug;
+    namespace.productUrl = productUrl;
     namespace.productCategorySlug = productCategorySlug;
     namespace.availableProducts = availableProducts;
     namespace.categoryCount = categoryCount;

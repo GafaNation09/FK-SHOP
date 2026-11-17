@@ -10,7 +10,7 @@ This guide summarizes the repository's verified development and release facts. I
 - **Verified — GitHub Pages:** `README.md` documents publishing the `main` branch from repository root at <https://gafanation09.github.io/FK-SHOP/>.
 - **Verified — Supabase:** The later `docs/supabase-auth-setup.md` record (2026-11-16) says the owner-confirmed project is healthy, the listed database migrations are applied, and the `admin-management` Supabase Edge Function is active with JWT verification. It also records migration-history version mismatches. See the caution below.
 - **Not documented:** No local development-server command is documented. Do not assume a package manager, build command, or development server exists.
-- **Unknown — Netlify configuration:** The current Base, Publish, build, Functions, and environment-variable settings have not been read or recorded. Do not change them based on assumptions.
+- **Unknown — Netlify configuration:** The current Base, Publish, build, Functions, and environment-variable settings have not been read or recorded. This local change adds a public-only product metadata function under the standard `netlify/functions/` folder plus a root rewrite, but neither function detection nor the clean production route has been verified yet. Do not infer successful deployment from source presence or change settings based on assumptions.
 
 ## Run and test
 
@@ -49,7 +49,7 @@ The repository contains timestamped Supabase migration and seed SQL under `supab
 
 ## GitHub, Netlify, and release checks
 
-GitHub Pages is documented as publishing `main` from the repository root. The latest deployment record available in this repository documents a Ready Netlify production deployment from branch `main` and the `/multishop/` route; it does not establish all future pushes' build behavior. No Netlify configuration file is present in the repository inventory, and Base/Publish/build/Functions settings and Netlify environment-variable names remain unverified. No Netlify Functions were included in the documented deployment; administrator team operations use the Supabase Edge Function instead. Do not invent a build command, publish directory, Functions path, or environment setup, and do not alter Netlify settings until their current values have been read and recorded.
+GitHub Pages is documented as publishing `main` from the repository root. The latest deployment record available in this repository documents a Ready Netlify production deployment from branch `main` and the `/multishop/` route; it does not establish all future pushes' build behavior. No Netlify configuration file is present in the repository inventory, and Base/Publish/build/Functions settings and Netlify environment-variable names remain unverified. Prior production deploy records state that no Netlify Functions were included; this local continuation adds `netlify/functions/product-page.mjs` using Netlify's current Fetch `Request`/`Response` handler format for read-only public product metadata via the publishable Supabase key. It does not perform privileged database operations or replace the Supabase `admin-management` Edge Function. Verify the deployment's Functions settings and live route behavior after release. Do not invent a build command, publish directory, or environment setup, and do not alter Netlify settings until their current values have been read and recorded.
 
 Before release:
 

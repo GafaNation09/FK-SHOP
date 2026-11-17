@@ -3,10 +3,30 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Shop Detail | Knit&Crochet by Faith</title>
+    <title>Product | Knit&amp;Crochet by Faith</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="handmade crochet, gifts, bags, accessories, Knit&Crochet by Faith" name="keywords">
-    <meta content="View verified product details from Knit&Crochet by Faith." name="description">
+    <meta id="product-meta-description" content="View verified product details from Knit&amp;Crochet by Faith." name="description">
+    <link id="product-canonical" rel="canonical" href="">
+    <meta id="product-og-title" property="og:title" content="Product | Knit&amp;Crochet by Faith">
+    <meta id="product-og-description" property="og:description" content="View verified product details from Knit&amp;Crochet by Faith.">
+    <meta id="product-og-url" property="og:url" content="">
+    <meta property="og:type" content="product">
+    <meta id="product-og-image" property="og:image" content="">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta id="product-twitter-title" name="twitter:title" content="Product | Knit&amp;Crochet by Faith">
+    <meta id="product-twitter-description" name="twitter:description" content="View verified product details from Knit&amp;Crochet by Faith.">
+    <meta id="product-twitter-image" name="twitter:image" content="">
+    <script>
+        (function () {
+            var route = window.location.pathname.match(/^(.*\/)product\/[^/]+\/?$/);
+            if (route) {
+                var base = document.createElement('base');
+                base.href = route[1];
+                document.head.appendChild(base);
+            }
+        }());
+    </script>
 
     <!-- Favicon -->
     <link href="img/favicon.ico" rel="icon">
@@ -210,6 +230,12 @@
                     <div class="d-flex align-items-center mb-4">
                         <button class="btn btn-outline-dark mr-2" type="button" disabled data-detail-wishlist data-commerce-action="wishlist" aria-pressed="false"><i class="far fa-heart mr-1" aria-hidden="true"></i> Add to favourites</button>
                         <a class="btn btn-outline-dark" href="contact.html" data-detail-quote>Ask about a custom request</a>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center mb-3">
+                        <a class="btn btn-sm btn-outline-success mr-2 mb-2" href="https://wa.me/" target="_blank" rel="noopener noreferrer" data-detail-share-whatsapp aria-label="Share this product on WhatsApp"><i class="fab fa-whatsapp mr-1" aria-hidden="true"></i>WhatsApp</a>
+                        <button class="btn btn-sm btn-outline-dark mr-2 mb-2" type="button" data-detail-native-share hidden><i class="fa fa-share-alt mr-1" aria-hidden="true"></i>Share</button>
+                        <button class="btn btn-sm btn-outline-dark mb-2" type="button" data-detail-copy-link><i class="fa fa-link mr-1" aria-hidden="true"></i>Copy product link</button>
+                        <span class="small ml-2" data-detail-share-status role="status" aria-live="polite"></span>
                     </div>
                     <p class="small mb-0">Only verified product information is shown. Prices, availability, stock and production estimates must be confirmed before publication.</p>
                 </div>

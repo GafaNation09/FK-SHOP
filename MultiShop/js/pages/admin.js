@@ -368,6 +368,7 @@
         if (!form) return;
         form.reset();
         form.elements.id.value = '';
+        form.elements.slug.dataset.userEdited = 'false';
         document.querySelector('[data-product-form-title]').textContent = 'New product';
         document.querySelectorAll('[name="ordering_modes"]').forEach(function (field) { field.checked = false; });
         const status = form.querySelector('[name="status"]');
@@ -408,6 +409,7 @@
         form.elements.id.value = product.id;
         form.elements.name.value = product.name || '';
         form.elements.slug.value = product.slug || '';
+        form.elements.slug.dataset.userEdited = 'true';
         form.elements.category_id.value = product.category_id || '';
         form.elements.base_price_kes.value = product.base_price_kes == null ? '' : product.base_price_kes;
         form.elements.original_price_kes.value = product.original_price_kes == null ? '' : product.original_price_kes;
@@ -424,7 +426,9 @@
         form.elements.weight_grams.value = product.weight_grams == null ? '' : product.weight_grams;
         form.elements.care_instructions.value = product.care_instructions || '';
         form.elements.shipping_information.value = product.shipping_information || '';
-        form.elements.attributes.value = JSON.stringify(product.attributes || {}, null, 2);
+        const editableAttributes = Object.assign({}, product.attributes || {});
+        delete editableAttributes.previousSlugs;
+        form.elements.attributes.value = JSON.stringify(editableAttributes, null, 2);
         form.elements.availability_status.value = product.availability_status || 'to_be_confirmed';
         form.elements.status.value = product.status || 'draft';
         form.elements.featured.checked = Boolean(product.featured);
@@ -518,7 +522,7 @@
             entries.forEach(function (entry) {
                 const key = String(entry[0]).trim();
                 const value = entry[1];
-                if (!key || key.length > 60 || /(__proto__|constructor|prototype|password|secret|credential|token|api[_-]?key|private[_-]?key|email|phone|address|customer)/i.test(key)) {
+                if (!key || key.length > 60 || /^previousSlugs$/i.test(key) || /(__proto__|constructor|prototype|password|secret|credential|token|api[_-]?key|private[_-]?key|email|phone|address|customer)/i.test(key)) {
                     throw new Error('Use short public specification names only; private or sensitive names are not allowed.');
                 }
                 if (typeof value === 'string') {
@@ -539,6 +543,16 @@
             return safe;
         }
         const publicAttributes = parsePublicAttributes(values.attributes);
+        const id = String(form.elements.id.value || '').trim();
+        const existingProduct = id ? allProducts.find(function (product) { return product.id === id; }) : null;
+        let previousSlugs = existingProduct && existingProduct.attributes && Array.isArray(existingProduct.attributes.previousSlugs)
+            ? existingProduct.attributes.previousSlugs.filter(function (oldSlug) { return typeof oldSlug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(oldSlug); })
+            : [];
+        if (existingProduct && existingProduct.slug && existingProduct.slug !== slug) {
+            previousSlugs = previousSlugs.filter(function (oldSlug) { return oldSlug !== slug; });
+            previousSlugs.push(existingProduct.slug);
+        }
+        if (previousSlugs.length) publicAttributes.previousSlugs = Array.from(new Set(previousSlugs)).slice(-20);
         const row = {
             category_id: values.category_id,
             name: String(values.name || '').trim(),
@@ -565,7 +579,6 @@
             shipping_information: String(values.shipping_information || '').trim() || null,
             attributes: publicAttributes
         };
-        const id = String(form.elements.id.value || '').trim();
         const result = id
             ? await client.from('products').update(row).eq('id', id).select('id').single()
             : await client.from('products').insert(row).select('id').single();
@@ -686,6 +699,17 @@
         const productForm = document.querySelector('[data-product-form]');
         const categoryForm = document.querySelector('[data-category-form]');
         const settingsForm = document.querySelector('[data-settings-form]');
+        if (productForm) {
+            const nameField = productForm.elements.name;
+            const slugField = productForm.elements.slug;
+            slugField.addEventListener('input', function () { slugField.dataset.userEdited = 'true'; });
+            nameField.addEventListener('input', function () {
+                if (productForm.elements.id.value || slugField.dataset.userEdited === 'true') return;
+                slugField.value = String(nameField.value || '').normalize('NFKD')
+                    .replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            });
+        }
         document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
         document.querySelector('[data-customers-table]')?.addEventListener('click', async function (event) {
             const button = event.target.closest('button[data-action="save-customer-details"]');
