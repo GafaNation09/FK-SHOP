@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const html = await readFile(resolve(root, 'MultiShop/admin/index.html'), 'utf8');
@@ -56,5 +57,62 @@ assert.match(js, /button\.getAttribute\('data-open-order-status'\)/, 'order metr
 assert.match(js, /button\.getAttribute\('data-payment-status-filter'\)/, 'payment metric actions must carry their filter into the order list');
 assert.match(js, /button\.getAttribute\('data-product-filter'\)/, 'inventory metric actions must carry their filter into product management');
 assert.match(js, /query\.in\('payment_status',\s*\['refunded',\s*'partially_refunded'\]\)/, 'refund metrics must include partial refunds when opening orders');
+assert.match(js, /function safeAdminImageUrl\(value\)/, 'admin product images must have a local URL validator');
+assert.match(js, /parsed\.protocol !== 'https:'/, 'admin product images must reject non-HTTPS URLs');
+assert.match(js, /function renderProductImages\(productId, images\)[\s\S]*?container\.replaceChildren\(\)/, 'product photo rendering must clear and rebuild the gallery with DOM nodes');
+assert.match(js, /photo\.src = url;[\s\S]*?photo\.alt = image\.alt_text \|\| 'Product photo'/, 'product photos must assign URL and alt text as DOM properties');
+assert.doesNotMatch(js, /api\.safeImageUrl|api\.escapeHtml/, 'admin product editing must not depend on storefront-only helpers');
 
-console.log('PASS: dashboard uses real count-only metrics, bounded date-filtered records, lazy sections and filtered actions');
+function extractFunction(source, name) {
+  const start = source.indexOf('function ' + name + '(');
+  assert.notEqual(start, -1, 'expected function ' + name);
+  const opening = source.indexOf('{', start);
+  let depth = 0;
+  for (let index = opening; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error('Unclosed function ' + name);
+}
+
+function createNode(tagName) {
+  const node = { tagName, children: [], dataset: {} };
+  node.appendChild = function (child) { this.children.push(child); return child; };
+  node.append = function (...children) { children.forEach(this.appendChild.bind(this)); };
+  node.replaceChildren = function (...children) { this.children = []; this.append(...children); };
+  Object.defineProperty(node, 'textContent', {
+    get() { return (this._textContent || '') + this.children.map(child => child.textContent || '').join(''); },
+    set(value) { this._textContent = String(value); this.children = []; }
+  });
+  return node;
+}
+
+const gallery = createNode('div');
+const documentMock = {
+  querySelector(selector) { return selector === '[data-product-images]' ? gallery : null; },
+  createElement: createNode
+};
+const galleryFunctions = runInNewContext([
+  extractFunction(js, 'safeAdminImageUrl'),
+  extractFunction(js, 'renderProductImages'),
+  '({ safeAdminImageUrl, renderProductImages })'
+].join('\n'), { URL, document: documentMock });
+assert.equal(galleryFunctions.safeAdminImageUrl('https://storage.example.test/photo.jpg'), 'https://storage.example.test/photo.jpg');
+assert.equal(galleryFunctions.safeAdminImageUrl('http://storage.example.test/photo.jpg'), '');
+assert.equal(galleryFunctions.safeAdminImageUrl('javascript:alert(1)'), '');
+galleryFunctions.renderProductImages('product-1', [
+  { id: 'main', image_url: 'https://storage.example.test/main.jpg', alt_text: '<img onerror=alert(1)>', is_main: true, sort_order: 0 },
+  { id: 'secondary', image_url: 'https://storage.example.test/second.jpg', alt_text: 'Second photo', is_main: false, sort_order: 1 },
+  { id: 'unsafe', image_url: 'javascript:alert(1)', alt_text: 'Unsafe', is_main: false, sort_order: 2 }
+]);
+function descendants(node) { return [node, ...node.children.flatMap(descendants)]; }
+const galleryNodes = descendants(gallery);
+assert.equal(galleryNodes.filter(node => node.tagName === 'img').length, 2, 'only HTTPS product images should render');
+assert.equal(galleryNodes.find(node => node.tagName === 'img')?.alt, '<img onerror=alert(1)>', 'alt text must remain a DOM text property, not parsed markup');
+assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'set-main-image' && node.dataset.id === 'secondary'));
+assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'remove-product-image' && node.dataset.id === 'main'));
+galleryFunctions.renderProductImages('product-1', [{ id: 'unsafe', image_url: 'data:text/html,unsafe' }]);
+assert.match(gallery.textContent, /No valid product photos/);
+
+console.log('PASS: dashboard metrics and filters; product gallery HTTPS validation, safe DOM rendering and action controls');

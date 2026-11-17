@@ -565,27 +565,71 @@
         fillCategoryOptions();
     }
 
+    function safeAdminImageUrl(value) {
+        if (typeof value !== 'string' || !value.trim()) return '';
+        try {
+            const parsed = new URL(value.trim());
+            if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return '';
+            return parsed.href;
+        } catch (error) {
+            return '';
+        }
+    }
+
     function renderProductImages(productId, images) {
         const container = document.querySelector('[data-product-images]');
         if (!container) return;
+        container.replaceChildren();
+        function showMessage(message) {
+            const paragraph = document.createElement('p');
+            paragraph.className = 'small text-muted mb-0';
+            paragraph.textContent = message;
+            container.appendChild(paragraph);
+        }
         if (!productId) {
-            container.innerHTML = '<p class="small text-muted mb-0">Save the product first to manage its photos.</p>';
+            showMessage('Save the product first to manage its photos.');
             return;
         }
         if (!images || !images.length) {
-            container.innerHTML = '<p class="small text-muted mb-0">No photos have been saved for this product yet.</p>';
+            showMessage('No photos have been saved for this product yet.');
             return;
         }
-        container.innerHTML = images.slice().sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); }).map(function (image) {
-            const url = api.safeImageUrl(image.image_url);
-            if (!url) return '';
-            const alt = api.escapeHtml(image.alt_text || 'Product photo');
-            return '<div class="col-6 col-md-3 mb-3"><div class="border bg-white p-2 h-100">' +
-                '<img class="img-fluid mb-2" src="' + api.escapeHtml(url) + '" alt="' + alt + '" loading="lazy">' +
-                '<small class="d-block mb-2">' + (image.is_main ? 'Main photo' : alt) + '</small>' +
-                (image.is_main ? '' : '<button class="btn btn-sm btn-outline-dark mb-1" type="button" data-action="set-main-image" data-id="' + api.escapeHtml(image.id) + '">Make main</button> ') +
-                '<button class="btn btn-sm btn-outline-danger mb-1" type="button" data-action="remove-product-image" data-id="' + api.escapeHtml(image.id) + '">Remove</button></div></div>';
-        }).join('');
+        const orderedImages = images.slice().sort(function (a, b) {
+            return Number(a.sort_order || 0) - Number(b.sort_order || 0);
+        });
+        let renderedCount = 0;
+        orderedImages.forEach(function (image) {
+            const url = safeAdminImageUrl(image.image_url);
+            if (!url) return;
+            const column = document.createElement('div');
+            column.className = 'col-6 col-md-3 mb-3';
+            const card = document.createElement('div');
+            card.className = 'border bg-white p-2 h-100';
+            const photo = document.createElement('img');
+            photo.className = 'img-fluid mb-2';
+            photo.src = url;
+            photo.alt = image.alt_text || 'Product photo';
+            photo.loading = 'lazy';
+            const label = document.createElement('small');
+            label.className = 'd-block mb-2';
+            label.textContent = image.is_main ? 'Main photo' : (image.alt_text || 'Product photo');
+            card.append(photo, label);
+            function addAction(action, labelText, classes) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = classes;
+                button.dataset.action = action;
+                button.dataset.id = String(image.id || '');
+                button.textContent = labelText;
+                card.appendChild(button);
+            }
+            if (!image.is_main) addAction('set-main-image', 'Make main', 'btn btn-sm btn-outline-dark mb-1 mr-1');
+            addAction('remove-product-image', 'Remove', 'btn btn-sm btn-outline-danger mb-1');
+            column.appendChild(card);
+            container.appendChild(column);
+            renderedCount += 1;
+        });
+        if (!renderedCount) showMessage('No valid product photos are available for this product.');
     }
 
     function populateProductForm(product) {
