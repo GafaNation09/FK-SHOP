@@ -47,7 +47,7 @@ Status terms follow the prompt exactly:
 - **IMPLEMENTED, NOT FULLY TESTED:** Existing authenticated-user and administrator protections remain in code; no new privileged endpoint, role grant, or service key was added.
 - **IMPLEMENTED, NOT FULLY TESTED:** The current Help/FAQ editor reuses public `business_settings` JSONB values and existing public-read/content-write RLS; no new DDL is required for its current scope.
 - **NOT IMPLEMENTED:** Rich content CMS schema/draft publishing/audit history, audit coverage for every sensitive operation, trusted payment/order server functions, media video/transcode/compression pipeline, derived image sizes, grouped analytic aggregates beyond count-only dashboard summaries, performance budgets and monitoring.
-- **BLOCKED:** Migration automation until repository/live history is reconciled; privileged provider operations until server-side provider configuration is verified.
+- **BLOCKED; AUDITED READ-ONLY:** Live migration names map to all five repository files, but normalized SQL digests match only three; `stage1_storefront` and `auth_admin_access` differ. No history row, schema or policy was changed. Audit the applied DDL/current schema and prepare a reviewed forward reconciliation before enabling automation. Privileged provider operations also remain blocked until server-side provider configuration is verified; see `docs/supabase-auth-setup.md`.
 - **NOT IMPLEMENTED:** Before/after Lighthouse/Core Web Vitals, bundle/image/query measurements, controlled load tests and a verified 100,000-user/10,000-visitors/day capacity assertion. Do not claim those scale targets are achieved; document provider limits and test only under an approved non-production workload.
 
 ## Phase 6 — Testing and deployment
