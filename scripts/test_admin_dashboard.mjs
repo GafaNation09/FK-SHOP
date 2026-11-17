@@ -33,6 +33,7 @@ assert.match(html, /data-open-order-status="delivered"/, 'delivered-order metric
 assert.match(html, /data-open-order-status="cancelled"/, 'cancelled-order metrics must select the cancelled filter');
 assert.match(html, /data-open-order-status="revoked"/, 'revoked-order metrics must select the revoked filter');
 assert.match(html, /data-payment-status-filter="paid"/, 'paid transaction metrics must select the paid filter');
+assert.match(html, /data-product-filter="published"/, 'published-product metric must open the published-only catalog list');
 assert.match(html, /data-product-filter="out_of_stock"/, 'out-of-stock metrics must open a filtered product list');
 
 assert.match(js, /select\(primaryKey,\s*\{\s*count:\s*'exact',\s*head:\s*true\s*\}\)/, 'dashboard counters must use exact count-only queries');
