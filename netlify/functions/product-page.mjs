@@ -96,12 +96,20 @@ export default async function productPage(request, context) {
         if (!product) product = await lookup('attributes', 'cs.' + JSON.stringify({ previousSlugs: [slug] }));
         if (!product) return withHeaders(404, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Product not found | Knit&amp;Crochet by Faith</title><h1>Product not found</h1><p>This product is not currently published.</p><a href="/multishop/shop.html">Browse the shop</a></html>');
 
+        const canonical = new URL('/multishop/product/' + encodeURIComponent(product.slug || slug), origin).toString();
+        if (product.slug && product.slug !== slug) {
+            return withHeaders(301, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Product moved | Knit&amp;Crochet by Faith</title><a href="' + htmlEscape(canonical) + '">Continue to the current product page</a></html>', {
+                Location: canonical,
+                'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=300',
+                'Netlify-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300'
+            });
+        }
+
         const htmlResponse = await fetch(new URL('/multishop/detail.html', origin), { headers: { Accept: 'text/html' } });
         if (!htmlResponse.ok) throw new Error('Product page template is unavailable.');
         let html = await htmlResponse.text();
         const title = plainText(product.name || 'Product', 180) + ' | Knit&Crochet by Faith';
         const description = plainText(product.short_description || product.description || 'View this handmade product from Knit&Crochet by Faith.', 300);
-        const canonical = new URL('/multishop/product/' + encodeURIComponent(product.slug || slug), origin).toString();
         const image = getImage(product, origin);
         const pageSchema = {
             '@context': 'https://schema.org',

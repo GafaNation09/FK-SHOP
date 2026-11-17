@@ -105,8 +105,10 @@ try {
     throw new Error('Unexpected fetch for alias case: ' + url.href);
   };
   const oldSlug = await productPage(request('old-crochet-bag'), { params: { slug: 'old-crochet-bag' } });
-  assert.equal(oldSlug.status, 200, 'a prior published slug should continue to resolve');
-  assert.match(await oldSlug.text(), /property="og:url" content="https:\/\/shop\.example\/multishop\/product\/renamed-crochet-bag"/, 'prior slugs must canonicalize to the current product URL');
+  assert.equal(oldSlug.status, 301, 'a prior published slug should permanently redirect to the current product URL');
+  assert.equal(oldSlug.headers.get('location'), 'https://shop.example/multishop/product/renamed-crochet-bag');
+  assert.match(oldSlug.headers.get('cache-control'), /s-maxage=300/, 'old-slug redirects should use a bounded CDN cache lifetime');
+  assert.match(oldSlug.headers.get('netlify-cdn-cache-control'), /s-maxage=300/);
 
   globalThis.fetch = async function (input) {
     const url = new URL(input);
