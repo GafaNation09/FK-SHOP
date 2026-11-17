@@ -6,10 +6,10 @@ import vm from 'node:vm';
 const root = resolve(new URL('..', import.meta.url).pathname);
 const loader = await readFile(resolve(root, 'MultiShop/js/storefront-data.js'), 'utf8');
 
-function fakeDocument() {
+function fakeDocument(baseHref = null) {
   return {
     title: 'Store | MultiShop',
-    querySelector() { return null; },
+    querySelector(selector) { return selector === 'base' && baseHref ? { href: baseHref } : null; },
     querySelectorAll() { return []; },
     documentElement: { setAttribute() {} }
   };
@@ -28,10 +28,11 @@ function clientFor(rows, failure = null) {
   };
 }
 
-async function runLoader(client, backendState = { status: 'unconfigured' }, hostname = 'store.example') {
-  const document = fakeDocument();
+async function runLoader(client, backendState = { status: 'unconfigured' }, hostname = 'store.example', routePath = '/multishop/index.html') {
+  const baseHref = routePath.includes('/product/') ? `https://${hostname}/multishop/` : null;
+  const document = fakeDocument(baseHref);
   const window = {
-    location: { href: `https://${hostname}/multishop/index.html`, hostname },
+    location: { href: `https://${hostname}${routePath}`, hostname },
     KCBF: { backendReady: Promise.resolve(client), backendState }
   };
   const fetch = async function (url) {
@@ -52,6 +53,13 @@ const fallback = fallbackResult.data;
 assert.equal(fallback.categories.length, 7, 'JSON fallback should expose the seven approved categories');
 assert.equal(fallback.products.length, 0, 'JSON fallback must not fabricate products');
 assert.equal(fallbackResult.api.productUrl('static-demo'), '/multishop/detail.html?product=static-demo', 'static hosts must retain the working query route');
+const cleanStaticRoute = await runLoader(null, { status: 'unconfigured' }, 'store.example', '/multishop/product/example-item');
+assert.equal(cleanStaticRoute.data.categories.length, 7, 'a clean detail path must still load shared JSON through its base URL');
+assert.equal(cleanStaticRoute.data.error, undefined, 'clean product paths must not resolve data beneath the slug directory');
+assert.equal(cleanStaticRoute.api.productUrl('static-demo'), '/multishop/detail.html?product=static-demo');
+const cleanNetlifyRoute = await runLoader(null, { status: 'unconfigured' }, 'fkshopping.netlify.app', '/multishop/product/example-item');
+assert.equal(cleanNetlifyRoute.data.categories.length, 7, 'Netlify clean product paths must load the shared catalog base');
+assert.equal(cleanNetlifyRoute.api.productUrl('netlify-demo'), '/multishop/product/netlify-demo');
 
 const liveResult = await runLoader(clientFor({
   product_categories: [{ id: 'cat-1', name: 'Bags', slug: 'bags', is_active: true, sort_order: 1 }],

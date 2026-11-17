@@ -5,7 +5,8 @@
     const namespace = window.KCBF = window.KCBF || {};
 
     async function readJson(relativePath) {
-        const url = new URL(relativePath, window.location.href);
+        const baseUrl = document.querySelector('base')?.href || window.location.href;
+        const url = new URL(relativePath, baseUrl);
         const response = await fetch(url.toString(), { credentials: 'same-origin' });
         if (!response.ok) throw new Error('Could not load ' + relativePath + ' (' + response.status + ')');
         return response.json();
