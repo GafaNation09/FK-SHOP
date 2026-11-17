@@ -46,12 +46,18 @@ function jsonForScript(value) {
     return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }
 
-export default async function productPage(request) {
+export const config = {
+    path: '/multishop/product/:slug',
+    method: 'GET'
+};
+
+export default async function productPage(request, context) {
     if (request.method !== 'GET') {
         return withHeaders(405, '<!doctype html><title>Method not allowed</title><h1>Method not allowed</h1>', { Allow: 'GET' });
     }
     const requestUrl = new URL(request.url);
-    const slug = String(requestUrl.searchParams.get('slug') || '').trim();
+    const routeSlug = context && context.params && context.params.slug;
+    const slug = String(routeSlug || requestUrl.searchParams.get('slug') || '').trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
         return withHeaders(400, '<!doctype html><title>Invalid product address</title><h1>Invalid product address</h1>');
     }

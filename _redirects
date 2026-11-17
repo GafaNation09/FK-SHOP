@@ -1,1 +1,0 @@
-/multishop/product/:slug  /.netlify/functions/product-page?slug=:slug  200
