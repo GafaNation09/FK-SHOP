@@ -165,3 +165,13 @@ The full current acceptance register is [`docs/master-prompt-progress.md`](docs/
 - [ ] **STILL OUTSTANDING:** Product videos, gallery zoom/swipe/photo reordering/image optimization; category/subcategory management; analytics/inventory/exports; trusted order, checkout, payment/delivery and custom quote flows; verified SMTP; performance/scale testing; migration-history reconciliation. See [`docs/master-prompt-progress.md`](docs/master-prompt-progress.md).
 
 The overall master prompt is still **NOT COMPLETE**.
+
+
+## 2026-11-17 — Admin dashboard expansion (local, pending release)
+
+- [x] Exact count-only Supabase metrics for catalog/customer totals and selected-period order/payment states; five-row recent order/transaction panels; explicit no-revenue/no-settlement warning.
+- [x] Validated 30-day default date range, all-time reset, open-ended dates, invalid-range handling, role-aware cards, and filtered product/order navigation.
+- [x] Lazy-load admin sections; add server-side product name/status/category filters and 50-row pagination; add order/payment/date filters and 50-row pagination; validate contradictory ready-made stock values.
+- [x] Tests: `scripts/test_admin_dashboard.mjs`, `scripts/test_admin_metric_links.mjs`, full `python3 scripts/validate_stage1.py`, JavaScript syntax, and `git diff --check` passed. No SQL/RLS changes or live record writes.
+- [ ] Push/deploy this increment and use the authorized live admin session to verify real RLS-backed counts, date filters, filtered navigation, and pagination. The prior production shortcut test does not verify this expanded dashboard.
+- [ ] Still missing: revenue/settlement reporting, trend charts, best sellers, full customer activity, inventory ledger/alerts, reports/exports, trusted checkout/orders, payment/delivery providers, custom order/quote workflow, SMTP verification, performance/accessibility checks, and migration-history reconciliation. Overall master prompt remains incomplete.

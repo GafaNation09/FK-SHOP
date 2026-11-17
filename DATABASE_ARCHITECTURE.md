@@ -114,6 +114,7 @@ Migration comments and grants reserve order creation and payment processing for 
 - **CREDENTIAL-DEPENDENT:** Payment activation requires provider selection/onboarding, secure server-side credentials, and verified callbacks. Delivery rules also need configuration before checkout/final totals can be enabled.
 - **CREDENTIAL-DEPENDENT:** The deployed admin route and a non-mutating product-metric shortcut were verified in an authorized session. No live product/photo edit or FAQ settings save/public reload after a save was performed; product-route metadata was subsequently verified read-only in production.
 - **OUTSTANDING:** Live Storage bucket/policies should be rechecked in the authorized Supabase project if operational certainty beyond the cited setup guide is required; no upload was exercised.
+- **IMPLEMENTED LOCALLY, NOT LIVE-VERIFIED (2026-11-17):** The expanded admin overview performs exact count-only reads and bounded recent-record queries through the current authenticated Supabase client; order/customer/catalog access continues to rely on existing RLS. It adds no table, migration, RPC, service-role call, or policy change. `scripts/test_admin_dashboard.mjs` covers query construction and filters; a live admin-session query has not yet been exercised.
 
 ## 9. References
 

@@ -6,11 +6,19 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
+
+class LocalSmokeHTTPServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address) -> None:
+        if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
+            return
+        super().handle_error(request, client_address)
+
 
 try:
     from lxml import html
@@ -97,6 +105,7 @@ def main() -> None:
     subprocess.run(["node", str(ROOT / "scripts/test_product_routes.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_home_categories.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_admin_metric_links.mjs")], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/test_admin_dashboard.mjs")], cwd=ROOT, check=True)
     subprocess.run(["node", str(ROOT / "scripts/test_help_content.mjs")], cwd=ROOT, check=True)
 
     expected_names = [
@@ -320,7 +329,7 @@ def main() -> None:
     print("Baseline-only missing local reference(s): " + ", ".join(sorted(current_missing)))
 
     handler = silent_handler()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server = LocalSmokeHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

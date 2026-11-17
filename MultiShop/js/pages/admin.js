@@ -13,11 +13,12 @@
     let membership = null;
     let allCategories = [];
     let allProducts = [];
+    let productOffset = 0;
     let customerOffset = 0;
     let orderOffset = 0;
-    let loadedCustomers = 0;
-    let loadedOrders = 0;
-    let loadedPaidOrders = 0;
+    let orderIdFilter = '';
+    let pendingOrderNavigation = false;
+    let dashboardDatesInitialized = false;
     const pageSize = 50;
     const orderStatuses = ['pending', 'confirmed', 'processing', 'in_production', 'ready_for_dispatch', 'dispatched', 'delivered', 'cancelled', 'revoked'];
 
@@ -92,13 +93,18 @@
 
     function fillCategoryOptions() {
         const select = document.querySelector('#product-category');
-        if (!select) return;
-        const current = select.value;
-        select.replaceChildren(new Option('Choose category', ''));
-        allCategories.filter(function (category) { return category.is_active; }).forEach(function (category) {
-            select.add(new Option(category.name, category.id));
+        const current = select && select.value;
+        if (select) select.replaceChildren(new Option('Choose category', ''));
+        const filter = document.querySelector('[data-product-category-filter]');
+        const currentFilter = filter && filter.value;
+        if (filter) filter.replaceChildren(new Option('All categories', ''));
+        allCategories.forEach(function (category) {
+            const label = category.name + (category.is_active ? '' : ' (inactive)');
+            if (select) select.add(new Option(label, category.id));
+            if (filter) filter.add(new Option(label, category.id));
         });
-        if (current) select.value = current;
+        if (current && select) select.value = current;
+        if (currentFilter && filter) filter.value = currentFilter;
     }
 
     async function loadCategories() {
@@ -125,16 +131,34 @@
         return allCategories;
     }
 
-    async function loadProducts() {
-        const { data, error } = await client.from('products')
+    async function loadProducts(reset) {
+        const shouldReset = reset !== false;
+        const body = document.querySelector('[data-products-table]');
+        if (shouldReset) {
+            productOffset = 0;
+            allProducts = [];
+            if (body) body.replaceChildren();
+        }
+        let query = client.from('products')
             .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main)')
             .order('updated_at', { ascending: false });
+        const statusFilter = document.querySelector('[data-product-status-filter]')?.value || '';
+        const categoryFilter = document.querySelector('[data-product-category-filter]')?.value || '';
+        const search = String(document.querySelector('[data-product-search]')?.value || '').trim().replace(/[\\%_,]/g, ' ').slice(0, 100);
+        if (statusFilter === 'out_of_stock') {
+            query = query.eq('status', 'published').or('availability_status.eq.out_of_stock,stock_quantity.eq.0');
+        } else if (statusFilter === 'limited_stock') {
+            query = query.eq('status', 'published').eq('availability_status', 'limited_stock');
+        }
+        else if (statusFilter) query = query.eq('status', statusFilter);
+        if (categoryFilter) query = query.eq('category_id', categoryFilter);
+        if (search) query = query.ilike('name', '%' + search + '%');
+        const { data, error } = await query.range(productOffset, productOffset + pageSize - 1);
         if (error) throw error;
-        allProducts = data || [];
-        const body = document.querySelector('[data-products-table]');
+        const rows = data || [];
+        allProducts = shouldReset ? rows.slice() : allProducts.concat(rows);
         if (body) {
-            body.replaceChildren();
-            allProducts.forEach(function (product) {
+            rows.forEach(function (product) {
                 const category = product.product_categories && product.product_categories.name || '';
                 const price = product.base_price_kes == null ? (product.requires_quote ? 'Quote' : '—') : 'KES ' + Number(product.base_price_kes).toLocaleString('en-KE');
                 body.appendChild(tableRow([
@@ -148,13 +172,14 @@
                 ]));
             });
         }
-        const metric = document.querySelector('[data-metric-products]');
-        if (metric) metric.textContent = String(allProducts.filter(function (item) { return item.status === 'published'; }).length);
-        return allProducts;
+        productOffset += rows.length;
+        const more = document.querySelector('[data-products-more]');
+        if (more) more.hidden = rows.length < pageSize;
+        return rows;
     }
 
     async function loadCustomers(reset) {
-        if (reset) { customerOffset = 0; loadedCustomers = 0; document.querySelector('[data-customers-table]')?.replaceChildren(); }
+        if (reset) { customerOffset = 0; document.querySelector('[data-customers-table]')?.replaceChildren(); }
         const { data, error } = await client.from('customer_profiles')
             .select('user_id,email,full_name,telephone')
             .order('user_id', { ascending: true }).range(customerOffset, customerOffset + pageSize - 1);
@@ -180,7 +205,7 @@
             row.appendChild(actions);
             body.appendChild(row);
         });
-        const count = (data || []).length; customerOffset += count; loadedCustomers += count;
+        const count = (data || []).length; customerOffset += count;
         const more = document.querySelector('[data-customers-more]'); if (more) more.hidden = count < pageSize;
         return count;
     }
@@ -265,12 +290,23 @@
     }
 
     async function loadOrders(reset) {
-        if (reset) { orderOffset = 0; loadedOrders = 0; loadedPaidOrders = 0; document.querySelector('[data-orders-table]')?.replaceChildren(); }
-        const { data, error } = await client.from('orders')
-            .select('id,order_reference,user_id,order_status,payment_status,currency_code,total_kes,customer_name,customer_email,customer_telephone,shipping_address,admin_notes,created_at,order_items(id,product_name,quantity,line_total_kes),payment_transactions(id,provider,status,amount_kes,created_at),order_status_history(id,previous_status,new_status,created_at)')
-            .order('created_at', { ascending: false }).range(orderOffset, orderOffset + pageSize - 1);
-        if (error) throw error;
+        const shouldReset = reset !== false;
         const body = document.querySelector('[data-orders-table]');
+        if (shouldReset) { orderOffset = 0; if (body) body.replaceChildren(); }
+        let query = client.from('orders')
+            .select('id,order_reference,user_id,order_status,payment_status,currency_code,total_kes,customer_name,customer_email,customer_telephone,shipping_address,admin_notes,created_at,order_items(id,product_name,quantity,line_total_kes),payment_transactions(id,provider,status,amount_kes,created_at),order_status_history(id,previous_status,new_status,created_at)')
+            .order('created_at', { ascending: false });
+        const statusFilter = document.querySelector('[data-order-status-filter]')?.value || 'all';
+        const paymentFilter = document.querySelector('[data-order-payment-filter]')?.value || 'all';
+        if (orderIdFilter) query = query.eq('id', orderIdFilter);
+        else {
+            if (statusFilter !== 'all') query = query.eq('order_status', statusFilter);
+            if (paymentFilter === 'refunds') query = query.in('payment_status', ['refunded', 'partially_refunded']);
+            else if (paymentFilter !== 'all') query = query.eq('payment_status', paymentFilter);
+            query = constrainByDateRange(query, getDashboardDateRange());
+        }
+        const { data, error } = await query.range(orderOffset, orderOffset + pageSize - 1);
+        if (error) throw error;
         (data || []).forEach(function (order) {
             const row = document.createElement('tr');
             const createdAt = order.created_at && !Number.isNaN(new Date(order.created_at).getTime()) ? new Date(order.created_at).toLocaleDateString() : 'Date unavailable';
@@ -286,11 +322,14 @@
             const detailCell = document.createElement('td'); detailCell.colSpan = 7; detailCell.className = 'bg-light';
             detailCell.appendChild(renderOrderDetails(order)); detailRow.appendChild(detailCell); body.appendChild(detailRow);
         });
-        const count = (data || []).length; orderOffset += count; loadedOrders += count;
-        loadedPaidOrders += (data || []).filter(function (o) { return o.payment_status === 'paid'; }).length;
+        const count = (data || []).length;
+        if (shouldReset && !count && body) {
+            const empty = document.createElement('tr');
+            const cell = makeCell('No orders match these filters and dates.');
+            cell.colSpan = 7; cell.className = 'text-muted'; empty.appendChild(cell); body.appendChild(empty);
+        }
+        orderOffset += count;
         const more = document.querySelector('[data-orders-more]'); if (more) more.hidden = count < pageSize;
-        const metric = document.querySelector('[data-metric-orders]'); if (metric) metric.textContent = loadedOrders + ' loaded';
-        const payments = document.querySelector('[data-metric-payments]'); if (payments) payments.textContent = loadedPaidOrders + ' paid of ' + loadedOrders + ' loaded';
         return count;
     }
 
@@ -310,6 +349,53 @@
         const { error } = await client.from('orders').update({ admin_notes: field.value.trim() }).eq('id', id);
         if (error) throw error;
         showStatus('Admin notes saved. Payment state was not changed.', 'success');
+    }
+
+    function getDashboardDateRange() {
+        const fromValue = String(document.querySelector('[data-dashboard-date-from]')?.value || '').trim();
+        const toValue = String(document.querySelector('[data-dashboard-date-to]')?.value || '').trim();
+        function parseDate(value) {
+            if (!value) return null;
+            const date = new Date(value + 'T00:00:00');
+            if (Number.isNaN(date.getTime())) throw new Error('Choose valid reporting dates.');
+            date.setHours(0, 0, 0, 0);
+            return date;
+        }
+        const fromDate = parseDate(fromValue);
+        const toDate = parseDate(toValue);
+        if (fromDate && toDate && fromDate.getTime() > toDate.getTime()) {
+            throw new Error('The reporting start date must be on or before its end date.');
+        }
+        if (toDate) toDate.setDate(toDate.getDate() + 1);
+        const label = fromValue && toValue ? fromValue + ' to ' + toValue
+            : fromValue ? fromValue + ' onward'
+                : toValue ? 'Through ' + toValue
+                    : 'All dates';
+        return {
+            from: fromDate ? fromDate.toISOString() : '',
+            toExclusive: toDate ? toDate.toISOString() : '',
+            label: label
+        };
+    }
+
+    function constrainByDateRange(query, range) {
+        if (range.from) query = query.gte('created_at', range.from);
+        if (range.toExclusive) query = query.lt('created_at', range.toExclusive);
+        return query;
+    }
+
+    function initializeDashboardDates() {
+        const fromField = document.querySelector('[data-dashboard-date-from]');
+        const toField = document.querySelector('[data-dashboard-date-to]');
+        if (!fromField || !toField || dashboardDatesInitialized) return;
+        dashboardDatesInitialized = true;
+        const today = new Date();
+        const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29);
+        function inputDate(date) {
+            return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+        }
+        if (!fromField.value) fromField.value = inputDate(from);
+        if (!toField.value) toField.value = inputDate(today);
     }
 
     async function loadSettings() {
@@ -506,6 +592,8 @@
         if (values.status === 'published' && modes.includes('ready_made') && stock === '') throw new Error('Enter a verified stock quantity before publishing ready-made products.');
         if (values.status === 'published' && customModes && productionDays === '') throw new Error('Published made-to-order products need an estimated production time in days.');
         if (values.availability_status === 'limited_stock' && (stock === '' || Number(stock) < 1)) throw new Error('Limited-stock products need at least one available item.');
+        if (values.availability_status === 'out_of_stock' && stock !== '' && Number(stock) > 0) throw new Error('An out-of-stock product cannot have positive stock.');
+        if (modes.includes('ready_made') && stock !== '' && Number(stock) === 0 && values.availability_status !== 'out_of_stock') throw new Error('A ready-made product with zero stock must be marked out of stock.');
         if (requiresQuote && !customModes) throw new Error('Quotation pricing is only valid for made-to-order or customisable products.');
         if (originalPrice !== '' && (price === '' || Number(originalPrice) <= Number(price))) throw new Error('The was-price must be greater than the current price.');
         if (weight !== '' && (!Number.isInteger(Number(weight)) || Number(weight) < 0)) throw new Error('Product weight must be a non-negative whole number of grams.');
@@ -656,16 +744,175 @@
         });
     }
 
+    async function countRows(table, filters, range) {
+        const primaryKey = table === 'customer_profiles' ? 'user_id' : 'id';
+        let query = client.from(table).select(primaryKey, { count: 'exact', head: true });
+        Object.entries(filters || {}).forEach(function (entry) {
+            query = Array.isArray(entry[1]) ? query.in(entry[0], entry[1]) : query.eq(entry[0], entry[1]);
+        });
+        if (range) query = constrainByDateRange(query, range);
+        const { count, error } = await query;
+        if (error) throw error;
+        if (!Number.isInteger(count) || count < 0) throw new Error('A dashboard count was not returned by the database.');
+        return count;
+    }
+
+    async function countOutOfStockProducts() {
+        const { count, error } = await client.from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'published')
+            .or('availability_status.eq.out_of_stock,stock_quantity.eq.0');
+        if (error) throw error;
+        if (!Number.isInteger(count) || count < 0) throw new Error('The out-of-stock count was not returned by the database.');
+        return count;
+    }
+
+    function setDashboardMetric(selector, value) {
+        const element = document.querySelector(selector);
+        if (element) element.textContent = Number.isInteger(value) ? value.toLocaleString('en-KE') : '—';
+    }
+
+    function setTableEmpty(body, columns, message) {
+        if (!body) return;
+        body.replaceChildren();
+        const row = document.createElement('tr');
+        const cell = makeCell(message);
+        cell.colSpan = columns;
+        cell.className = 'text-muted';
+        row.appendChild(cell);
+        body.appendChild(row);
+    }
+
+    function openOrdersFor(orderId) {
+        orderIdFilter = String(orderId || '');
+        pendingOrderNavigation = true;
+        const statusFilter = document.querySelector('[data-order-status-filter]');
+        const paymentFilter = document.querySelector('[data-order-payment-filter]');
+        if (statusFilter) statusFilter.value = 'all';
+        if (paymentFilter) paymentFilter.value = 'all';
+        const target = document.querySelector('[data-admin-tab="orders"]');
+        if (target && !target.hidden) target.click();
+    }
+
+    function renderDashboardOrders(orders) {
+        const body = document.querySelector('[data-dashboard-recent-orders]');
+        if (!body) return;
+        if (!orders.length) { setTableEmpty(body, 5, 'No orders in the selected reporting period.'); return; }
+        body.replaceChildren();
+        orders.forEach(function (order) {
+            const row = document.createElement('tr');
+            row.appendChild(makeCell(order.order_reference || order.id));
+            row.appendChild(makeCell(humanizeStatus(order.order_status)));
+            row.appendChild(makeCell('KES ' + Number(order.total_kes || 0).toLocaleString('en-KE')));
+            const date = order.created_at && !Number.isNaN(new Date(order.created_at).getTime()) ? new Date(order.created_at).toLocaleDateString() : 'Date unavailable';
+            row.appendChild(makeCell(date));
+            const actionCell = document.createElement('td');
+            const button = makeButton('Open', 'open-dashboard-order', order.id);
+            button.setAttribute('aria-label', 'Open order ' + String(order.order_reference || order.id));
+            button.addEventListener('click', function () { openOrdersFor(order.id); });
+            actionCell.appendChild(button);
+            row.appendChild(actionCell);
+            body.appendChild(row);
+        });
+    }
+
+    function renderDashboardTransactions(transactions) {
+        const body = document.querySelector('[data-dashboard-transactions]');
+        if (!body) return;
+        if (!transactions.length) { setTableEmpty(body, 4, 'No payment transaction records in this period.'); return; }
+        body.replaceChildren();
+        transactions.forEach(function (payment) {
+            const row = document.createElement('tr');
+            row.appendChild(makeCell(payment.provider || 'Provider unavailable'));
+            row.appendChild(makeCell(humanizeStatus(payment.status)));
+            row.appendChild(makeCell('KES ' + Number(payment.amount_kes || 0).toLocaleString('en-KE')));
+            const actionCell = document.createElement('td');
+            const button = makeButton('Order', 'open-payment-order', payment.order_id);
+            button.disabled = !payment.order_id;
+            button.addEventListener('click', function () { if (payment.order_id) openOrdersFor(payment.order_id); });
+            actionCell.appendChild(button);
+            row.appendChild(actionCell);
+            body.appendChild(row);
+        });
+    }
+
     async function loadDashboardData() {
-        const tasks = [];
-        if (isAllowed('catalog:write')) tasks.push(loadCategories(), loadProducts());
-        if (isAllowed('content:write')) tasks.push(loadSettings());
-        if (membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role)) {
-            const customerTab = document.querySelector('[data-admin-tab="customers"]'); if (customerTab) customerTab.hidden = false;
-            const ordersTab = document.querySelector('[data-admin-tab="orders"]'); if (ordersTab) ordersTab.hidden = false;
-            tasks.push(loadCustomers(true), loadOrders(true));
+        const errorBox = document.querySelector('[data-dashboard-error]');
+        if (errorBox) { errorBox.hidden = true; errorBox.textContent = ''; }
+        initializeDashboardDates();
+        let range;
+        try { range = getDashboardDateRange(); }
+        catch (error) {
+            ['[data-metric-products]', '[data-metric-out-of-stock]', '[data-metric-limited-stock]', '[data-metric-categories]', '[data-metric-customers]', '[data-metric-orders]', '[data-metric-pending-orders]', '[data-metric-delivered-orders]', '[data-metric-cancelled-orders]', '[data-metric-revoked-orders]', '[data-metric-pending-payments]', '[data-metric-paid-payments]', '[data-metric-failed-payments]', '[data-metric-refunded-payments]'].forEach(function (selector) { setDashboardMetric(selector, null); });
+            const label = document.querySelector('[data-dashboard-range-label]');
+            if (label) label.textContent = 'Invalid reporting range.';
+            if (errorBox) { errorBox.textContent = error.message || 'Choose a valid reporting range.'; errorBox.hidden = false; }
+            throw error;
         }
-        await Promise.all(tasks);
+        const label = document.querySelector('[data-dashboard-range-label]');
+        if (label) label.textContent = 'Orders and payments: ' + range.label + '. Customer/catalog totals are all-time.';
+        ['[data-metric-products]', '[data-metric-out-of-stock]', '[data-metric-limited-stock]', '[data-metric-categories]', '[data-metric-customers]', '[data-metric-orders]', '[data-metric-pending-orders]', '[data-metric-delivered-orders]', '[data-metric-cancelled-orders]', '[data-metric-revoked-orders]', '[data-metric-pending-payments]', '[data-metric-paid-payments]', '[data-metric-failed-payments]', '[data-metric-refunded-payments]'].forEach(function (selector) { setDashboardMetric(selector, null); });
+
+        const storeAdmin = Boolean(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
+        const jobs = [
+            ['[data-metric-products]', isAllowed('catalog:write') ? countRows('products', { status: 'published' }) : Promise.resolve(null)],
+            ['[data-metric-out-of-stock]', isAllowed('catalog:write') ? countOutOfStockProducts() : Promise.resolve(null)],
+            ['[data-metric-limited-stock]', isAllowed('catalog:write') ? countRows('products', { status: 'published', availability_status: 'limited_stock' }) : Promise.resolve(null)],
+            ['[data-metric-categories]', isAllowed('catalog:write') ? countRows('product_categories', { is_active: true }) : Promise.resolve(null)],
+            ['[data-metric-customers]', storeAdmin ? countRows('customer_profiles', {}) : Promise.resolve(null)],
+            ['[data-metric-orders]', storeAdmin ? countRows('orders', {}, range) : Promise.resolve(null)],
+            ['[data-metric-pending-orders]', storeAdmin ? countRows('orders', { order_status: 'pending' }, range) : Promise.resolve(null)],
+            ['[data-metric-delivered-orders]', storeAdmin ? countRows('orders', { order_status: 'delivered' }, range) : Promise.resolve(null)],
+            ['[data-metric-cancelled-orders]', storeAdmin ? countRows('orders', { order_status: 'cancelled' }, range) : Promise.resolve(null)],
+            ['[data-metric-revoked-orders]', storeAdmin ? countRows('orders', { order_status: 'revoked' }, range) : Promise.resolve(null)],
+            ['[data-metric-pending-payments]', storeAdmin ? countRows('payment_transactions', { status: 'pending' }, range) : Promise.resolve(null)],
+            ['[data-metric-paid-payments]', storeAdmin ? countRows('payment_transactions', { status: 'paid' }, range) : Promise.resolve(null)],
+            ['[data-metric-failed-payments]', storeAdmin ? countRows('payment_transactions', { status: 'failed' }, range) : Promise.resolve(null)],
+            ['[data-metric-refunded-payments]', storeAdmin ? countRows('payment_transactions', { status: ['refunded', 'partially_refunded'] }, range) : Promise.resolve(null)]
+        ];
+        if (storeAdmin) {
+            setTableEmpty(document.querySelector('[data-dashboard-recent-orders]'), 5, 'Loading recent orders…');
+            setTableEmpty(document.querySelector('[data-dashboard-transactions]'), 4, 'Loading payment activity…');
+        }
+        try {
+            const values = await Promise.all(jobs.map(function (job) { return job[1]; }));
+            jobs.forEach(function (job, index) { setDashboardMetric(job[0], values[index]); });
+            if (storeAdmin) {
+                let ordersQuery = client.from('orders').select('id,order_reference,order_status,total_kes,created_at').order('created_at', { ascending: false }).limit(5);
+                ordersQuery = constrainByDateRange(ordersQuery, range);
+                let transactionsQuery = client.from('payment_transactions').select('order_id,provider,status,amount_kes,created_at').order('created_at', { ascending: false }).limit(5);
+                transactionsQuery = constrainByDateRange(transactionsQuery, range);
+                const results = await Promise.all([ordersQuery, transactionsQuery]);
+                if (results[0].error) throw results[0].error;
+                if (results[1].error) throw results[1].error;
+                renderDashboardOrders(results[0].data || []);
+                renderDashboardTransactions(results[1].data || []);
+            }
+        } catch (error) {
+            if (storeAdmin) {
+                setTableEmpty(document.querySelector('[data-dashboard-recent-orders]'), 5, 'Recent orders are unavailable.');
+                setTableEmpty(document.querySelector('[data-dashboard-transactions]'), 4, 'Payment activity is unavailable.');
+            }
+            if (errorBox) { errorBox.textContent = error.message || 'Dashboard information is temporarily unavailable.'; errorBox.hidden = false; }
+            throw error;
+        }
+    }
+
+    async function loadAdminTab(tab) {
+        if (tab === 'products' && isAllowed('catalog:write')) {
+            await loadCategories();
+            await loadProducts(true);
+        } else if (tab === 'categories' && isAllowed('catalog:write')) {
+            await loadCategories();
+        } else if (tab === 'content' && isAllowed('content:write')) {
+            await loadSettings();
+        } else if (tab === 'customers' && membership && ['admin', 'super_admin'].includes(membership.role)) {
+            await loadCustomers(true);
+        } else if (tab === 'orders' && membership && ['admin', 'super_admin'].includes(membership.role)) {
+            await loadOrders(true);
+        } else if (tab === 'team' && isAllowed('admins:manage')) {
+            await refreshAdminList();
+        }
     }
 
     function activateTabs() {
@@ -676,11 +923,20 @@
             if (permission && !isAllowed(permission)) button.hidden = true;
             if (button.getAttribute('data-requires-role') === 'store-admin') button.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
             button.addEventListener('click', function () {
+                const tab = button.getAttribute('data-admin-tab');
+                if (tab === 'orders' && !pendingOrderNavigation) orderIdFilter = '';
+                pendingOrderNavigation = false;
                 nav.querySelectorAll('[data-admin-tab]').forEach(function (item) { item.classList.toggle('active', item === button); });
                 document.querySelectorAll('[data-admin-section]').forEach(function (section) {
-                    section.hidden = section.getAttribute('data-admin-section') !== button.getAttribute('data-admin-tab');
+                    section.hidden = section.getAttribute('data-admin-section') !== tab;
+                });
+                loadAdminTab(tab).catch(function (error) {
+                    showStatus(error.message || 'This admin section could not be loaded.', 'error');
                 });
             });
+        });
+        document.querySelectorAll('[data-requires-role="store-admin"]').forEach(function (element) {
+            element.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
         });
         document.querySelectorAll('[data-admin-tab-link]').forEach(function (button) {
             const permission = button.getAttribute('data-requires-permission');
@@ -689,6 +945,31 @@
                 button.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
             }
             button.addEventListener('click', function () {
+                const productFilter = button.getAttribute('data-product-filter');
+                if (productFilter) {
+                    const filter = document.querySelector('[data-product-status-filter]');
+                    const search = document.querySelector('[data-product-search]');
+                    const category = document.querySelector('[data-product-category-filter]');
+                    if (filter) filter.value = productFilter;
+                    if (search) search.value = '';
+                    if (category) category.value = '';
+                }
+                const orderStatus = button.getAttribute('data-open-order-status');
+                const paymentStatus = button.getAttribute('data-payment-status-filter');
+                if (orderStatus !== null) {
+                    orderIdFilter = '';
+                    const select = document.querySelector('[data-order-status-filter]');
+                    if (select) select.value = orderStatus;
+                    const payment = document.querySelector('[data-order-payment-filter]');
+                    if (payment) payment.value = 'all';
+                }
+                if (paymentStatus) {
+                    orderIdFilter = '';
+                    const select = document.querySelector('[data-order-payment-filter]');
+                    if (select) select.value = paymentStatus;
+                    const status = document.querySelector('[data-order-status-filter]');
+                    if (status) status.value = 'all';
+                }
                 const target = nav.querySelector('[data-admin-tab="' + button.getAttribute('data-admin-tab-link') + '"]');
                 if (target && !target.hidden) target.click();
             });
@@ -711,6 +992,29 @@
             });
         }
         document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
+        document.querySelector('[data-products-more]')?.addEventListener('click', async function () { try { await loadProducts(false); } catch (error) { showStatus(error.message || 'More products could not be loaded.', 'error'); } });
+        document.querySelector('[data-product-filter-apply]')?.addEventListener('click', async function () { try { await loadProducts(true); } catch (error) { showStatus(error.message || 'Product search could not be loaded.', 'error'); } });
+        document.querySelector('[data-orders-filter-apply]')?.addEventListener('click', async function () {
+            orderIdFilter = '';
+            try { await loadOrders(true); } catch (error) { showStatus(error.message || 'Filtered orders could not be loaded.', 'error'); }
+        });
+        const refreshOverview = async function () {
+            try {
+                orderIdFilter = '';
+                await loadDashboardData();
+                const ordersSection = document.querySelector('[data-admin-section="orders"]');
+                if (ordersSection && !ordersSection.hidden) await loadOrders(true);
+            } catch (error) { showStatus(error.message || 'The overview could not be refreshed.', 'error'); }
+        };
+        document.querySelector('[data-dashboard-apply]')?.addEventListener('click', refreshOverview);
+        document.querySelector('[data-dashboard-refresh]')?.addEventListener('click', refreshOverview);
+        document.querySelector('[data-dashboard-all-dates]')?.addEventListener('click', async function () {
+            const from = document.querySelector('[data-dashboard-date-from]');
+            const to = document.querySelector('[data-dashboard-date-to]');
+            if (from) from.value = '';
+            if (to) to.value = '';
+            await refreshOverview();
+        });
         document.querySelector('[data-customers-table]')?.addEventListener('click', async function (event) {
             const button = event.target.closest('button[data-action="save-customer-details"]');
             if (!button) return;
@@ -935,7 +1239,6 @@
         bindForms();
         try {
             await loadDashboardData();
-            if (isAllowed('admins:manage')) await refreshAdminList();
             showStatus('Administrator access verified. Product, category and public-content writes use the signed-in user’s RLS permissions.', 'success');
         } catch (error) {
             showStatus(error.message || 'Dashboard data could not be loaded. Check the database migration and role permissions.', 'error');

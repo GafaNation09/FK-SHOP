@@ -62,6 +62,7 @@
     min-height: 118px;
     background: #f8f7f4;
     border: 1px solid #e6e1d8;
+    border-top: 3px solid #f4c84a;
 }
 
 .kcbf-admin-metric strong {
@@ -89,6 +90,10 @@
     outline-offset: 2px;
 }
 
+.kcbf-admin-metric-link:active {
+    transform: translateY(1px);
+}
+
 .kcbf-admin-metric-link > span:last-child {
     margin-top: auto;
     color: #665938;
@@ -106,6 +111,16 @@
 .kcbf-admin-table td,
 .kcbf-admin-table th {
     vertical-align: middle;
+}
+
+[data-admin-section="overview"] .kcbf-admin-table {
+    min-width: 460px;
+}
+
+[data-dashboard-range-label] {
+    min-height: 2.375rem;
+    display: flex;
+    align-items: center;
 }
 
 .kcbf-admin-section[hidden],
