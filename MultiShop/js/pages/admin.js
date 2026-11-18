@@ -33,6 +33,154 @@
         statusBox.className = 'alert kcbf-admin-status ' + (kind === 'error' ? 'alert-danger' : kind === 'success' ? 'alert-success' : kind === 'warning' ? 'alert-warning' : 'alert-info');
     }
 
+    function productFieldError(field, message) {
+        const error = new Error(message);
+        error.productField = field;
+        return error;
+    }
+
+    function productErrorDetails(error, operation) {
+        if (error && error.productField) return { field: error.productField, message: String(error.message || 'Check this product field.') };
+        const code = String(error && error.code || '').toUpperCase();
+        const raw = [error && error.message, error && error.details, error && error.hint, error && error.constraint]
+            .filter(Boolean).join(' ').toLowerCase();
+        const context = operation || 'save';
+        const fallback = {
+            save: 'The product could not be saved. Check the highlighted fields and try again. If this keeps happening, ask an administrator to check product access.',
+            load: 'Products could not be loaded. Check your connection or catalog access, then try again.',
+            media: 'This file could not be added to the product. Check the file type and size, then try again.',
+            action: 'That product action could not be completed. Check your access and try again.'
+        };
+        function fieldForColumn(column) {
+            const fields = {
+                name: 'name', slug: 'slug', category_id: 'category_id', base_price_kes: 'base_price_kes',
+                original_price_kes: 'original_price_kes', stock_quantity: 'stock_quantity',
+                production_time_days: 'production_time_days', availability_status: 'availability_status',
+                ordering_modes: 'ordering_modes', requires_quote: 'requires_quote', weight_grams: 'weight_grams',
+                attributes: 'attributes', status: 'status'
+            };
+            return fields[String(column || '').toLowerCase()] || '';
+        }
+        function fieldMessage(field) {
+            const messages = {
+                name: 'Enter a product name.', slug: 'Enter a valid URL slug using lowercase letters, numbers and single hyphens.',
+                category_id: 'Choose an active product category.', base_price_kes: 'Enter a valid product price in Kenyan shillings.',
+                original_price_kes: 'Check the was-price; it must be higher than the current price.',
+                stock_quantity: 'Enter a valid stock quantity for this product.',
+                production_time_days: 'Enter production time as a number of days greater than zero.',
+                availability_status: 'Choose a valid product availability.',
+                ordering_modes: 'Choose at least one valid product type.',
+                requires_quote: 'Check the quotation setting for this product type.',
+                weight_grams: 'Enter product weight as a whole number of grams.',
+                attributes: 'Check the additional specifications; they must be a valid public JSON object.',
+                status: 'Choose a valid publication status.'
+            };
+            return messages[field] || fallback[context] || fallback.save;
+        }
+        const columnMatch = raw.match(/column[\s"']+([a-z_]+)[\s"']/i);
+        const columnField = columnMatch ? fieldForColumn(columnMatch[1]) : '';
+        if (/failed to fetch|networkerror|network request|timed? ?out|fetch failed/.test(raw)) {
+            return { field: '', message: context === 'media' ? 'The file service could not be reached. Check your connection and try again.' : 'The product service could not be reached. Check your connection and try again.' };
+        }
+        if (code === '42501' || /row-level security|permission denied|not authorized/.test(raw)) {
+            return { field: '', message: context === 'load' ? 'You do not have permission to view these products. Ask an administrator to check your access.' : 'You do not have permission to save or change this product. Ask an administrator to check your access.' };
+        }
+        if (context !== 'media' && (code === '23505' || /duplicate key value|unique constraint/.test(raw))) {
+            return { field: 'slug', message: 'This product URL slug is already in use. Choose a different slug.' };
+        }
+        if (context !== 'media' && (code === '23503' || /foreign key constraint/.test(raw))) {
+            if (/category/.test(raw) || columnField === 'category_id') return { field: 'category_id', message: 'That category is no longer available. Choose an active category and try again.' };
+            return { field: '', message: 'A linked product record has changed. Reload the product and try again.' };
+        }
+        if (code === '23502' && columnField) return { field: columnField, message: fieldMessage(columnField) };
+        if (code === '23514') {
+            const rules = [
+                [/products_ordering_modes_valid/, 'ordering_modes', 'Choose at least one product type: Ready-made, Made to order, or Customisable.'],
+                [/products_published_availability_verified|availability_status_check/, 'availability_status', 'Confirm availability before publishing this product.'],
+                [/products_published_ready_made_stock_known|products_limited_stock_quantity|products_limited_stock_positive|products_stock_nonnegative|products_stock_only_for_ready_made/, 'stock_quantity', 'Check the stock quantity and product type. Limited stock needs at least one item; stock can only be tracked for ready-made products.'],
+                [/products_price_or_quote|products_ready_made_price|products_price_nonnegative/, 'base_price_kes', 'Enter a valid current price. Published ready-made products need a price unless quotation pricing is enabled.'],
+                [/products_original_price_consistency|products_original_price_nonnegative/, 'original_price_kes', 'The was-price must be greater than or equal to zero and higher than the current price.'],
+                [/products_quote_requires_customizable/, 'requires_quote', 'Quotation pricing is only available for made-to-order or customisable products.'],
+                [/products_custom_production_time|products_production_time_positive/, 'production_time_days', 'Enter a production time greater than zero for made-to-order or customisable products.'],
+                [/products_weight_nonnegative/, 'weight_grams', 'Enter a weight of zero grams or more.'],
+                [/attributes.*object|jsonb_typeof/, 'attributes', 'Additional specifications must be a valid JSON object.'],
+                [/products_status_check/, 'status', 'Choose Draft, Published, or Archived for publication status.']
+            ];
+            const matchingRule = rules.find(function (rule) { return rule[0].test(raw); });
+            if (matchingRule) return { field: matchingRule[1], message: matchingRule[2] };
+            if (columnField) return { field: columnField, message: fieldMessage(columnField) };
+        }
+        if (code === '22P02' && columnField) return { field: columnField, message: fieldMessage(columnField) };
+        if (code === 'PGRST116') return { field: '', message: 'This product is no longer available. Reload the product list and try again.' };
+        return { field: '', message: fallback[context] || fallback.save };
+    }
+
+    function nativeProductFieldMessage(field) {
+        const name = field && field.name || '';
+        const labels = {
+            name: 'product name', slug: 'URL slug', category_id: 'product category', base_price_kes: 'current price',
+            original_price_kes: 'was-price', stock_quantity: 'stock quantity', production_time_days: 'production days',
+            weight_grams: 'weight', attributes: 'additional specifications'
+        };
+        const label = labels[name] || 'this product field';
+        const validity = field && field.validity || {};
+        if (validity.valueMissing) return name === 'category_id' ? 'Choose a product category.' : name === 'slug' ? 'Enter a URL slug for this product.' : 'Enter the ' + label + '.';
+        if (validity.patternMismatch && name === 'slug') return 'Use lowercase letters and numbers separated by single hyphens for the URL slug.';
+        if (validity.badInput || validity.typeMismatch) return 'Enter a valid value for the ' + label + '.';
+        if (validity.rangeUnderflow) return 'The ' + label + ' cannot be less than ' + field.min + '.';
+        if (validity.rangeOverflow) return 'The ' + label + ' cannot be more than ' + field.max + '.';
+        if (validity.stepMismatch) return 'Enter a whole number for the ' + label + '.';
+        if (validity.tooLong) return 'Shorten the ' + label + ' to fit the allowed length.';
+        return 'Check the value entered for the ' + label + '.';
+    }
+
+    function clearProductFieldFeedback(form, fieldName) {
+        if (!form) return;
+        Array.from(form.querySelectorAll('[data-product-field-feedback]')).forEach(function (feedback) {
+            if (!fieldName || feedback.getAttribute('data-product-field-feedback') === fieldName) feedback.remove();
+        });
+        Array.from(form.querySelectorAll('[name]')).forEach(function (field) {
+            if (fieldName && field.name !== fieldName) return;
+            field.classList.remove('is-invalid');
+            field.removeAttribute('aria-invalid');
+            const feedbackId = 'product-field-error-' + field.name;
+            const describedBy = String(field.getAttribute('aria-describedby') || '').split(/\s+/).filter(function (id) { return id && id !== feedbackId; });
+            if (describedBy.length) field.setAttribute('aria-describedby', describedBy.join(' '));
+            else field.removeAttribute('aria-describedby');
+        });
+    }
+
+    function displayProductError(form, error, operation) {
+        clearProductFieldFeedback(form);
+        const issue = productErrorDetails(error, operation);
+        const controls = issue.field ? Array.from(form.querySelectorAll('[name]')).filter(function (field) { return field.name === issue.field; }) : [];
+        const target = controls[0];
+        if (target) {
+            const container = target.closest('.form-group, fieldset') || target.closest('.custom-control') || target.parentElement;
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback d-block kcbf-product-field-feedback';
+            feedback.id = 'product-field-error-' + issue.field;
+            feedback.setAttribute('data-product-field-feedback', issue.field);
+            feedback.setAttribute('role', 'alert');
+            feedback.textContent = issue.message;
+            if (container) container.appendChild(feedback);
+            controls.forEach(function (field) {
+                field.classList.add('is-invalid');
+                field.setAttribute('aria-invalid', 'true');
+                const describedBy = String(field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+                if (!describedBy.includes(feedback.id)) describedBy.push(feedback.id);
+                field.setAttribute('aria-describedby', describedBy.join(' '));
+            });
+        }
+        showStatus(issue.message, 'error');
+        if (statusBox) statusBox.dataset.productError = 'true';
+        if (target) {
+            target.focus({ preventScroll: true });
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return issue;
+    }
+
     function setVisible(element, visible) {
         if (element) element.hidden = !visible;
     }
@@ -45,6 +193,21 @@
     function makeCell(text) {
         const cell = document.createElement('td');
         cell.textContent = text == null ? '' : String(text);
+        return cell;
+    }
+
+    function makeProductStackCell(primary, secondary, secondaryClass) {
+        const cell = document.createElement('td');
+        const primaryText = document.createElement('strong');
+        primaryText.className = 'kcbf-product-cell-primary';
+        primaryText.textContent = primary == null || primary === '' ? '—' : String(primary);
+        cell.appendChild(primaryText);
+        if (secondary) {
+            const secondaryText = document.createElement('small');
+            secondaryText.className = 'kcbf-product-cell-secondary' + (secondaryClass ? ' ' + secondaryClass : '');
+            secondaryText.textContent = String(secondary);
+            cell.appendChild(secondaryText);
+        }
         return cell;
     }
 
@@ -138,6 +301,34 @@
     async function loadProducts(reset) {
         const shouldReset = reset !== false;
         const body = document.querySelector('[data-products-table]');
+        const minimumField = document.querySelector('[data-product-price-min-filter]');
+        const maximumField = document.querySelector('[data-product-price-max-filter]');
+        const minimumText = String(minimumField && minimumField.value || '').trim();
+        const maximumText = String(maximumField && maximumField.value || '').trim();
+        const filterError = document.querySelector('[data-product-filter-error]');
+        [minimumField, maximumField].forEach(function (field) {
+            if (field) { field.classList.remove('is-invalid'); field.removeAttribute('aria-invalid'); }
+        });
+        if (filterError) { filterError.hidden = true; filterError.textContent = ''; }
+        const minimumPrice = minimumText === '' ? null : Number(minimumText);
+        const maximumPrice = maximumText === '' ? null : Number(maximumText);
+        let priceRangeMessage = '';
+        let invalidPriceField = null;
+        if (minimumText !== '' && (!Number.isFinite(minimumPrice) || minimumPrice < 0 || !Number.isInteger(minimumPrice))) {
+            invalidPriceField = minimumField;
+            priceRangeMessage = 'Enter a minimum price as a whole number of Kenyan shillings (0 or more).';
+        } else if (maximumText !== '' && (!Number.isFinite(maximumPrice) || maximumPrice < 0 || !Number.isInteger(maximumPrice))) {
+            invalidPriceField = maximumField;
+            priceRangeMessage = 'Enter a maximum price as a whole number of Kenyan shillings (0 or more).';
+        } else if (minimumPrice !== null && maximumPrice !== null && minimumPrice > maximumPrice) {
+            invalidPriceField = maximumField;
+            priceRangeMessage = 'Maximum price must be at least the minimum price.';
+        }
+        if (priceRangeMessage) {
+            if (invalidPriceField) { invalidPriceField.classList.add('is-invalid'); invalidPriceField.setAttribute('aria-invalid', 'true'); invalidPriceField.focus(); }
+            if (filterError) { filterError.textContent = priceRangeMessage; filterError.hidden = false; }
+            return [];
+        }
         if (shouldReset) {
             productOffset = 0;
             productTotal = 0;
@@ -162,6 +353,8 @@
         if (categoryFilter) query = query.eq('category_id', categoryFilter);
         if (availabilityFilter) query = query.eq('availability_status', availabilityFilter);
         if (typeFilter) query = query.contains('ordering_modes', [typeFilter]);
+        if (minimumPrice !== null) query = query.gte('base_price_kes', minimumPrice);
+        if (maximumPrice !== null) query = query.lte('base_price_kes', maximumPrice);
         if (search) {
             const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(search);
             query = uuid
@@ -173,12 +366,12 @@
         let result;
         try { result = await query.range(productOffset, productOffset + pageSize - 1); }
         catch (error) {
-            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + (error.message || 'Check catalog permission and connection.'); }
+            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + productErrorDetails(error, 'load').message; }
             throw error;
         }
         const { data, error, count } = result;
         if (error) {
-            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + (error.message || 'Check catalog permission and connection.'); }
+            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + productErrorDetails(error, 'load').message; }
             throw error;
         }
         const rows = data || [];
@@ -196,40 +389,54 @@
                 if (imageUrl) {
                     const image = document.createElement('img');
                     image.src = imageUrl; image.alt = ''; image.loading = 'lazy';
-                    image.width = 52; image.height = 52; image.className = 'kcbf-admin-product-thumb';
+                    image.width = 44; image.height = 44; image.className = 'kcbf-admin-product-thumb';
                     summary.appendChild(image);
+                } else {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'kcbf-admin-product-thumb-placeholder';
+                    placeholder.setAttribute('aria-hidden', 'true');
+                    placeholder.textContent = 'Photo';
+                    summary.appendChild(placeholder);
                 }
                 const name = document.createElement('strong'); name.className = 'd-block'; name.textContent = product.name || 'Untitled product';
-                copy.appendChild(name); copy.appendChild(document.createElement('small')).textContent = product.short_description || 'No short description';
-                const slugLabel = document.createElement('small'); slugLabel.className = 'd-block text-muted'; slugLabel.textContent = product.slug ? 'URL: ' + product.slug : 'Slug not set';
+                copy.appendChild(name);
+                const slugLabel = document.createElement('small'); slugLabel.className = 'd-block text-muted kcbf-admin-product-slug'; slugLabel.textContent = product.slug ? '/' + product.slug : 'Slug not set';
                 copy.appendChild(slugLabel);
+                const mediaLabel = document.createElement('small'); mediaLabel.className = 'd-block text-muted';
+                mediaLabel.textContent = (product.product_images || []).length + ' photos · ' + (product.product_videos || []).length + ' videos';
+                copy.appendChild(mediaLabel);
                 summary.appendChild(copy);
                 nameCell.appendChild(summary);
                 row.appendChild(nameCell);
-                row.appendChild(makeCell(product.id));
                 row.appendChild(makeCell(category || 'Uncategorised'));
                 const currentPrice = product.base_price_kes == null ? (product.requires_quote ? 'By quotation' : 'Not set') : 'KES ' + Number(product.base_price_kes).toLocaleString('en-KE');
-                const wasPrice = product.original_price_kes == null ? '' : ' · Was KES ' + Number(product.original_price_kes).toLocaleString('en-KE');
-                row.appendChild(makeCell(currentPrice + wasPrice));
-                row.appendChild(makeCell(product.stock_quantity == null ? 'Not tracked' : String(product.stock_quantity)));
-                row.appendChild(makeCell(humanizeStatus(product.availability_status)));
-                row.appendChild(makeCell((product.ordering_modes || []).map(humanizeStatus).join(', ') || 'Not set'));
-                row.appendChild(makeCell(humanizeStatus(product.status)));
-                row.appendChild(makeCell((product.product_images || []).length + ' photos · ' + (product.product_videos || []).length + ' videos'));
-                row.appendChild(makeCell(product.created_at ? new Date(product.created_at).toLocaleDateString() : '—'));
-                row.appendChild(makeCell(product.updated_at ? new Date(product.updated_at).toLocaleDateString() : '—'));
+                const wasPrice = product.original_price_kes == null ? '' : 'Was KES ' + Number(product.original_price_kes).toLocaleString('en-KE');
+                row.appendChild(makeProductStackCell(currentPrice, wasPrice, 'kcbf-product-was-price'));
+                const stockValue = product.stock_quantity == null ? 'Not tracked' : Number(product.stock_quantity).toLocaleString('en-KE') + ' in stock';
+                row.appendChild(makeProductStackCell(stockValue, humanizeStatus(product.availability_status)));
+                const typeValue = (product.ordering_modes || []).map(humanizeStatus).join(' · ') || 'Type not set';
+                row.appendChild(makeProductStackCell(typeValue, humanizeStatus(product.status), 'kcbf-product-publication'));
+                const createdDate = product.created_at ? new Date(product.created_at).toLocaleDateString() : '—';
+                const updatedDate = product.updated_at ? new Date(product.updated_at).toLocaleDateString() : '—';
+                row.appendChild(makeProductStackCell('Added ' + createdDate, 'Updated ' + updatedDate));
                 const actions = document.createElement('td');
                 actions.className = 'kcbf-product-row-actions';
                 actions.appendChild(makeButton('Edit', 'edit-product', product.id, 'btn-outline-primary'));
-                actions.appendChild(makeButton('Stock', 'edit-product-stock', product.id));
-                actions.appendChild(makeButton('Media', 'edit-product-media', product.id));
-                actions.appendChild(makeButton(product.status === 'published' ? 'Unpublish' : 'Publish', 'toggle-publish-product', product.id, product.status === 'published' ? 'btn-outline-secondary' : 'btn-outline-success'));
+                const menu = document.createElement('details'); menu.className = 'kcbf-product-row-menu';
+                const menuToggle = document.createElement('summary'); menuToggle.className = 'btn btn-sm btn-outline-secondary';
+                menuToggle.textContent = 'More'; menuToggle.setAttribute('aria-label', 'More actions for ' + (product.name || 'product'));
+                const menuItems = document.createElement('div'); menuItems.className = 'kcbf-product-row-menu-items';
+                menuItems.appendChild(makeButton('Update stock', 'edit-product-stock', product.id));
+                menuItems.appendChild(makeButton('Manage media', 'edit-product-media', product.id));
+                menuItems.appendChild(makeButton(product.status === 'published' ? 'Unpublish' : 'Publish', 'toggle-publish-product', product.id, product.status === 'published' ? 'btn-outline-secondary' : 'btn-outline-success'));
                 const view = document.createElement('a'); view.className = 'btn btn-sm btn-outline-secondary mr-1';
                 view.textContent = 'View'; view.href = '../product/' + encodeURIComponent(product.slug || product.id);
                 view.target = '_blank'; view.rel = 'noopener noreferrer'; view.setAttribute('aria-label', 'Open public details for ' + (product.name || 'product'));
                 if (product.status !== 'published') { view.setAttribute('aria-disabled', 'true'); view.title = 'Only published products are shown in the public catalog.'; view.addEventListener('click', function (event) { event.preventDefault(); }); }
-                actions.appendChild(view);
-                actions.appendChild(makeButton(product.status === 'archived' ? 'Unarchive' : 'Archive', 'toggle-archive-product', product.id, 'btn-outline-danger'));
+                menuItems.appendChild(view);
+                menuItems.appendChild(makeButton(product.status === 'archived' ? 'Unarchive' : 'Archive', 'toggle-archive-product', product.id, 'btn-outline-danger'));
+                menu.append(menuToggle, menuItems);
+                actions.appendChild(menu);
                 row.appendChild(actions); body.appendChild(row);
             });
         }
@@ -238,7 +445,7 @@
         if (countLabel) countLabel.textContent = 'Showing ' + Math.min(productOffset, productTotal) + ' of ' + productTotal + ' product' + (productTotal === 1 ? '' : 's');
         if (shouldReset && !rows.length && body) {
             const empty = document.createElement('tr'); const cell = makeCell('No products match these filters. Clear or change the filters and try again.');
-            cell.colSpan = 12; cell.className = 'text-muted'; empty.appendChild(cell); body.appendChild(empty);
+            cell.colSpan = 7; cell.className = 'text-muted'; empty.appendChild(cell); body.appendChild(empty);
             if (state) { state.hidden = false; state.className = 'small text-muted'; state.textContent = productTotal === 0 ? 'No products exist for these filters.' : 'No matching products are on this page.'; }
         } else if (state) {
             state.hidden = true;
@@ -623,6 +830,11 @@
         const form = document.querySelector('[data-product-form]');
         if (!form) return;
         form.reset();
+        clearProductFieldFeedback(form);
+        if (statusBox && statusBox.dataset.productError === 'true') {
+            delete statusBox.dataset.productError;
+            showStatus('', 'info');
+        }
         form.elements.id.value = '';
         form.elements.slug.dataset.userEdited = 'false';
         document.querySelector('[data-product-form-title]').textContent = 'New product';
@@ -807,7 +1019,7 @@
         });
         if (invalid.length) {
             const names = invalid.map(function (file) { return file.name || 'Unnamed file'; }).join(', ');
-            throw new Error('No product photos were uploaded. Use JPG, PNG or WebP files no larger than 5 MiB. Unsupported or oversized file(s): ' + names + '.');
+            throw productFieldError('photo', 'No product photos were uploaded. Use JPG, PNG or WebP files no larger than 5 MiB. Unsupported or oversized file(s): ' + names + '.');
         }
         return selected;
     }
@@ -819,7 +1031,7 @@
         });
         if (invalid.length) {
             const names = invalid.map(function (file) { return file.name || 'Unnamed file'; }).join(', ');
-            throw new Error('No product videos were uploaded. Use MP4 or WebM files no larger than 25 MiB each. Unsupported or oversized file(s): ' + names + '.');
+            throw productFieldError('video', 'No product videos were uploaded. Use MP4 or WebM files no larger than 25 MiB each. Unsupported or oversized file(s): ' + names + '.');
         }
         return selected;
     }
@@ -865,7 +1077,7 @@
                     } catch (removeError) { cleanupError = removeError; }
                 }
                 const name = file.name || 'Selected video';
-                failed.push({ name: name, reason: error && error.message ? error.message : 'Storage or video metadata save failed.' });
+                failed.push({ name: name, reason: productErrorDetails(error, 'media').message });
                 if (cleanupError) cleanupFailed.push(name);
             }
         }
@@ -916,7 +1128,7 @@
                     } catch (removeError) { cleanupError = removeError; }
                 }
                 const name = file.name || 'Selected photo';
-                failed.push({ name: name, reason: error && error.message ? error.message : 'Storage or gallery save failed.' });
+                failed.push({ name: name, reason: productErrorDetails(error, 'media').message });
                 if (cleanupError) cleanupFailed.push(name);
             }
         }
@@ -930,9 +1142,9 @@
         const selectedVideos = validateProductVideos(form.elements.video && form.elements.video.files);
         const values = Object.fromEntries(new FormData(form).entries());
         const modes = Array.from(form.querySelectorAll('[name="ordering_modes"]:checked')).map(function (field) { return field.value; });
-        if (!modes.length) throw new Error('Choose at least one ordering option.');
+        if (!modes.length) throw productFieldError('ordering_modes', 'Choose at least one product type: Ready-made, Made to order, or Customisable.');
         const slug = String(values.slug || '').trim().toLowerCase();
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Use a lowercase URL slug with letters, numbers and hyphens.');
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw productFieldError('slug', 'Use lowercase letters and numbers separated by single hyphens for the URL slug.');
         const price = String(values.base_price_kes || '').trim();
         const originalPrice = String(values.original_price_kes || '').trim();
         const stock = String(values.stock_quantity || '').trim();
@@ -940,34 +1152,34 @@
         const weight = String(values.weight_grams || '').trim();
         const requiresQuote = Boolean(form.elements.requires_quote.checked);
         const customModes = modes.includes('made_to_order') || modes.includes('customizable');
-        if (values.status === 'published' && values.availability_status === 'to_be_confirmed') throw new Error('Confirm product availability before publishing.');
-        if (values.status === 'published' && modes.includes('ready_made') && price === '') throw new Error('Published ready-made products need a confirmed price.');
-        if (values.status === 'published' && modes.includes('ready_made') && stock === '') throw new Error('Enter a verified stock quantity before publishing ready-made products.');
-        if (values.status === 'published' && customModes && productionDays === '') throw new Error('Published made-to-order products need an estimated production time in days.');
-        if (values.availability_status === 'limited_stock' && (stock === '' || Number(stock) < 1)) throw new Error('Limited-stock products need at least one available item.');
-        if (values.availability_status === 'out_of_stock' && stock !== '' && Number(stock) > 0) throw new Error('An out-of-stock product cannot have positive stock.');
-        if (modes.includes('ready_made') && stock !== '' && Number(stock) === 0 && values.availability_status !== 'out_of_stock') throw new Error('A ready-made product with zero stock must be marked out of stock.');
-        if (requiresQuote && !customModes) throw new Error('Quotation pricing is only valid for made-to-order or customisable products.');
-        if (originalPrice !== '' && (price === '' || Number(originalPrice) <= Number(price))) throw new Error('The was-price must be greater than the current price.');
-        if (weight !== '' && (!Number.isInteger(Number(weight)) || Number(weight) < 0)) throw new Error('Product weight must be a non-negative whole number of grams.');
+        if (values.status === 'published' && values.availability_status === 'to_be_confirmed') throw productFieldError('availability_status', 'Confirm availability before publishing this product.');
+        if (values.status === 'published' && modes.includes('ready_made') && price === '') throw productFieldError('base_price_kes', 'Enter a confirmed price before publishing a ready-made product.');
+        if (values.status === 'published' && modes.includes('ready_made') && stock === '') throw productFieldError('stock_quantity', 'Enter the verified stock quantity before publishing a ready-made product.');
+        if (values.status === 'published' && customModes && productionDays === '') throw productFieldError('production_time_days', 'Enter the estimated production time in days before publishing a made-to-order or customisable product.');
+        if (values.availability_status === 'limited_stock' && (stock === '' || Number(stock) < 1)) throw productFieldError('stock_quantity', 'Limited-stock products need at least one available item.');
+        if (values.availability_status === 'out_of_stock' && stock !== '' && Number(stock) > 0) throw productFieldError('availability_status', 'Availability is Out of stock but the stock quantity is above zero. Change availability or set stock to 0.');
+        if (modes.includes('ready_made') && stock !== '' && Number(stock) === 0 && values.availability_status !== 'out_of_stock') throw productFieldError('availability_status', 'A ready-made product with 0 items must have availability set to Out of stock.');
+        if (requiresQuote && !customModes) throw productFieldError('requires_quote', 'Quotation pricing is only available for made-to-order or customisable products.');
+        if (originalPrice !== '' && (price === '' || Number(originalPrice) <= Number(price))) throw productFieldError('original_price_kes', 'The was-price must be greater than the current price.');
+        if (weight !== '' && (!Number.isInteger(Number(weight)) || Number(weight) < 0)) throw productFieldError('weight_grams', 'Enter the product weight as a non-negative whole number of grams.');
         function splitList(value) { return String(value || '').split(',').map(function (item) { return item.trim(); }).filter(Boolean); }
         function parsePublicAttributes(value) {
             const source = String(value || '').trim();
             if (!source) return {};
             let parsed;
-            try { parsed = JSON.parse(source); } catch (error) { throw new Error('Additional specifications must be a valid JSON object.'); }
-            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Additional specifications must be a JSON object, not an array or scalar.');
+            try { parsed = JSON.parse(source); } catch (error) { throw productFieldError('attributes', 'Additional specifications must be a valid JSON object. Check the quotation marks, commas and braces.'); }
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw productFieldError('attributes', 'Additional specifications must be a JSON object, not a list or single value.');
             const entries = Object.entries(parsed);
-            if (entries.length > 30) throw new Error('Use no more than 30 additional public specifications.');
+            if (entries.length > 30) throw productFieldError('attributes', 'Use no more than 30 additional public specifications.');
             const safe = {};
             entries.forEach(function (entry) {
                 const key = String(entry[0]).trim();
                 const value = entry[1];
                 if (!key || key.length > 60 || /^previousSlugs$/i.test(key) || /(__proto__|constructor|prototype|password|secret|credential|token|api[_-]?key|private[_-]?key|email|phone|address|customer)/i.test(key)) {
-                    throw new Error('Use short public specification names only; private or sensitive names are not allowed.');
+                    throw productFieldError('attributes', 'Use short public specification names only; private or sensitive names are not allowed.');
                 }
                 if (typeof value === 'string') {
-                    if (value.length > 1000) throw new Error('Each public specification must be 1,000 characters or fewer.');
+                    if (value.length > 1000) throw productFieldError('attributes', 'Each public specification must be 1,000 characters or fewer.');
                     safe[key] = value.trim();
                 } else if (typeof value === 'number' && Number.isFinite(value)) {
                     safe[key] = value;
@@ -978,7 +1190,7 @@
                 })) {
                     safe[key] = value;
                 } else {
-                    throw new Error('Use only text, numbers, true/false or simple lists in public specifications.');
+                    throw productFieldError('attributes', 'Use only text, numbers, true/false or simple lists in public specifications.');
                 }
             });
             return safe;
@@ -1030,14 +1242,14 @@
         try { photoResult = await uploadProductPhotos(savedId, selectedPhotos); }
         catch (error) {
             photoResult = { uploaded: 0, failed: selectedPhotos.map(function (file) {
-                return { name: file.name || 'Selected photo', reason: error && error.message ? error.message : 'The product photo service could not be reached.' };
+                return { name: file.name || 'Selected photo', reason: productErrorDetails(error, 'media').message };
             }), cleanupFailed: [] };
         }
         let videoResult;
         try { videoResult = await uploadProductVideos(savedId, selectedVideos); }
         catch (error) {
             videoResult = { uploaded: 0, failed: selectedVideos.map(function (file) {
-                return { name: file.name || 'Selected video', reason: error && error.message ? error.message : 'The product video service could not be reached.' };
+                return { name: file.name || 'Selected video', reason: productErrorDetails(error, 'media').message };
             }), cleanupFailed: [] };
         }
         let refreshError = null;
@@ -1078,15 +1290,18 @@
         if (nextStatus === 'published') {
             const modes = Array.isArray(product.ordering_modes) ? product.ordering_modes : [];
             const hasCustom = modes.includes('made_to_order') || modes.includes('customizable');
-            if (!product.name || !product.slug || !product.category_id || !modes.length) throw new Error('Open Edit and complete the product name, slug, category and ordering options before publishing.');
-            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product.slug)) throw new Error('Open Edit and correct the product URL slug before publishing.');
-            if (product.availability_status === 'to_be_confirmed') throw new Error('Confirm product availability in Edit before publishing.');
-            if (modes.includes('ready_made') && (product.base_price_kes == null || product.stock_quantity == null)) throw new Error('A ready-made product needs a confirmed price and tracked stock before publishing.');
-            if (hasCustom && !(Number(product.production_time_days) > 0)) throw new Error('A made-to-order product needs an estimated production time before publishing.');
-            if (product.requires_quote && !hasCustom) throw new Error('Quotation pricing requires a made-to-order or customisable product.');
-            if (product.availability_status === 'limited_stock' && !(Number(product.stock_quantity) > 0)) throw new Error('Limited-stock products must have at least one item in stock.');
-            if (product.availability_status === 'out_of_stock' && Number(product.stock_quantity) > 0) throw new Error('An out-of-stock product cannot have positive stock.');
-            if (modes.includes('ready_made') && Number(product.stock_quantity) === 0 && product.availability_status !== 'out_of_stock') throw new Error('A ready-made product with zero stock must be marked out of stock.');
+            if (!product.name) throw productFieldError('name', 'Enter a product name before publishing.');
+            if (!product.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product.slug)) throw productFieldError('slug', 'Correct the product URL slug before publishing; use lowercase letters, numbers and single hyphens.');
+            if (!product.category_id) throw productFieldError('category_id', 'Choose a product category before publishing.');
+            if (!modes.length) throw productFieldError('ordering_modes', 'Choose at least one product type before publishing.');
+            if (product.availability_status === 'to_be_confirmed') throw productFieldError('availability_status', 'Confirm product availability in Edit before publishing.');
+            if (modes.includes('ready_made') && product.base_price_kes == null) throw productFieldError('base_price_kes', 'A ready-made product needs a confirmed price before publishing.');
+            if (modes.includes('ready_made') && product.stock_quantity == null) throw productFieldError('stock_quantity', 'Enter a verified stock quantity before publishing a ready-made product.');
+            if (hasCustom && !(Number(product.production_time_days) > 0)) throw productFieldError('production_time_days', 'A made-to-order or customisable product needs an estimated production time before publishing.');
+            if (product.requires_quote && !hasCustom) throw productFieldError('requires_quote', 'Quotation pricing requires a made-to-order or customisable product.');
+            if (product.availability_status === 'limited_stock' && !(Number(product.stock_quantity) > 0)) throw productFieldError('stock_quantity', 'Limited-stock products must have at least one item in stock.');
+            if (product.availability_status === 'out_of_stock' && Number(product.stock_quantity) > 0) throw productFieldError('availability_status', 'An out-of-stock product cannot have positive stock.');
+            if (modes.includes('ready_made') && Number(product.stock_quantity) === 0 && product.availability_status !== 'out_of_stock') throw productFieldError('availability_status', 'A ready-made product with zero stock must be marked out of stock.');
             if (!window.confirm('Publish this product to the public catalog? Its current saved details and media will become visible.')) return;
         } else if (!window.confirm('Unpublish this product? It will remain in Admin and historical orders will be preserved.')) return;
         const { error } = await client.from('products').update({ status: nextStatus }).eq('id', product.id).select('id').single();
@@ -1487,6 +1702,15 @@
         if (productForm) {
             const nameField = productForm.elements.name;
             const slugField = productForm.elements.slug;
+            const clearProductErrorOnEdit = function () {
+                clearProductFieldFeedback(productForm);
+                if (statusBox && statusBox.dataset.productError === 'true') {
+                    delete statusBox.dataset.productError;
+                    showStatus('', 'info');
+                }
+            };
+            productForm.addEventListener('input', clearProductErrorOnEdit);
+            productForm.addEventListener('change', clearProductErrorOnEdit);
             slugField.addEventListener('input', function () { slugField.dataset.userEdited = 'true'; });
             nameField.addEventListener('input', function () {
                 if (productForm.elements.id.value || slugField.dataset.userEdited === 'true') return;
@@ -1496,12 +1720,27 @@
             });
         }
         document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
-        document.querySelector('[data-products-more]')?.addEventListener('click', async function () { try { await loadProducts(false); } catch (error) { showStatus(error.message || 'More products could not be loaded.', 'error'); } });
-        document.querySelector('[data-product-filter-apply]')?.addEventListener('click', async function () { try { await loadProducts(true); } catch (error) { showStatus(error.message || 'Product search could not be loaded.', 'error'); } });
+        document.querySelector('[data-products-more]')?.addEventListener('click', async function () { try { await loadProducts(false); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); } });
+        document.querySelector('[data-product-filter-apply]')?.addEventListener('click', async function () { try { await loadProducts(true); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); } });
+        document.querySelector('[data-product-filter-clear]')?.addEventListener('click', async function () {
+            const filterSelectors = ['[data-product-search]', '[data-product-category-filter]', '[data-product-type-filter]', '[data-product-status-filter]', '[data-product-availability-filter]', '[data-product-stock-filter]', '[data-product-price-min-filter]', '[data-product-price-max-filter]'];
+            filterSelectors.forEach(function (selector) { const field = document.querySelector(selector); if (field) field.value = ''; });
+            const sortField = document.querySelector('[data-product-sort]');
+            if (sortField) sortField.value = 'updated_desc';
+            try { await loadProducts(true); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); }
+        });
+        ['[data-product-price-min-filter]', '[data-product-price-max-filter]'].forEach(function (selector) {
+            document.querySelector(selector)?.addEventListener('input', function () {
+                const field = document.querySelector(selector);
+                if (field) { field.classList.remove('is-invalid'); field.removeAttribute('aria-invalid'); }
+                const filterError = document.querySelector('[data-product-filter-error]');
+                if (filterError) { filterError.hidden = true; filterError.textContent = ''; }
+            });
+        });
         document.querySelector('[data-product-search]')?.addEventListener('keydown', async function (event) {
             if (event.key !== 'Enter') return;
             event.preventDefault();
-            try { await loadProducts(true); } catch (error) { showStatus(error.message || 'Product search could not be loaded.', 'error'); }
+            try { await loadProducts(true); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); }
         });
         document.querySelector('[data-orders-filter-apply]')?.addEventListener('click', async function () {
             orderIdFilter = '';
@@ -1548,9 +1787,15 @@
 
         if (productForm) productForm.addEventListener('submit', async function (event) {
             event.preventDefault();
-            if (!productForm.reportValidity()) return;
+            if (!productForm.checkValidity()) {
+                const invalidField = Array.from(productForm.elements).find(function (field) { return field.willValidate && !field.validity.valid; });
+                if (invalidField) displayProductError(productForm, productFieldError(invalidField.name || '', nativeProductFieldMessage(invalidField)), 'save');
+                return;
+            }
+            clearProductFieldFeedback(productForm);
+            if (statusBox && statusBox.dataset.productError === 'true') delete statusBox.dataset.productError;
             showStatus('Saving product…', 'info');
-            try { await saveProduct(productForm); } catch (error) { showStatus(error.message || 'Product could not be saved.', 'error'); }
+            try { await saveProduct(productForm); } catch (error) { displayProductError(productForm, error, 'save'); }
         });
         if (categoryForm) categoryForm.addEventListener('submit', async function (event) {
             event.preventDefault();
@@ -1603,7 +1848,7 @@
                     showStatus('Product status changed to ' + next + '.', 'success');
                 }
                 if (action === 'toggle-publish-product') await toggleProductPublication(product);
-            } catch (error) { showStatus(error.message || 'Product action failed.', 'error'); }
+            } catch (error) { showStatus(productErrorDetails(error, 'action').message, 'error'); }
         });
 
         document.querySelector('[data-product-images]')?.addEventListener('click', async function (event) {

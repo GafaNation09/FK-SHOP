@@ -29,12 +29,18 @@ assert.match(html, /data-dashboard-transactions/, 'overview must expose recent t
 assert.match(html, /data-orders-filter-apply/, 'orders must expose status filters');
 assert.match(html, /data-product-search/, 'catalog must expose search');
 assert.match(html, /data-products-more/, 'catalog records must be paginated');
-for (const control of ['data-product-status-filter', 'data-product-stock-filter', 'data-product-availability-filter', 'data-product-type-filter', 'data-product-category-filter', 'data-product-sort', 'data-products-count', 'data-products-state']) {
+for (const control of ['data-product-status-filter', 'data-product-stock-filter', 'data-product-availability-filter', 'data-product-type-filter', 'data-product-category-filter', 'data-product-sort', 'data-product-price-min-filter', 'data-product-price-max-filter', 'data-product-filter-clear', 'data-products-count', 'data-products-state']) {
   assert.match(html, new RegExp(control), 'catalog must expose ' + control);
 }
-for (const heading of ['Product ID', 'Category', 'Price / was price', 'Stock', 'Availability', 'Product type', 'Publication', 'Media', 'Created', 'Updated', 'Actions']) {
+for (const heading of ['Product', 'Category', 'Price', 'Stock / availability', 'Type / status', 'Dates', 'Actions']) {
   assert.ok(html.includes('<th>' + heading + '</th>'), 'product rows must expose ' + heading);
 }
+assert.match(html, /Newest first[\s\S]*?Oldest first/, 'catalog must make both newest and oldest ordering easy to choose');
+assert.match(js, /query\.gte\('base_price_kes',\s*minimumPrice\)/, 'minimum KES price must filter on the database query');
+assert.match(js, /query\.lte\('base_price_kes',\s*maximumPrice\)/, 'maximum KES price must filter on the database query');
+assert.match(js, /cell\.colSpan = 7/, 'empty product results must span the compact seven-column table');
+assert.match(css, /\.kcbf-admin-products-table\s*\{[\s\S]*?min-width:\s*1050px/, 'catalogue table must use the compact width rather than the oversized legacy layout');
+assert.doesNotMatch(css, /min-width:\s*1985px/, 'catalogue must not retain its previous excessively wide fixed minimum');
 assert.match(html, /data-admin-tab-link="customers"[^>]*data-requires-role="store-admin"/, 'customer metrics must open a role-gated customer section');
 assert.match(html, /data-open-order-status="pending"/, 'pending-order metrics must select the pending filter');
 assert.match(html, /data-open-order-status="delivered"/, 'delivered-order metrics must select the delivered filter');
@@ -86,7 +92,7 @@ assert.match(js, /query\.contains\('ordering_modes',\s*\[typeFilter\]\)/, 'produ
 assert.match(js, /query\.gt\('stock_quantity',\s*0\)/, 'in-stock filter must use inventory data server-side');
 assert.match(js, /stockFilter === 'out_of_stock'[\s\S]*?stockFilter === 'limited_stock'[\s\S]*?stockFilter === 'in_stock'/, 'stock filtering must be independent from publication status');
 assert.match(js, /stock_asc:[\s\S]*?stock_desc:[\s\S]*?status_asc:/, 'catalog sorting must support both stock directions and publication status');
-for (const action of ["makeButton('Edit', 'edit-product'", "makeButton('Stock', 'edit-product-stock'", "makeButton('Media', 'edit-product-media'", "'toggle-publish-product'", "'toggle-archive-product'"]) {
+for (const action of ["makeButton('Edit', 'edit-product'", "makeButton('Update stock', 'edit-product-stock'", "makeButton('Manage media', 'edit-product-media'", "'toggle-publish-product'", "'toggle-archive-product'"]) {
   assert.ok(js.includes(action), 'each product row must provide the ' + action + ' action');
 }
 assert.match(js, /view\.href = '\.\.\/product\/'/, 'product preview must link to the real public detail route');
@@ -109,6 +115,11 @@ assert.match(js, /function renderProductImages\(productId, images\)[\s\S]*?conta
 assert.match(js, /photo\.src = url;[\s\S]*?photo\.alt = image\.alt_text \|\| 'Product photo'/, 'product photos must assign URL and alt text as DOM properties');
 assert.match(js, /addAction\('move-image-up', 'Move earlier'[\s\S]*?addAction\('move-image-down', 'Move later'/, 'saved photos must have clear controls for changing gallery order');
 assert.doesNotMatch(js, /api\.safeImageUrl|api\.escapeHtml/, 'admin product editing must not depend on storefront-only helpers');
+assert.match(js, /function productErrorDetails\(error, operation\)/, 'product write failures must be translated into understandable language');
+assert.match(js, /function displayProductError\(form, error, operation\)/, 'product errors must identify and focus the field to correct');
+assert.match(js, /data-product-field-feedback/, 'product validation must render inline feedback beside the affected field');
+assert.match(js, /productForm\.checkValidity\(\)/, 'native form errors must be replaced with clear field-specific feedback');
+assert.doesNotMatch(js, /catch \(error\) \{ showStatus\(error\.message \|\| 'Product could not be saved\.'/, 'product save failures must not display raw database error text');
 const saveProductSource = extractFunction(js, 'saveProduct');
 const photoPreflightIndex = saveProductSource.indexOf('const selectedPhotos = validateProductPhotos');
 const videoPreflightIndex = saveProductSource.indexOf('const selectedVideos = validateProductVideos');
@@ -120,9 +131,16 @@ assert.match(js, /cleanupFailed/, 'media metadata failure must report when Stora
 assert.match(js, /function validateProductVideos\(files\)/, 'product videos must be validated before product writes');
 assert.match(js, /async function uploadProductVideos\(productId, files\)/, 'product videos must upload to product-owned Storage paths and metadata');
 assert.match(js, /product_videos\(id,video_url,storage_path,mime_type,caption,sort_order\)/, 'admin product listing must load persisted videos');
+const productErrorFns = runInNewContext([
+  extractFunction(js, 'productFieldError'),
+  extractFunction(js, 'productErrorDetails'),
+  extractFunction(js, 'nativeProductFieldMessage'),
+  '({ productFieldError, productErrorDetails, nativeProductFieldMessage })'
+].join('\n'));
 const videoValidator = runInNewContext(extractFunction(js, 'validateProductVideos') + '\nvalidateProductVideos', {
   validVideoTypes: ['video/mp4', 'video/webm'],
-  maxProductVideoBytes: 25 * 1024 * 1024
+  maxProductVideoBytes: 25 * 1024 * 1024,
+  productFieldError: productErrorFns.productFieldError
 });
 const validVideo = { name: 'preview.mp4', type: 'video/mp4', size: 1024 };
 assert.equal(Array.from(videoValidator([validVideo]))[0], validVideo, 'valid MP4 video should pass preflight');
@@ -158,7 +176,9 @@ const uploadVideo = runInNewContext(extractFunction(js, 'validateProductVideos')
   bucketName: 'kcbf-product-media',
   crypto: { randomUUID() { videoUuid += 1; return 'video-uuid-' + videoUuid; } },
   validVideoTypes: ['video/mp4', 'video/webm'],
-  maxProductVideoBytes: 25 * 1024 * 1024
+  maxProductVideoBytes: 25 * 1024 * 1024,
+  productFieldError: productErrorFns.productFieldError,
+  productErrorDetails: productErrorFns.productErrorDetails
 });
 const uploadedVideo = await uploadVideo('product-1', [validVideo]);
 assert.equal(uploadedVideo.uploaded, 1);
@@ -167,7 +187,8 @@ assert.equal(videoCalls.find(call => call[0] === 'insert')[1].mime_type, 'video/
 assert.equal(videoCalls.find(call => call[0] === 'insert')[1].sort_order, 2, 'video sort order must append after existing videos');
 videoMetadataShouldFail = true;
 const failedVideo = await uploadVideo('product-1', [validVideo]);
-assert.match(failedVideo.failed[0].reason, /video metadata denied/);
+assert.match(failedVideo.failed[0].reason, /could not be added to the product/);
+assert.doesNotMatch(failedVideo.failed[0].reason, /video metadata denied/);
 assert.ok(videoCalls.some(call => call[0] === 'remove' && call[1][0] === 'product-1/video-uuid-2.mp4'), 'failed metadata insertion must clean up the uploaded video object');
 assert.match(js, /Product saved, but .*media file\(s\) failed[\s\S]*?Reselect only these file\(s\)/, 'partial media failure must distinguish product persistence and explain safe retry');
 assert.match(js, /if \(photoResult\.failed\.length \|\| videoResult\.failed\.length\)[\s\S]*?title\.textContent = 'Edit product'/, 'partial media upload failure must leave the persisted product editor in edit state');
@@ -185,6 +206,33 @@ function extractFunction(source, name) {
   }
   throw new Error('Unclosed function ' + name);
 }
+
+const slugIssue = productErrorFns.productErrorDetails({
+  code: '23505',
+  message: 'duplicate key value violates unique constraint "products_slug_key"'
+}, 'save');
+assert.equal(slugIssue.field, 'slug', 'duplicate product slugs must point to the URL slug field');
+assert.match(slugIssue.message, /already in use.*Choose a different slug/i, 'duplicate slug feedback must explain how to fix the value');
+assert.doesNotMatch(slugIssue.message, /23505|products_slug_key|duplicate key/i, 'friendly product errors must not expose database codes or constraint names');
+
+const categoryIssue = productErrorFns.productErrorDetails({
+  code: '23503',
+  message: 'insert or update violates foreign key constraint "products_category_id_fkey"'
+}, 'save');
+assert.equal(categoryIssue.field, 'category_id', 'an unavailable category must point to the category field');
+assert.match(categoryIssue.message, /category.*no longer available.*active category/i, 'category feedback must explain the correction');
+
+const stockIssue = productErrorFns.productErrorDetails({
+  code: '23514',
+  message: 'new row violates check constraint "products_stock_nonnegative"'
+}, 'save');
+assert.equal(stockIssue.field, 'stock_quantity', 'stock constraint failures must point to the stock field');
+assert.match(stockIssue.message, /stock quantity/i, 'stock feedback must name the field in ordinary language');
+
+const nativeCategoryIssue = productErrorFns.nativeProductFieldMessage({ name: 'category_id', validity: { valueMissing: true } });
+assert.equal(nativeCategoryIssue, 'Choose a product category.', 'missing category feedback must name the exact required field');
+const unknownIssue = productErrorFns.productErrorDetails({ code: 'PGRST205', message: 'PGRST205 private raw details' }, 'save');
+assert.doesNotMatch(unknownIssue.message, /PGRST205|private raw details/, 'unknown database errors must fall back to safe plain-language guidance');
 
 function createNode(tagName) {
   const node = { tagName, children: [], dataset: {} };
@@ -257,9 +305,11 @@ const mockClient = {
 };
 let uuidSequence = 0;
 const mediaFns = runInNewContext([
-  "const bucketName = 'kcbf-product-media';",
-  "const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];",
-  extractFunction(js, 'validateProductPhotos'),
+      "const bucketName = 'kcbf-product-media';",
+      "const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];",
+      extractFunction(js, 'productFieldError'),
+      extractFunction(js, 'productErrorDetails'),
+      extractFunction(js, 'validateProductPhotos'),
   extractFunction(js, 'uploadProductPhotos'),
   '({ validateProductPhotos, uploadProductPhotos })'
 ].join('\n'), {
@@ -290,7 +340,8 @@ insertShouldFail = true;
 cleanupShouldFail = true;
 const failedPhoto = await mediaFns.uploadProductPhotos('product-1', [validPhoto]);
 assert.equal(failedPhoto.failed[0].name, 'front.jpg');
-assert.match(failedPhoto.failed[0].reason, /metadata denied/);
+assert.match(failedPhoto.failed[0].reason, /could not be added to the product/);
+assert.doesNotMatch(failedPhoto.failed[0].reason, /metadata denied/);
 assert.deepEqual(Array.from(failedPhoto.cleanupFailed), ['front.jpg'], 'failed object cleanup must be surfaced');
 
 const orderingModes = [
@@ -319,6 +370,9 @@ const clearProductForm = runInNewContext(extractFunction(js, 'clearProductForm')
     },
     querySelectorAll(selector) { return selector === '[name="ordering_modes"]' ? orderingModes : []; }
   },
+  statusBox: null,
+  clearProductFieldFeedback() {},
+  showStatus() {},
   renderProductImages() {},
   renderProductVideos() {},
   fillCategoryOptions() {}
