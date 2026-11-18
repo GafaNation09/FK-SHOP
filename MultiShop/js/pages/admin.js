@@ -1513,7 +1513,10 @@
         bindForms();
         try {
             await loadDashboardData();
-            showStatus('Administrator access verified. Product, category and public-content writes use the signed-in user’s RLS permissions.', 'success');
+            // A verified session is not evidence that any particular product or media write succeeded.
+            // Keep the status region available for concrete action results instead of showing a green
+            // authorization banner that can be mistaken for proof of a successful catalog write.
+            showStatus('', 'info');
         } catch (error) {
             showStatus(error.message || 'Dashboard data could not be loaded. Check the database migration and role permissions.', 'error');
         }

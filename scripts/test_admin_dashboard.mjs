@@ -55,6 +55,8 @@ assert.match(html, /After selecting photos, click <strong>Save product<\/strong>
 assert.match(html, /Product video upload is not available yet[\s\S]*?bucket accepts photos only/, 'admin must not be led to believe video uploads work with the photo-only bucket');
 assert.match(html, /name="category_id" required/, 'product editor must retain its required category field');
 assert.match(html, /form="product-editor-form"/, 'the header save action must submit the existing product form');
+assert.doesNotMatch(js, /Administrator access verified\. Product, category and public-content writes use the signed-in user’s RLS permissions\./, 'admin initialization must not present a successful-looking banner as proof that catalog writes were tested');
+assert.match(js, /showStatus\('',\s*'info'\)/, 'admin initialization should clear the loading status after the dashboard loads');
 for (const fieldName of ['name', 'slug', 'short_description', 'description', 'base_price_kes', 'stock_quantity', 'colors', 'sizes', 'materials', 'measurements', 'care_instructions', 'shipping_information', 'attributes', 'ordering_modes', 'requires_quote', 'availability_status', 'status', 'photo', 'featured']) {
   assert.match(html, new RegExp('name="' + fieldName + '"'), 'product editor must retain the ' + fieldName + ' input');
 }
