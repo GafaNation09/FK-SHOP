@@ -36,6 +36,18 @@ assert.match(html, /data-open-order-status="revoked"/, 'revoked-order metrics mu
 assert.match(html, /data-payment-status-filter="paid"/, 'paid transaction metrics must select the paid filter');
 assert.match(html, /data-product-filter="published"/, 'published-product metric must open the published-only catalog list');
 assert.match(html, /data-product-filter="out_of_stock"/, 'out-of-stock metrics must open a filtered product list');
+assert.match(html, /kcbf-admin-nav-heading">Main menu/, 'admin navigation should retain reference-style grouped labels');
+assert.match(html, /data-admin-tab="orders" data-requires-role="store-admin"/, 'Sales and orders must preserve the existing store-admin gate');
+assert.match(html, /data-admin-tab="team" data-requires-permission="admins:manage"/, 'administrator management must preserve its permission gate');
+assert.match(html, /class="kcbf-product-editor-layout"/, 'product editing should use the reference-inspired two-column form');
+assert.match(html, /class="kcbf-product-panel"><h3>General information/, 'product editor must have a General information panel');
+assert.match(html, /class="kcbf-product-panel"><h3>Pricing and stock/, 'product editor must have a Pricing and stock panel');
+assert.match(html, /class="kcbf-product-panel kcbf-product-photo-panel"><h3>Upload images/, 'product editor must retain a dedicated photo upload panel');
+assert.match(html, /name="category_id" required/, 'product editor must retain its required category field');
+assert.match(html, /form="product-editor-form"/, 'the header save action must submit the existing product form');
+for (const fieldName of ['name', 'slug', 'short_description', 'description', 'base_price_kes', 'stock_quantity', 'colors', 'sizes', 'materials', 'measurements', 'care_instructions', 'shipping_information', 'attributes', 'ordering_modes', 'requires_quote', 'availability_status', 'status', 'photo', 'featured']) {
+  assert.match(html, new RegExp('name="' + fieldName + '"'), 'product editor must retain the ' + fieldName + ' input');
+}
 
 assert.match(js, /select\(primaryKey,\s*\{\s*count:\s*'exact',\s*head:\s*true\s*\}\)/, 'dashboard counters must use exact count-only queries');
 assert.match(js, /query\.gte\('created_at',\s*range\.from\)/, 'date range start must be applied in PostgREST');
@@ -115,4 +127,4 @@ assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.ac
 galleryFunctions.renderProductImages('product-1', [{ id: 'unsafe', image_url: 'data:text/html,unsafe' }]);
 assert.match(gallery.textContent, /No valid product photos/);
 
-console.log('PASS: dashboard metrics and filters; product gallery HTTPS validation, safe DOM rendering and action controls');
+console.log('PASS: dashboard metrics and filters; SalesSync-inspired navigation/product editor layout; product gallery HTTPS validation, safe DOM rendering and action controls');

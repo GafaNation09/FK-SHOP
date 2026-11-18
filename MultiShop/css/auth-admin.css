@@ -1,4 +1,4 @@
-/* Account and administration pages: MultiShop palette, isolated from public storefront layout. */
+/* Account and administration pages: admin-specific visual tokens, isolated from public storefront layout. */
 .kcbf-auth-card,
 .kcbf-admin-card {
     border: 1px solid #e6e1d8;
@@ -168,5 +168,489 @@
 
     .kcbf-admin-permissions {
         grid-template-columns: 1fr;
+    }
+}
+
+/* SalesSync-inspired administration workspace. All overrides are scoped to the admin page. */
+.kcbf-admin-page {
+    min-height: 100vh;
+    color: #26332d;
+    background: #f4f6f5 !important;
+    font-family: 'Roboto', sans-serif;
+}
+
+.kcbf-admin-page .kcbf-admin-header {
+    min-height: 68px;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e8ece9;
+}
+
+.kcbf-admin-page .kcbf-brand-mark span {
+    padding: 0.4rem 0.55rem !important;
+    color: #244b38 !important;
+    background: transparent !important;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.kcbf-admin-page .kcbf-brand-mark span + span {
+    color: #6e7a72 !important;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.kcbf-admin-page main.container-fluid {
+    padding: 1.25rem 1.5rem !important;
+}
+
+.kcbf-admin-page .kcbf-admin-status {
+    border-radius: 10px;
+}
+
+.kcbf-admin-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: calc(100vh - 110px);
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e8ece9;
+    border-radius: 18px;
+    box-shadow: 0 10px 34px rgba(31, 55, 42, 0.06);
+}
+
+.kcbf-admin-sidebar {
+    padding: 1.25rem 0.9rem;
+    background: #fbfcfb;
+    border-right: 1px solid #edf0ee;
+}
+
+.kcbf-admin-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 0 0 1rem;
+    padding: 0.35rem 0.45rem 1rem;
+    color: #244b38;
+    text-decoration: none;
+    border-bottom: 1px solid #edf0ee;
+}
+
+.kcbf-admin-sidebar-brand:hover,
+.kcbf-admin-sidebar-brand:focus {
+    color: #244b38;
+    text-decoration: none;
+}
+
+.kcbf-admin-brand-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    color: #fff;
+    background: #2f8053;
+    border-radius: 10px;
+}
+
+.kcbf-admin-sidebar-brand strong,
+.kcbf-admin-sidebar-brand small {
+    display: block;
+    line-height: 1.25;
+}
+
+.kcbf-admin-sidebar-brand strong {
+    font-size: 0.83rem;
+}
+
+.kcbf-admin-sidebar-brand small {
+    margin-top: 0.15rem;
+    color: #7c8880;
+    font-size: 0.7rem;
+}
+
+.kcbf-admin-identity {
+    overflow-wrap: anywhere;
+    margin: 0.25rem 0.45rem 0.7rem;
+    color: #77847b;
+    font-size: 0.72rem;
+}
+
+.kcbf-admin-sidebar .kcbf-admin-nav-heading {
+    margin: 0.9rem 0.5rem 0.35rem;
+    color: #9aa39d;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.kcbf-admin-sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 38px;
+    margin: 0.12rem 0;
+    padding: 0.55rem 0.65rem;
+    color: #637168;
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.kcbf-admin-sidebar .nav-link i {
+    width: 17px;
+    color: #849188;
+    text-align: center;
+}
+
+.kcbf-admin-sidebar .nav-link:hover,
+.kcbf-admin-sidebar .nav-link:focus-visible {
+    color: #244b38;
+    background: #eef6f0;
+    outline: 2px solid #a9d8b7;
+    outline-offset: 1px;
+}
+
+.kcbf-admin-sidebar .nav-link.active {
+    color: #205638;
+    background: #d8f2df;
+    font-weight: 700;
+}
+
+.kcbf-admin-sidebar .nav-link.active i {
+    color: #247144;
+}
+
+.kcbf-admin-content {
+    padding: clamp(1rem, 2.4vw, 2rem);
+    background: #fff;
+}
+
+.kcbf-admin-content h1 {
+    color: #27352d;
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+    font-weight: 700;
+}
+
+.kcbf-admin-content h2 {
+    color: #354239;
+    font-weight: 600;
+}
+
+.kcbf-admin-page .kcbf-admin-card {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #edf0ee;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(31, 55, 42, 0.035);
+}
+
+.kcbf-admin-page .kcbf-admin-card .card-body {
+    padding: clamp(1rem, 1.8vw, 1.4rem);
+}
+
+.kcbf-admin-page .kcbf-admin-card .form-control,
+.kcbf-admin-page .kcbf-admin-card .custom-select {
+    min-height: 40px;
+    color: #34423a;
+    background-color: #f6f7f6;
+    border: 1px solid #e9edeb;
+    border-radius: 8px;
+}
+
+.kcbf-admin-page .kcbf-admin-card textarea.form-control {
+    min-height: auto;
+}
+
+.kcbf-admin-page .kcbf-admin-card .form-control:focus,
+.kcbf-admin-page .kcbf-admin-card .custom-select:focus {
+    background: #fff;
+    border-color: #70bd88;
+    box-shadow: 0 0 0 0.18rem rgba(56, 151, 87, 0.14);
+}
+
+.kcbf-admin-page .btn {
+    border-radius: 9px;
+    font-weight: 600;
+}
+
+.kcbf-admin-page .btn-primary {
+    color: #fff;
+    background: #3c9b5d;
+    border-color: #3c9b5d;
+}
+
+.kcbf-admin-page .btn-primary:hover,
+.kcbf-admin-page .btn-primary:focus {
+    background: #2f804c;
+    border-color: #2f804c;
+}
+
+.kcbf-admin-page .btn-outline-dark {
+    color: #46534b;
+    border-color: #d9e0dc;
+}
+
+.kcbf-admin-page .btn-outline-dark:hover,
+.kcbf-admin-page .btn-outline-dark:focus {
+    color: #244b38;
+    background: #eff6f1;
+    border-color: #b8d9c1;
+}
+
+.kcbf-admin-metric {
+    min-height: 126px;
+    background: #fbfcfb;
+    border: 1px solid #edf0ee;
+    border-top: 3px solid #75c98e;
+    border-radius: 12px;
+}
+
+.kcbf-admin-metric strong {
+    color: #284c36;
+}
+
+.kcbf-admin-metric-link:hover,
+.kcbf-admin-metric-link:focus-visible {
+    background: #f0f8f2;
+    border-color: #a9d8b7;
+    outline-color: #70bd88;
+}
+
+.kcbf-admin-page .table thead th {
+    color: #69766d;
+    background: #f6f8f6;
+    border-top: 0;
+    border-bottom: 1px solid #e8ece9;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+.kcbf-admin-page .table td {
+    border-color: #eff2f0;
+}
+
+.kcbf-product-form-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1.15rem;
+    padding: 0 0 1rem;
+    border-bottom: 1px solid #edf0ee;
+}
+
+.kcbf-product-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.kcbf-product-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.8fr);
+    align-items: start;
+    gap: 1rem;
+}
+
+.kcbf-product-editor-main,
+.kcbf-product-editor-aside {
+    display: grid;
+    min-width: 0;
+    gap: 1rem;
+}
+
+.kcbf-product-panel {
+    min-width: 0;
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid #edf0ee;
+    border-radius: 12px;
+}
+
+.kcbf-product-panel h3 {
+    margin: 0 0 0.9rem;
+    color: #34433a;
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.kcbf-product-panel .form-group label {
+    margin-bottom: 0.35rem;
+    color: #59665e;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.kcbf-product-panel .form-row {
+    margin-right: -0.45rem;
+    margin-left: -0.45rem;
+}
+
+.kcbf-product-panel .form-row > .form-group {
+    padding-right: 0.45rem;
+    padding-left: 0.45rem;
+}
+
+.kcbf-product-panel textarea.form-control {
+    min-height: 82px;
+}
+
+.kcbf-product-panel:first-child textarea[name="description"] {
+    min-height: 145px;
+}
+
+.kcbf-product-upload-tile {
+    display: flex;
+    min-height: 170px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0 0 0.55rem;
+    padding: 1rem;
+    color: #4b6454 !important;
+    text-align: center;
+    background: #f5f8f5;
+    border: 1px dashed #bfd2c4;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.kcbf-product-upload-tile i {
+    color: #469b61;
+    font-size: 2rem;
+}
+
+.kcbf-product-upload-tile strong {
+    font-size: 0.87rem;
+}
+
+.kcbf-product-upload-tile span {
+    color: #849087;
+    font-size: 0.7rem;
+    font-weight: 400;
+}
+
+.kcbf-product-upload-tile:hover,
+.kcbf-product-upload-tile:focus-within {
+    background: #edf7ef;
+    border-color: #7eb990;
+}
+
+.kcbf-product-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+}
+
+.kcbf-product-photo-panel:focus-within .kcbf-product-upload-tile,
+.kcbf-product-upload-tile:focus-visible {
+    outline: 2px solid #70bd88;
+    outline-offset: 2px;
+}
+
+.kcbf-product-photo-panel [data-product-images] {
+    margin-right: -0.35rem;
+    margin-left: -0.35rem;
+}
+
+.kcbf-product-photo-panel [data-product-images] > * {
+    max-width: 50%;
+    flex: 0 0 50%;
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
+}
+
+.kcbf-product-photo-panel [data-product-images] img {
+    height: 90px;
+    object-fit: cover;
+}
+
+@media (max-width: 767.98px) {
+    .kcbf-admin-page main.container-fluid {
+        padding: 0.75rem !important;
+    }
+
+    .kcbf-admin-shell {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 0;
+        border-radius: 13px;
+    }
+
+    .kcbf-admin-sidebar {
+        padding: 0.8rem;
+        border-right: 0;
+        border-bottom: 1px solid #edf0ee;
+    }
+
+    .kcbf-admin-sidebar-brand {
+        margin-bottom: 0.45rem;
+        padding-bottom: 0.65rem;
+    }
+
+    .kcbf-admin-sidebar .nav {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.25rem;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .kcbf-admin-sidebar .kcbf-admin-nav-heading {
+        display: none;
+    }
+
+    .kcbf-admin-sidebar .nav-link {
+        flex: 0 0 auto;
+        min-height: 36px;
+        margin: 0;
+        padding: 0.45rem 0.6rem;
+        white-space: nowrap;
+    }
+
+    .kcbf-admin-content {
+        padding: 1rem;
+    }
+
+    .kcbf-product-editor-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .kcbf-product-editor-aside {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kcbf-product-photo-panel {
+        grid-column: 1 / -1;
+    }
+
+    .kcbf-product-upload-tile {
+        min-height: 135px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .kcbf-product-form-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .kcbf-product-editor-aside {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .kcbf-product-photo-panel {
+        grid-column: auto;
     }
 }
