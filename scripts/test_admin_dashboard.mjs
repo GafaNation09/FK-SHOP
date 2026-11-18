@@ -51,6 +51,8 @@ assert.match(html, /class="kcbf-product-editor-layout"/, 'product editing should
 assert.match(html, /class="kcbf-product-panel"><h3>General information/, 'product editor must have a General information panel');
 assert.match(html, /class="kcbf-product-panel"><h3>Pricing and stock/, 'product editor must have a Pricing and stock panel');
 assert.match(html, /class="kcbf-product-panel kcbf-product-photo-panel"><h3>Upload images/, 'product editor must retain a dedicated photo upload panel');
+assert.match(html, /After selecting photos, click <strong>Save product<\/strong>/, 'admin must be told that selecting a photo alone does not upload it');
+assert.match(html, /Product video upload is not available yet[\s\S]*?bucket accepts photos only/, 'admin must not be led to believe video uploads work with the photo-only bucket');
 assert.match(html, /name="category_id" required/, 'product editor must retain its required category field');
 assert.match(html, /form="product-editor-form"/, 'the header save action must submit the existing product form');
 for (const fieldName of ['name', 'slug', 'short_description', 'description', 'base_price_kes', 'stock_quantity', 'colors', 'sizes', 'materials', 'measurements', 'care_instructions', 'shipping_information', 'attributes', 'ordering_modes', 'requires_quote', 'availability_status', 'status', 'photo', 'featured']) {
@@ -85,10 +87,18 @@ assert.match(js, /parsed\.protocol !== 'https:'/, 'admin product images must rej
 assert.match(js, /function renderProductImages\(productId, images\)[\s\S]*?container\.replaceChildren\(\)/, 'product photo rendering must clear and rebuild the gallery with DOM nodes');
 assert.match(js, /photo\.src = url;[\s\S]*?photo\.alt = image\.alt_text \|\| 'Product photo'/, 'product photos must assign URL and alt text as DOM properties');
 assert.doesNotMatch(js, /api\.safeImageUrl|api\.escapeHtml/, 'admin product editing must not depend on storefront-only helpers');
+const saveProductSource = extractFunction(js, 'saveProduct');
+const photoPreflightIndex = saveProductSource.indexOf('const selectedPhotos = validateProductPhotos');
+assert.ok(photoPreflightIndex >= 0 && photoPreflightIndex < saveProductSource.indexOf("await client.from('products').update(row)"), 'selected photo validation must run before product updates');
+assert.ok(photoPreflightIndex < saveProductSource.indexOf("await client.from('products').insert(row)"), 'selected photo validation must run before product inserts');
+assert.match(js, /No product photos were uploaded[\s\S]*?5 MiB/, 'invalid photo preflight must clearly explain that no photos were uploaded and state the limit');
+assert.match(js, /cleanupFailed/, 'media metadata failure must report when Storage object cleanup also fails');
+assert.match(js, /Product saved, but .*photo\(s\) failed[\s\S]*?Reselect only these file\(s\)/, 'partial photo failure must distinguish product persistence and explain safe retry');
 
 function extractFunction(source, name) {
-  const start = source.indexOf('function ' + name + '(');
+  let start = source.indexOf('function ' + name + '(');
   assert.notEqual(start, -1, 'expected function ' + name);
+  if (source.slice(Math.max(0, start - 6), start) === 'async ') start -= 6;
   const opening = source.indexOf('{', start);
   let depth = 0;
   for (let index = opening; index < source.length; index += 1) {
@@ -138,6 +148,71 @@ assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.ac
 galleryFunctions.renderProductImages('product-1', [{ id: 'unsafe', image_url: 'data:text/html,unsafe' }]);
 assert.match(gallery.textContent, /No valid product photos/);
 
+const mediaCalls = [];
+let insertShouldFail = false;
+let cleanupShouldFail = false;
+const mockClient = {
+  from(table) {
+    assert.equal(table, 'product_images');
+    return {
+      select() { return this; },
+      eq() { return this; },
+      order() { return Promise.resolve({ data: [{ sort_order: 2, is_main: false }], error: null }); },
+      insert(row) {
+        mediaCalls.push(['insert', row]);
+        return Promise.resolve({ error: insertShouldFail ? { message: 'metadata denied' } : null });
+      }
+    };
+  },
+  storage: {
+    from(bucket) {
+      assert.equal(bucket, 'kcbf-product-media');
+      return {
+        upload(path, file, options) { mediaCalls.push(['upload', path, file, options]); return Promise.resolve({ error: null }); },
+        getPublicUrl(path) { return { data: { publicUrl: 'https://storage.example.test/' + path } }; },
+        remove(paths) { mediaCalls.push(['remove', paths]); return Promise.resolve({ error: cleanupShouldFail ? { message: 'cleanup denied' } : null }); }
+      };
+    }
+  }
+};
+let uuidSequence = 0;
+const mediaFns = runInNewContext([
+  "const bucketName = 'kcbf-product-media';",
+  "const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];",
+  extractFunction(js, 'validateProductPhotos'),
+  extractFunction(js, 'uploadProductPhotos'),
+  '({ validateProductPhotos, uploadProductPhotos })'
+].join('\n'), {
+  client: mockClient,
+  document: { querySelector() { return { value: 'Test product' }; } },
+  crypto: { randomUUID() { uuidSequence += 1; return 'fixed-uuid-' + uuidSequence; } }
+});
+const validPhoto = { name: 'front.jpg', type: 'image/jpeg', size: 1024 };
+const secondPhoto = { name: 'back.webp', type: 'image/webp', size: 2048 };
+assert.deepEqual(Array.from(mediaFns.validateProductPhotos([validPhoto])), [validPhoto]);
+assert.throws(() => mediaFns.validateProductPhotos([{ name: 'bad.mp4', type: 'video/mp4', size: 1024 }]), /No product photos were uploaded.*bad\.mp4/, 'invalid media must fail preflight before product writes');
+const uploadedPhotos = await mediaFns.uploadProductPhotos('product-1', [validPhoto, secondPhoto]);
+assert.equal(uploadedPhotos.uploaded, 2);
+assert.equal(uploadedPhotos.failed.length, 0);
+const uploadCall = mediaCalls.find(call => call[0] === 'upload');
+assert.equal(uploadCall[1], 'product-1/fixed-uuid-1.jpg', 'photos must upload beneath their stable product ID');
+assert.equal(mediaCalls.filter(call => call[0] === 'upload')[1][1], 'product-1/fixed-uuid-2.webp');
+assert.equal(uploadCall[3].cacheControl, '3600');
+assert.equal(uploadCall[3].contentType, 'image/jpeg');
+assert.equal(uploadCall[3].upsert, false);
+const insertedPhoto = mediaCalls.find(call => call[0] === 'insert')[1];
+assert.equal(insertedPhoto.sort_order, 3);
+assert.equal(insertedPhoto.is_main, true, 'the first photo becomes the main photo if the product has no existing main image');
+const insertedPhotos = mediaCalls.filter(call => call[0] === 'insert').map(call => call[1]);
+assert.deepEqual(insertedPhotos.map(row => row.sort_order), [3, 4], 'multi-file uploads must receive sequential non-negative gallery order');
+assert.deepEqual(insertedPhotos.map(row => row.is_main), [true, false], 'only the first photo is marked main when no prior main exists');
+insertShouldFail = true;
+cleanupShouldFail = true;
+const failedPhoto = await mediaFns.uploadProductPhotos('product-1', [validPhoto]);
+assert.equal(failedPhoto.failed[0].name, 'front.jpg');
+assert.match(failedPhoto.failed[0].reason, /metadata denied/);
+assert.deepEqual(Array.from(failedPhoto.cleanupFailed), ['front.jpg'], 'failed object cleanup must be surfaced');
+
 const tableHeaders = ['Reference', 'Status', ''];
 const mobileCells = tableHeaders.map(() => ({
   attributes: {},
@@ -157,4 +232,4 @@ const labelTables = runInNewContext(extractFunction(js, 'labelResponsiveAdminTab
 labelTables(adminRoot);
 assert.deepEqual(mobileCells.map(cell => cell.getAttribute('data-admin-label')), ['Reference', 'Status', 'Actions'], 'responsive rows retain accessible labels when visually converted to cards');
 
-console.log('PASS: dashboard metrics/filters, SalesSync layout, accessible mobile navigation/table labels, and safe product gallery rendering');
+console.log('PASS: dashboard metrics/filters, SalesSync layout, accessible mobile navigation/table labels, safe gallery rendering, and product-photo upload/preflight/cleanup behavior');

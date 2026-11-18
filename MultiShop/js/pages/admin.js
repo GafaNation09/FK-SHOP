@@ -672,13 +672,21 @@
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    async function uploadProductPhotos(productId, files) {
+    function validateProductPhotos(files) {
         const selected = Array.from(files || []);
-        if (!selected.length) return { uploaded: 0, failed: [] };
-        selected.forEach(function (file) {
-            if (!validImageTypes.includes(file.type)) throw new Error('Choose JPG, PNG or WebP product photos only.');
-            if (file.size > 5 * 1024 * 1024) throw new Error('Each product photo must be 5 MB or smaller.');
+        const invalid = selected.filter(function (file) {
+            return !validImageTypes.includes(file.type) || !Number.isFinite(Number(file.size)) || Number(file.size) > 5 * 1024 * 1024;
         });
+        if (invalid.length) {
+            const names = invalid.map(function (file) { return file.name || 'Unnamed file'; }).join(', ');
+            throw new Error('No product photos were uploaded. Use JPG, PNG or WebP files no larger than 5 MiB. Unsupported or oversized file(s): ' + names + '.');
+        }
+        return selected;
+    }
+
+    async function uploadProductPhotos(productId, files) {
+        const selected = validateProductPhotos(files);
+        if (!selected.length) return { uploaded: 0, failed: [], cleanupFailed: [] };
         const { data: existing, error: readError } = await client.from('product_images')
             .select('id,sort_order,is_main')
             .eq('product_id', productId)
@@ -688,6 +696,7 @@
         let hasMain = (existing || []).some(function (image) { return image.is_main; });
         let uploaded = 0;
         const failed = [];
+        const cleanupFailed = [];
         for (const file of selected) {
             const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
             const path = productId + '/' + crypto.randomUUID() + '.' + extension;
@@ -711,14 +720,25 @@
                 nextOrder += 1;
                 uploaded += 1;
             } catch (error) {
-                if (objectUploaded) await client.storage.from(bucketName).remove([path]).catch(function () {});
-                failed.push(file.name || 'Selected photo');
+                let cleanupError = null;
+                if (objectUploaded) {
+                    try {
+                        const cleanup = await client.storage.from(bucketName).remove([path]);
+                        cleanupError = cleanup && cleanup.error || null;
+                    } catch (removeError) { cleanupError = removeError; }
+                }
+                const name = file.name || 'Selected photo';
+                failed.push({ name: name, reason: error && error.message ? error.message : 'Storage or gallery save failed.' });
+                if (cleanupError) cleanupFailed.push(name);
             }
         }
-        return { uploaded: uploaded, failed: failed };
+        return { uploaded: uploaded, failed: failed, cleanupFailed: cleanupFailed };
     }
 
     async function saveProduct(form) {
+        // Preflight before inserting/updating the product so a rejected file cannot
+        // leave a saved product behind while the UI reports that the whole save failed.
+        const selectedPhotos = validateProductPhotos(form.elements.photo && form.elements.photo.files);
         const values = Object.fromEntries(new FormData(form).entries());
         const modes = Array.from(form.querySelectorAll('[name="ordering_modes"]:checked')).map(function (field) { return field.value; });
         if (!modes.length) throw new Error('Choose at least one ordering option.');
@@ -817,14 +837,37 @@
         if (result.error) throw result.error;
         const savedId = result.data.id;
         form.elements.id.value = savedId;
-        const files = form.elements.photo.files;
-        const photoResult = await uploadProductPhotos(savedId, files);
+        let photoResult;
+        try { photoResult = await uploadProductPhotos(savedId, selectedPhotos); }
+        catch (error) {
+            photoResult = { uploaded: 0, failed: selectedPhotos.map(function (file) {
+                return { name: file.name || 'Selected photo', reason: error && error.message ? error.message : 'The product photo service could not be reached.' };
+            }), cleanupFailed: [] };
+        }
+        let refreshError = null;
+        try { await Promise.all([loadProducts(), loadCategories()]); }
+        catch (error) { refreshError = error; }
+        const failedNames = photoResult.failed.map(function (item) { return item.name + ' (' + item.reason + ')'; });
+        const cleanupMessage = photoResult.cleanupFailed.length
+            ? ' Cleanup could not remove the stored object for: ' + photoResult.cleanupFailed.join(', ') + '; contact the site administrator before retrying.'
+            : '';
+        if (photoResult.failed.length) {
+            // Clear the browser FileList to prevent accidental duplicate retries;
+            // retain the saved product fields so only failed files need reselection.
+            if (form.elements.photo) form.elements.photo.value = '';
+            showStatus('Product saved, but ' + photoResult.failed.length + ' photo(s) failed. Reselect only these file(s): ' + failedNames.join('; ') + '.' + cleanupMessage, 'warning');
+            if (!refreshError) {
+                const refreshed = allProducts.find(function (product) { return product.id === savedId; });
+                renderProductImages(savedId, refreshed && refreshed.product_images || []);
+            }
+            return;
+        }
         clearProductForm();
-        await Promise.all([loadProducts(), loadCategories()]);
         const photoMessage = photoResult.uploaded ? ' with ' + photoResult.uploaded + ' photo' + (photoResult.uploaded === 1 ? '' : 's') : '';
-        const failureMessage = photoResult.failed.length ? ' These photos could not be uploaded: ' + photoResult.failed.join(', ') + '.' : '';
-        showStatus('Product saved' + photoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.' + failureMessage,
-            photoResult.failed.length ? 'warning' : 'success');
+        showStatus(refreshError
+            ? 'Product saved' + photoMessage + ', but the admin list could not refresh. Reload the Products section to confirm the latest records.'
+            : 'Product saved' + photoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.',
+            refreshError ? 'warning' : 'success');
     }
 
     async function saveSettings(form) {

@@ -189,3 +189,14 @@ The overall master prompt is still **NOT COMPLETE**.
 - [ ] **BLOCKED:** Do not apply new production DDL or enable automated migration deployment while the audited `stage1_storefront` and `auth_admin_access` migration digests differ from applied history. No migration was applied for this continuation. Checkout/payment/email/delivery also remain unavailable until provider onboarding and trusted server-side configuration are verified.
 
 Overall acceptance of the attached prompt remains **NOT COMPLETE**; code/UI changes above do not satisfy the missing business workflows or live acceptance tests.
+
+
+## 2026-11-18 — Admin media upload reliability continuation
+
+- [x] Explain to admins that selecting photos only stages them; **Save product** saves the product first and then uploads images.
+- [x] Validate selected image types/sizes before any product insert or update; identify the actual file-level Storage/metadata error; distinguish product save from media failures; keep product fields for correction; avoid accidental duplicate retries; and report failed cleanup.
+- [x] Add deterministic storage/PostgREST mock regression coverage for rejected files, object path/options, metadata order/main status, metadata failure and orphan-cleanup warning.
+- [ ] Deploy and verify the new code in production. No live upload was attempted under the confirmed safety boundary; the owner's reported current production failure remains un-reproduced.
+- [ ] **BLOCKED:** Hosted product-video upload and playback. Current bucket allows only JPEG/PNG/WebP, is capped at 5 MiB, the image table is image-only, and no video renderer exists. Requires approved reviewed schema/storage/policy update and migration-history reconciliation before any production DDL. Do not attempt video upload or weaken policies.
+
+No production DB/storage/product record was changed. Overall prompt acceptance remains incomplete; custom orders, inventory ledger/atomic stock handling, trusted checkout, providers, reports/exports, and live device/accessibility/performance tests remain outstanding.
