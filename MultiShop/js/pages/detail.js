@@ -181,6 +181,38 @@
         wrapper.hidden = !list.childElementCount;
     }
 
+    function renderRelatedProducts(product, products) {
+        const section = document.querySelector('[data-related-products]');
+        const grid = document.querySelector('[data-related-products-grid]');
+        if (!section || !grid || typeof api.renderProductCard !== 'function') return;
+        const currentId = String(product.id || '');
+        const currentSlug = String(product.slug || '');
+        const categorySlug = api.productCategorySlug ? api.productCategorySlug(product) : (product.categorySlug || product.category_slug || '');
+        function eligible(item) {
+            const availability = item.availability || item.availability_status || '';
+            const stock = item.stockQuantity !== undefined ? item.stockQuantity : item.stock_quantity;
+            return String(item.id || '') !== currentId && String(item.slug || '') !== currentSlug &&
+                availability !== 'out_of_stock' && !(stock !== null && stock !== undefined && Number(stock) <= 0);
+        }
+        function order(items) {
+            return items.sort(function (a, b) {
+            return Number(Boolean(b.featured || b.is_featured)) - Number(Boolean(a.featured || a.is_featured)) ||
+                new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0);
+            });
+        }
+        const others = products.filter(eligible);
+        const sameCategory = order(others.filter(function (item) {
+            return categorySlug && (api.productCategorySlug ? api.productCategorySlug(item) : (item.categorySlug || item.category_slug || '')) === categorySlug;
+        }));
+        const sameCategoryIds = new Set(sameCategory.map(function (item) { return String(item.id || item.slug || ''); }));
+        const alternatives = order(others.filter(function (item) { return !sameCategoryIds.has(String(item.id || item.slug || '')); }));
+        const related = sameCategory.concat(alternatives).slice(0, 4);
+        grid.innerHTML = related.map(function (item) {
+            return api.renderProductCard(item, 'col-6 col-lg-3 col-md-4 pb-1');
+        }).join('');
+        section.hidden = related.length === 0;
+    }
+
     api.ready.then(function (data) {
         const params = new URLSearchParams(window.location.search);
         const routeMatch = window.location.pathname.match(/\/product\/([^/]+)\/?$/);
@@ -205,6 +237,17 @@
             window.history.replaceState(window.history.state, '', api.productUrl(product.slug));
         }
         const canonicalUrl = updateProductMetadata(product);
+        const productCrumb = document.querySelector('[data-detail-breadcrumb-product]');
+        if (productCrumb) productCrumb.textContent = product.name || 'Product';
+        const categoryCrumb = document.querySelector('[data-detail-breadcrumb-category]');
+        const categorySlug = api.productCategorySlug ? api.productCategorySlug(product) : (product.categorySlug || product.category_slug || '');
+        const categoryName = product.categoryName || product.category_name || '';
+        if (categoryCrumb && categorySlug && categoryName) {
+            categoryCrumb.textContent = categoryName;
+            categoryCrumb.href = 'shop.html?category=' + encodeURIComponent(categorySlug);
+            categoryCrumb.hidden = false;
+        }
+        renderRelatedProducts(product, products);
         bindProductSharing(product, canonicalUrl, panel);
         const imageContainer = document.querySelector('[data-detail-image]');
         if (imageContainer) imageContainer.innerHTML = productImage(product);

@@ -29,6 +29,12 @@ assert.match(html, /data-dashboard-transactions/, 'overview must expose recent t
 assert.match(html, /data-orders-filter-apply/, 'orders must expose status filters');
 assert.match(html, /data-product-search/, 'catalog must expose search');
 assert.match(html, /data-products-more/, 'catalog records must be paginated');
+for (const control of ['data-product-status-filter', 'data-product-stock-filter', 'data-product-availability-filter', 'data-product-type-filter', 'data-product-category-filter', 'data-product-sort', 'data-products-count', 'data-products-state']) {
+  assert.match(html, new RegExp(control), 'catalog must expose ' + control);
+}
+for (const heading of ['Product ID', 'Category', 'Price / was price', 'Stock', 'Availability', 'Product type', 'Publication', 'Media', 'Created', 'Updated', 'Actions']) {
+  assert.ok(html.includes('<th>' + heading + '</th>'), 'product rows must expose ' + heading);
+}
 assert.match(html, /data-admin-tab-link="customers"[^>]*data-requires-role="store-admin"/, 'customer metrics must open a role-gated customer section');
 assert.match(html, /data-open-order-status="pending"/, 'pending-order metrics must select the pending filter');
 assert.match(html, /data-open-order-status="delivered"/, 'delivered-order metrics must select the delivered filter');
@@ -72,7 +78,18 @@ assert.match(js, /client\.from\('orders'\)[\s\S]*?\.limit\(5\)/, 'recent orders 
 assert.match(js, /client\.from\('payment_transactions'\)[\s\S]*?\.limit\(5\)/, 'recent transactions must be bounded');
 assert.match(js, /query\.range\(productOffset,\s*productOffset\s*\+\s*pageSize\s*-\s*1\)/, 'products must be server-paginated');
 assert.match(js, /query\.range\(orderOffset,\s*orderOffset\s*\+\s*pageSize\s*-\s*1\)/, 'orders must be server-paginated');
-assert.match(js, /query\.ilike\('name'/, 'product search must be performed server-side');
+assert.match(js, /query = uuid[\s\S]*?name\.ilike\.%[\s\S]*?slug\.ilike\.%[\s\S]*?id\.eq\./, 'product search must match names/slugs and exact UUIDs server-side');
+assert.match(js, /async function retrieveProductForEdit[\s\S]*?select\(adminProductSelect\)[\s\S]*?\.eq\('id',\s*productId\)[\s\S]*?\.single\(\)/, 'Edit, Stock and Media must retrieve the latest full product record by stable ID');
+assert.match(js, /async function toggleProductPublication[\s\S]*?update\(\{ status: nextStatus \}\)/, 'product rows must support publication transitions');
+assert.match(js, /No empty-catalog conclusion was made/, 'product query failures must be distinct from empty results');
+assert.match(js, /query\.contains\('ordering_modes',\s*\[typeFilter\]\)/, 'product-type filter must use the stored type array server-side');
+assert.match(js, /query\.gt\('stock_quantity',\s*0\)/, 'in-stock filter must use inventory data server-side');
+assert.match(js, /stockFilter === 'out_of_stock'[\s\S]*?stockFilter === 'limited_stock'[\s\S]*?stockFilter === 'in_stock'/, 'stock filtering must be independent from publication status');
+assert.match(js, /stock_asc:[\s\S]*?stock_desc:[\s\S]*?status_asc:/, 'catalog sorting must support both stock directions and publication status');
+for (const action of ["makeButton('Edit', 'edit-product'", "makeButton('Stock', 'edit-product-stock'", "makeButton('Media', 'edit-product-media'", "'toggle-publish-product'", "'toggle-archive-product'"]) {
+  assert.ok(js.includes(action), 'each product row must provide the ' + action + ' action');
+}
+assert.match(js, /view\.href = '\.\.\/product\/'/, 'product preview must link to the real public detail route');
 assert.match(js, /query\.eq\('category_id'/, 'category filtering must be performed server-side');
 assert.match(js, /query\.eq\('order_status'/, 'order lifecycle filters must be performed server-side');
 assert.match(js, /query\.eq\('payment_status'/, 'payment filters must be performed server-side');
@@ -90,6 +107,7 @@ assert.match(js, /function safeAdminImageUrl\(value\)/, 'admin product images mu
 assert.match(js, /parsed\.protocol !== 'https:'/, 'admin product images must reject non-HTTPS URLs');
 assert.match(js, /function renderProductImages\(productId, images\)[\s\S]*?container\.replaceChildren\(\)/, 'product photo rendering must clear and rebuild the gallery with DOM nodes');
 assert.match(js, /photo\.src = url;[\s\S]*?photo\.alt = image\.alt_text \|\| 'Product photo'/, 'product photos must assign URL and alt text as DOM properties');
+assert.match(js, /addAction\('move-image-up', 'Move earlier'[\s\S]*?addAction\('move-image-down', 'Move later'/, 'saved photos must have clear controls for changing gallery order');
 assert.doesNotMatch(js, /api\.safeImageUrl|api\.escapeHtml/, 'admin product editing must not depend on storefront-only helpers');
 const saveProductSource = extractFunction(js, 'saveProduct');
 const photoPreflightIndex = saveProductSource.indexOf('const selectedPhotos = validateProductPhotos');
@@ -196,14 +214,17 @@ assert.equal(galleryFunctions.safeAdminImageUrl('javascript:alert(1)'), '');
 galleryFunctions.renderProductImages('product-1', [
   { id: 'main', image_url: 'https://storage.example.test/main.jpg', alt_text: '<img onerror=alert(1)>', is_main: true, sort_order: 0 },
   { id: 'secondary', image_url: 'https://storage.example.test/second.jpg', alt_text: 'Second photo', is_main: false, sort_order: 1 },
-  { id: 'unsafe', image_url: 'javascript:alert(1)', alt_text: 'Unsafe', is_main: false, sort_order: 2 }
+  { id: 'third', image_url: 'https://storage.example.test/third.jpg', alt_text: 'Third photo', is_main: false, sort_order: 2 },
+  { id: 'unsafe', image_url: 'javascript:alert(1)', alt_text: 'Unsafe', is_main: false, sort_order: 3 }
 ]);
 function descendants(node) { return [node, ...node.children.flatMap(descendants)]; }
 const galleryNodes = descendants(gallery);
-assert.equal(galleryNodes.filter(node => node.tagName === 'img').length, 2, 'only HTTPS product images should render');
+assert.equal(galleryNodes.filter(node => node.tagName === 'img').length, 3, 'only HTTPS product images should render');
 assert.equal(galleryNodes.find(node => node.tagName === 'img')?.alt, '<img onerror=alert(1)>', 'alt text must remain a DOM text property, not parsed markup');
 assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'set-main-image' && node.dataset.id === 'secondary'));
 assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'remove-product-image' && node.dataset.id === 'main'));
+assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'move-image-up' && node.dataset.id === 'secondary'));
+assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.action === 'move-image-down' && node.dataset.id === 'secondary'));
 galleryFunctions.renderProductImages('product-1', [{ id: 'unsafe', image_url: 'data:text/html,unsafe' }]);
 assert.match(gallery.textContent, /No valid product photos/);
 

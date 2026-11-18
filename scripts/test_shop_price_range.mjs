@@ -13,7 +13,7 @@ const selectors = [
   '[data-facet="colors"]', '[data-facet="sizes"]', '[data-facet="availability"]',
   '[data-price-min]', '[data-price-max]', '[data-price-min-output]', '[data-price-max-output]',
   '[data-shop-filter-panel]', '[data-mobile-filter-backdrop]', '[data-mobile-filter-open]',
-  '[data-active-filter-count]', '[data-active-filters]', '[data-shop-search]'
+  '[data-active-filter-count]', '[data-active-filters]', '[data-shop-search]', '[data-filter-clear-top]', '[data-shop-breadcrumb-shop]', '[data-shop-breadcrumb-current]'
 ];
 const nodes = new Map(selectors.map((selector) => [selector, {
   value: '', min: '0', max: '200', innerHTML: '', textContent: '', attributes: {},
@@ -80,7 +80,7 @@ const api = {
   categorySlug(category) { return category.slug; },
   productCategorySlug(product) { return product.categorySlug || ''; },
   escapeHtml(value) { return String(value); },
-  renderProductCard(product) { return '<div>' + product.name + '</div>'; },
+  renderProductCard(product, column) { return '<div class="' + (column || '') + '">' + product.name + '</div>'; },
   renderProductPlaceholders() { return ''; },
   renderEmptyState() { return '<div>empty</div>'; }
 };
@@ -120,20 +120,33 @@ assert.equal(max.max, '10000');
 assert.equal(grid.getAttribute('data-view-mode'), 'grid');
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
+assert.match(grid.innerHTML, /col-6/, 'Shop cards retain two columns even below the Bootstrap sm breakpoint');
 assert.equal((html.match(/data-facet="(?:category|price|availability|orderingModes|colors|sizes)"/g) || []).length, 6, 'all six data-driven facets must remain present');
 assert.match(html, /data-mobile-filter-open[\s\S]*data-active-filter-count/, 'the mobile toolbar must expose filters and active-count feedback');
 assert.match(html, /data-mobile-filter-apply[\s\S]*data-filter-clear/, 'the drawer must provide Apply and Clear All actions');
 assert.match(html, /<details class="kcbf-shop-filter-group" open>/, 'filter groups must be expandable');
 assert.match(css, /\.kcbf-shop-filter-sidebar\.is-open/, 'the mobile drawer must expose its open state');
 assert.match(nodes.get('[data-facet="colors"]').innerHTML, />1<\/span>/, 'facet badges must show actual product counts');
-
 const targetFor = (selector, match) => ({ closest(candidate) { return candidate === selector || candidate.split(', ').includes(selector) ? match : null; } });
+
+const categoryChoice = filterInputs.find((input) => input.group === 'category');
+categoryChoice.checked = true;
+listeners.change({ target: categoryChoice });
+assert.equal(nodes.get('[data-shop-breadcrumb-shop]').hidden, false, 'selected category shows the Shop parent link');
+assert.equal(nodes.get('[data-shop-breadcrumb-current]').textContent, 'Accessories', 'selected category is the current breadcrumb, after Shop');
+listeners.click({ target: targetFor('[data-remove-filter-group]', {
+  getAttribute(name) { return name === 'data-remove-filter-group' ? 'category' : 'Accessories'; }
+}) });
+assert.equal(nodes.get('[data-shop-breadcrumb-shop]').hidden, true, 'removing category context hides the extra Shop crumb');
+assert.equal(nodes.get('[data-shop-breadcrumb-current]').textContent, 'Shop');
+
 const greenFilter = filterInputs.find((input) => input.value === 'Green');
 greenFilter.checked = true;
 listeners.change({ target: greenFilter });
 assert.match(grid.innerHTML, /Pouch/);
 assert.doesNotMatch(grid.innerHTML, /Shawl/);
 assert.equal(nodes.get('[data-active-filter-count]').textContent, '1');
+assert.equal(nodes.get('[data-filter-clear-top]').hidden, false, 'Clear all is visible when any filter is active');
 assert.match(nodes.get('[data-active-filters]').innerHTML, /Colour: Green/);
 listeners.click({ target: targetFor('[data-remove-filter-group]', {
   getAttribute(name) { return name === 'data-remove-filter-group' ? 'colors' : 'Green'; }
@@ -165,6 +178,7 @@ assert.equal(madeToOrder.checked, false, 'Clear All clears every checked facet')
 assert.equal(min.value, min.min, 'Clear All restores the lower price bound');
 assert.equal(max.value, max.max, 'Clear All restores the upper price bound');
 assert.equal(nodes.get('[data-shop-search]').value, '', 'Clear All resets the search query');
+assert.equal(nodes.get('[data-filter-clear-top]').hidden, true, 'Clear all hides once no filters remain');
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
@@ -186,6 +200,7 @@ listeners.click({ target: { closest(selector) { return selector === '[data-view-
 assert.equal(grid.getAttribute('data-view-mode'), 'list');
 assert.equal(listButton.attributes['aria-pressed'], 'true');
 assert.equal(localStorage.get('kcbf.catalog-view.v1'), 'list', 'the view preference should persist in this browser');
+assert.match(css, /data-shop-grid\]\[data-view-mode="list"\][\s\S]*?display: flex;[\s\S]*?min-height: 132px/, 'mobile List mode keeps its horizontal row layout rather than duplicating Grid mode');
 
 min.value = '1000';
 max.value = '500';

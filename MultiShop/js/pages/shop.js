@@ -92,6 +92,9 @@
         const filterOpenButton = document.querySelector('[data-mobile-filter-open]');
         const activeFilterCount = document.querySelector('[data-active-filter-count]');
         const activeFilters = document.querySelector('[data-active-filters]');
+        const clearTop = document.querySelector('[data-filter-clear-top]');
+        const shopBreadcrumb = document.querySelector('[data-shop-breadcrumb-shop]');
+        const shopCurrent = document.querySelector('[data-shop-breadcrumb-current]');
         const groupTitles = { category: 'Category', availability: 'Availability', orderingModes: 'Product type', colors: 'Colour', sizes: 'Size' };
         let previousFocus = null;
         let currentPage = 1;
@@ -262,7 +265,14 @@
                     window.history.replaceState({}, '', cleanUrl.toString());
                 }
             }
-            if (group === 'search') params.delete('q');
+            if (group === 'search') {
+                params.delete('q');
+                if (window.history && typeof window.history.replaceState === 'function') {
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('q');
+                    window.history.replaceState({}, '', cleanUrl.toString());
+                }
+            }
             currentPage = 1;
             render();
         }
@@ -291,6 +301,10 @@
                 activeFilters.innerHTML = chips.join('');
                 activeFilters.hidden = count === 0;
             }
+            if (clearTop) clearTop.hidden = count === 0;
+            const selectedCategory = document.querySelectorAll('[data-filter-group="category"]:checked')[0];
+            if (shopBreadcrumb) shopBreadcrumb.hidden = !selectedCategory;
+            if (shopCurrent) shopCurrent.textContent = selectedCategory ? selectedCategory.value : 'Shop';
         }
 
         function render() {
@@ -318,7 +332,7 @@
             currentPage = Math.min(currentPage, pageCount);
             const start = (currentPage - 1) * pageSize;
             const pageItems = results.slice(start, start + pageSize);
-            const shopColumn = 'col-lg-4 col-md-6 col-sm-6 pb-1';
+            const shopColumn = 'col-6 col-lg-4 col-md-6 pb-1';
             if (grid) {
                 if (pageItems.length) grid.innerHTML = pageItems.map(function (product) { return api.renderProductCard(product, shopColumn); }).join('');
                 else if (!published.length && !params.get('q') && !initialCategory) grid.innerHTML = api.renderProductPlaceholders(pageSize, 'Shop product', shopColumn);

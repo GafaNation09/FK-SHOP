@@ -51,6 +51,10 @@ const mainImage = new Element();
 image.querySelector = (selector) => selector === '[data-detail-main-image]' ? mainImage : null;
 const gallery = new Element();
 const videos = new Element();
+const relatedSection = new Element();
+const relatedGrid = new Element();
+const productCrumb = new Element();
+const categoryCrumb = new Element();
 const metadataSelectors = ['#product-meta-description', '#product-canonical', '#product-og-title', '#product-og-description', '#product-og-url', '#product-og-image', '#product-twitter-title', '#product-twitter-description', '#product-twitter-image'];
 const metadata = new Map(metadataSelectors.map((selector) => [selector, new Element()]));
 let jsonLdNode = null;
@@ -65,13 +69,17 @@ const document = {
       '[data-detail-image]': image,
       '[data-detail-gallery]': gallery,
       '[data-detail-videos]': videos,
+      '[data-related-products]': relatedSection,
+      '[data-related-products-grid]': relatedGrid,
+      '[data-detail-breadcrumb-product]': productCrumb,
+      '[data-detail-breadcrumb-category]': categoryCrumb,
       ...Object.fromEntries(metadata)
     }[selector] || null;
   },
   createElement() { return new Element(); }
 };
 const product = {
-  id: 'product-1', slug: 'woven-bag', name: 'Woven bag', description: 'Handmade crochet bag',
+  id: 'product-1', slug: 'woven-bag', name: 'Woven bag', description: 'Handmade crochet bag', categorySlug: 'bags', status: 'published',
   categoryName: 'Bags', priceKes: 1250, originalPriceKes: 1500, availability: 'contact_for_availability',
   productionTimeDays: 2, materials: 'Cotton yarn', careInstructions: 'Hand wash',
   patterns: ['Floral'], personalizationOptions: ['Monogram'], measurements: '20 cm wide', weightGrams: 180,
@@ -82,11 +90,17 @@ const product = {
   ],
   videos: [{ url: 'https://media.example/bag.mp4', mimeType: 'video/mp4', caption: 'Bag detail' }]
 };
+const relatedProduct = { id: 'product-2', slug: 'crochet-tote', name: 'Crochet tote', categorySlug: 'bags', categoryName: 'Bags', status: 'published' };
+const alternativeProduct = { id: 'product-3', slug: 'flower-pin', name: 'Flower pin', categorySlug: 'gifts', status: 'published' };
+const unavailableProduct = { id: 'product-4', slug: 'sold-out-bag', name: 'Sold out bag', categorySlug: 'bags', status: 'published', availability: 'out_of_stock', stockQuantity: 0 };
+const unpublishedProduct = { id: 'product-5', slug: 'draft-bag', name: 'Draft bag', categorySlug: 'bags', status: 'draft' };
 const api = {
-  ready: Promise.resolve({ products: [product] }),
-  availableProducts(data) { return data.products; },
+  ready: Promise.resolve({ products: [product, relatedProduct, alternativeProduct, unavailableProduct, unpublishedProduct] }),
+  availableProducts(data) { return data.products.filter((item) => item.status === 'published'); },
   availabilityLabel(product) { return product.availability === 'contact_for_availability' ? 'Contact to confirm availability' : product.availability; },
   productUrl(slug) { return '/multishop/product/' + encodeURIComponent(slug); },
+  productCategorySlug(item) { return item.categorySlug || ''; },
+  renderProductCard(item) { return '<a href="/multishop/product/' + item.slug + '">' + item.name + '</a>'; },
   safeImageUrl(value) { return value; },
   escapeHtml(value) { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); },
   formatKes(value) { return 'KES ' + Number(value).toLocaleString('en-KE'); }
@@ -98,6 +112,14 @@ await api.ready;
 await Promise.resolve();
 
 assert.equal(panel.hidden, false, 'published product detail panel should become visible');
+assert.equal(productCrumb.textContent, 'Woven bag', 'the current product breadcrumb uses the resolved product title');
+assert.equal(categoryCrumb.href, 'shop.html?category=bags', 'category breadcrumb returns to the matching Shop facet');
+assert.equal(categoryCrumb.hidden, false);
+assert.equal(relatedSection.hidden, false, 'related products are shown when the category has more entries');
+assert.match(relatedGrid.innerHTML, /crochet-tote/, 'related cards navigate to the selected product detail route');
+assert.match(relatedGrid.innerHTML, /flower-pin/, 'real published alternatives fill the related-products section when same-category choices are limited');
+assert.doesNotMatch(relatedGrid.innerHTML, /woven-bag/, 'related results exclude the current product');
+assert.doesNotMatch(relatedGrid.innerHTML, /sold-out-bag|draft-bag/, 'recommendations exclude out-of-stock and unpublished products');
 assert.match(image.innerHTML, /images\.example\/bag\.webp/, 'product image must render in its sibling container');
 assert.match(gallery.innerHTML, /data-detail-photo-index="1"/, 'secondary product images should render as selectable thumbnails');
 assert.equal(videos.hidden, false, 'product videos should reveal their detail section');

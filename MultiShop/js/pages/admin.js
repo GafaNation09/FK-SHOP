@@ -10,12 +10,14 @@
     const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
     const validVideoTypes = ['video/mp4', 'video/webm'];
     const maxProductVideoBytes = 25 * 1024 * 1024;
+    const adminProductSelect = 'id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,created_at,updated_at,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main),product_videos(id,video_url,storage_path,mime_type,caption,sort_order)';
     let client = null;
     let currentUser = null;
     let membership = null;
     let allCategories = [];
     let allProducts = [];
     let productOffset = 0;
+    let productTotal = 0;
     let customerOffset = 0;
     let orderOffset = 0;
     let orderIdFilter = '';
@@ -138,45 +140,111 @@
         const body = document.querySelector('[data-products-table]');
         if (shouldReset) {
             productOffset = 0;
+            productTotal = 0;
             allProducts = [];
             if (body) body.replaceChildren();
         }
-        let query = client.from('products')
-            .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main),product_videos(id,video_url,storage_path,mime_type,caption,sort_order)')
-            .order('updated_at', { ascending: false });
+        let query = client.from('products').select(adminProductSelect, { count: 'exact' });
+        const sort = document.querySelector('[data-product-sort]')?.value || 'updated_desc';
+        const sortColumns = { updated_desc: ['updated_at', false], created_desc: ['created_at', false], created_asc: ['created_at', true], name_asc: ['name', true], price_asc: ['base_price_kes', true], price_desc: ['base_price_kes', false], stock_asc: ['stock_quantity', true], stock_desc: ['stock_quantity', false], status_asc: ['status', true] };
+        const sortRule = sortColumns[sort] || sortColumns.updated_desc;
+        query = query.order(sortRule[0], { ascending: sortRule[1], nullsFirst: false });
         const statusFilter = document.querySelector('[data-product-status-filter]')?.value || '';
+        const stockFilter = document.querySelector('[data-product-stock-filter]')?.value || '';
         const categoryFilter = document.querySelector('[data-product-category-filter]')?.value || '';
-        const search = String(document.querySelector('[data-product-search]')?.value || '').trim().replace(/[\\%_,]/g, ' ').slice(0, 100);
-        if (statusFilter === 'out_of_stock') {
-            query = query.eq('status', 'published').or('availability_status.eq.out_of_stock,stock_quantity.eq.0');
-        } else if (statusFilter === 'limited_stock') {
-            query = query.eq('status', 'published').eq('availability_status', 'limited_stock');
-        }
-        else if (statusFilter) query = query.eq('status', statusFilter);
+        const availabilityFilter = document.querySelector('[data-product-availability-filter]')?.value || '';
+        const typeFilter = document.querySelector('[data-product-type-filter]')?.value || '';
+        const search = String(document.querySelector('[data-product-search]')?.value || '').trim().replace(/[\\%_,()."*]/g, ' ').replace(/\s+/g, ' ').slice(0, 100);
+        if (statusFilter) query = query.eq('status', statusFilter);
+        if (stockFilter === 'out_of_stock') query = query.or('availability_status.eq.out_of_stock,stock_quantity.eq.0');
+        else if (stockFilter === 'limited_stock') query = query.eq('availability_status', 'limited_stock');
+        else if (stockFilter === 'in_stock') query = query.gt('stock_quantity', 0);
         if (categoryFilter) query = query.eq('category_id', categoryFilter);
-        if (search) query = query.ilike('name', '%' + search + '%');
-        const { data, error } = await query.range(productOffset, productOffset + pageSize - 1);
-        if (error) throw error;
+        if (availabilityFilter) query = query.eq('availability_status', availabilityFilter);
+        if (typeFilter) query = query.contains('ordering_modes', [typeFilter]);
+        if (search) {
+            const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(search);
+            query = uuid
+                ? query.or('name.ilike.%' + search + '%,slug.ilike.%' + search + '%,id.eq.' + search)
+                : query.or('name.ilike.%' + search + '%,slug.ilike.%' + search + '%');
+        }
+        const state = document.querySelector('[data-products-state]');
+        if (shouldReset && state) { state.hidden = false; state.className = 'small text-muted'; state.textContent = 'Loading products from the existing catalog…'; }
+        let result;
+        try { result = await query.range(productOffset, productOffset + pageSize - 1); }
+        catch (error) {
+            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + (error.message || 'Check catalog permission and connection.'); }
+            throw error;
+        }
+        const { data, error, count } = result;
+        if (error) {
+            if (state) { state.hidden = false; state.className = 'small text-danger'; state.textContent = 'Products could not be loaded from Supabase. No empty-catalog conclusion was made. ' + (error.message || 'Check catalog permission and connection.'); }
+            throw error;
+        }
         const rows = data || [];
+        productTotal = Number.isFinite(count) ? count : productOffset + rows.length;
         allProducts = shouldReset ? rows.slice() : allProducts.concat(rows);
         if (body) {
             rows.forEach(function (product) {
                 const category = product.product_categories && product.product_categories.name || '';
-                const price = product.base_price_kes == null ? (product.requires_quote ? 'Quote' : '—') : 'KES ' + Number(product.base_price_kes).toLocaleString('en-KE');
-                body.appendChild(tableRow([
-                    product.name,
-                    category,
-                    price,
-                    product.status
-                ], [
-                    makeButton('Edit', 'edit-product', product.id),
-                    makeButton(product.status === 'archived' ? 'Unarchive' : 'Archive', 'toggle-archive-product', product.id, 'btn-outline-secondary')
-                ]));
+                const row = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                const summary = document.createElement('div'); summary.className = 'kcbf-admin-product-summary';
+                const copy = document.createElement('div'); copy.className = 'kcbf-admin-product-copy';
+                const mainImage = (product.product_images || []).find(function (item) { return item.is_main; }) || (product.product_images || [])[0];
+                const imageUrl = mainImage && safeAdminImageUrl(mainImage.image_url);
+                if (imageUrl) {
+                    const image = document.createElement('img');
+                    image.src = imageUrl; image.alt = ''; image.loading = 'lazy';
+                    image.width = 52; image.height = 52; image.className = 'kcbf-admin-product-thumb';
+                    summary.appendChild(image);
+                }
+                const name = document.createElement('strong'); name.className = 'd-block'; name.textContent = product.name || 'Untitled product';
+                copy.appendChild(name); copy.appendChild(document.createElement('small')).textContent = product.short_description || 'No short description';
+                const slugLabel = document.createElement('small'); slugLabel.className = 'd-block text-muted'; slugLabel.textContent = product.slug ? 'URL: ' + product.slug : 'Slug not set';
+                copy.appendChild(slugLabel);
+                summary.appendChild(copy);
+                nameCell.appendChild(summary);
+                row.appendChild(nameCell);
+                row.appendChild(makeCell(product.id));
+                row.appendChild(makeCell(category || 'Uncategorised'));
+                const currentPrice = product.base_price_kes == null ? (product.requires_quote ? 'By quotation' : 'Not set') : 'KES ' + Number(product.base_price_kes).toLocaleString('en-KE');
+                const wasPrice = product.original_price_kes == null ? '' : ' · Was KES ' + Number(product.original_price_kes).toLocaleString('en-KE');
+                row.appendChild(makeCell(currentPrice + wasPrice));
+                row.appendChild(makeCell(product.stock_quantity == null ? 'Not tracked' : String(product.stock_quantity)));
+                row.appendChild(makeCell(humanizeStatus(product.availability_status)));
+                row.appendChild(makeCell((product.ordering_modes || []).map(humanizeStatus).join(', ') || 'Not set'));
+                row.appendChild(makeCell(humanizeStatus(product.status)));
+                row.appendChild(makeCell((product.product_images || []).length + ' photos · ' + (product.product_videos || []).length + ' videos'));
+                row.appendChild(makeCell(product.created_at ? new Date(product.created_at).toLocaleDateString() : '—'));
+                row.appendChild(makeCell(product.updated_at ? new Date(product.updated_at).toLocaleDateString() : '—'));
+                const actions = document.createElement('td');
+                actions.className = 'kcbf-product-row-actions';
+                actions.appendChild(makeButton('Edit', 'edit-product', product.id, 'btn-outline-primary'));
+                actions.appendChild(makeButton('Stock', 'edit-product-stock', product.id));
+                actions.appendChild(makeButton('Media', 'edit-product-media', product.id));
+                actions.appendChild(makeButton(product.status === 'published' ? 'Unpublish' : 'Publish', 'toggle-publish-product', product.id, product.status === 'published' ? 'btn-outline-secondary' : 'btn-outline-success'));
+                const view = document.createElement('a'); view.className = 'btn btn-sm btn-outline-secondary mr-1';
+                view.textContent = 'View'; view.href = '../product/' + encodeURIComponent(product.slug || product.id);
+                view.target = '_blank'; view.rel = 'noopener noreferrer'; view.setAttribute('aria-label', 'Open public details for ' + (product.name || 'product'));
+                if (product.status !== 'published') { view.setAttribute('aria-disabled', 'true'); view.title = 'Only published products are shown in the public catalog.'; view.addEventListener('click', function (event) { event.preventDefault(); }); }
+                actions.appendChild(view);
+                actions.appendChild(makeButton(product.status === 'archived' ? 'Unarchive' : 'Archive', 'toggle-archive-product', product.id, 'btn-outline-danger'));
+                row.appendChild(actions); body.appendChild(row);
             });
         }
         productOffset += rows.length;
+        const countLabel = document.querySelector('[data-products-count]');
+        if (countLabel) countLabel.textContent = 'Showing ' + Math.min(productOffset, productTotal) + ' of ' + productTotal + ' product' + (productTotal === 1 ? '' : 's');
+        if (shouldReset && !rows.length && body) {
+            const empty = document.createElement('tr'); const cell = makeCell('No products match these filters. Clear or change the filters and try again.');
+            cell.colSpan = 12; cell.className = 'text-muted'; empty.appendChild(cell); body.appendChild(empty);
+            if (state) { state.hidden = false; state.className = 'small text-muted'; state.textContent = productTotal === 0 ? 'No products exist for these filters.' : 'No matching products are on this page.'; }
+        } else if (state) {
+            state.hidden = true;
+        }
         const more = document.querySelector('[data-products-more]');
-        if (more) more.hidden = rows.length < pageSize;
+        if (more) more.hidden = productOffset >= productTotal || rows.length < pageSize;
         return rows;
     }
 
@@ -603,7 +671,7 @@
             return Number(a.sort_order || 0) - Number(b.sort_order || 0);
         });
         let renderedCount = 0;
-        orderedImages.forEach(function (image) {
+        orderedImages.forEach(function (image, index) {
             const url = safeAdminImageUrl(image.image_url);
             if (!url) return;
             const column = document.createElement('div');
@@ -628,6 +696,8 @@
                 button.textContent = labelText;
                 card.appendChild(button);
             }
+            if (index > 0) addAction('move-image-up', 'Move earlier', 'btn btn-sm btn-outline-secondary mb-1 mr-1');
+            if (index < orderedImages.length - 1) addAction('move-image-down', 'Move later', 'btn btn-sm btn-outline-secondary mb-1 mr-1');
             if (!image.is_main) addAction('set-main-image', 'Make main', 'btn btn-sm btn-outline-dark mb-1 mr-1');
             addAction('remove-product-image', 'Remove', 'btn btn-sm btn-outline-danger mb-1');
             column.appendChild(card);
@@ -676,6 +746,16 @@
             card.append(video, caption, remove);
             container.appendChild(card);
         });
+    }
+
+    async function retrieveProductForEdit(productId) {
+        const { data, error } = await client.from('products')
+            .select(adminProductSelect)
+            .eq('id', productId)
+            .single();
+        if (error) throw error;
+        if (!data) throw new Error('This product no longer exists or is not accessible to your administrator role.');
+        return data;
     }
 
     function populateProductForm(product) {
@@ -991,6 +1071,28 @@
             ? 'Product saved' + photoMessage + videoMessage + ', but the admin list could not refresh. Reload the Products section to confirm the latest records.'
             : 'Product saved' + photoMessage + videoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.',
             refreshError ? 'warning' : 'success');
+    }
+
+    async function toggleProductPublication(product) {
+        const nextStatus = product.status === 'published' ? 'draft' : 'published';
+        if (nextStatus === 'published') {
+            const modes = Array.isArray(product.ordering_modes) ? product.ordering_modes : [];
+            const hasCustom = modes.includes('made_to_order') || modes.includes('customizable');
+            if (!product.name || !product.slug || !product.category_id || !modes.length) throw new Error('Open Edit and complete the product name, slug, category and ordering options before publishing.');
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product.slug)) throw new Error('Open Edit and correct the product URL slug before publishing.');
+            if (product.availability_status === 'to_be_confirmed') throw new Error('Confirm product availability in Edit before publishing.');
+            if (modes.includes('ready_made') && (product.base_price_kes == null || product.stock_quantity == null)) throw new Error('A ready-made product needs a confirmed price and tracked stock before publishing.');
+            if (hasCustom && !(Number(product.production_time_days) > 0)) throw new Error('A made-to-order product needs an estimated production time before publishing.');
+            if (product.requires_quote && !hasCustom) throw new Error('Quotation pricing requires a made-to-order or customisable product.');
+            if (product.availability_status === 'limited_stock' && !(Number(product.stock_quantity) > 0)) throw new Error('Limited-stock products must have at least one item in stock.');
+            if (product.availability_status === 'out_of_stock' && Number(product.stock_quantity) > 0) throw new Error('An out-of-stock product cannot have positive stock.');
+            if (modes.includes('ready_made') && Number(product.stock_quantity) === 0 && product.availability_status !== 'out_of_stock') throw new Error('A ready-made product with zero stock must be marked out of stock.');
+            if (!window.confirm('Publish this product to the public catalog? Its current saved details and media will become visible.')) return;
+        } else if (!window.confirm('Unpublish this product? It will remain in Admin and historical orders will be preserved.')) return;
+        const { error } = await client.from('products').update({ status: nextStatus }).eq('id', product.id).select('id').single();
+        if (error) throw error;
+        await loadProducts(true);
+        showStatus('Product is now ' + nextStatus + '. Product history and media were preserved.', 'success');
     }
 
     async function saveSettings(form) {
@@ -1319,9 +1421,16 @@
                     const filter = document.querySelector('[data-product-status-filter]');
                     const search = document.querySelector('[data-product-search]');
                     const category = document.querySelector('[data-product-category-filter]');
-                    if (filter) filter.value = productFilter;
+                    const availability = document.querySelector('[data-product-availability-filter]');
+                    const stock = document.querySelector('[data-product-stock-filter]');
+                    const type = document.querySelector('[data-product-type-filter]');
+                    const stockStatuses = ['out_of_stock', 'limited_stock', 'in_stock'];
+                    if (filter) filter.value = stockStatuses.includes(productFilter) ? '' : productFilter;
+                    if (stock) stock.value = stockStatuses.includes(productFilter) ? productFilter : '';
                     if (search) search.value = '';
                     if (category) category.value = '';
+                    if (availability) availability.value = '';
+                    if (type) type.value = '';
                 }
                 const orderStatus = button.getAttribute('data-open-order-status');
                 const paymentStatus = button.getAttribute('data-payment-status-filter');
@@ -1389,6 +1498,11 @@
         document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
         document.querySelector('[data-products-more]')?.addEventListener('click', async function () { try { await loadProducts(false); } catch (error) { showStatus(error.message || 'More products could not be loaded.', 'error'); } });
         document.querySelector('[data-product-filter-apply]')?.addEventListener('click', async function () { try { await loadProducts(true); } catch (error) { showStatus(error.message || 'Product search could not be loaded.', 'error'); } });
+        document.querySelector('[data-product-search]')?.addEventListener('keydown', async function (event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            try { await loadProducts(true); } catch (error) { showStatus(error.message || 'Product search could not be loaded.', 'error'); }
+        });
         document.querySelector('[data-orders-filter-apply]')?.addEventListener('click', async function () {
             orderIdFilter = '';
             try { await loadOrders(true); } catch (error) { showStatus(error.message || 'Filtered orders could not be loaded.', 'error'); }
@@ -1464,14 +1578,31 @@
             const product = allProducts.find(function (item) { return item.id === button.getAttribute('data-id'); });
             if (!product) return;
             try {
-                if (button.getAttribute('data-action') === 'edit-product') populateProductForm(product);
+                const action = button.getAttribute('data-action');
+                if (action === 'edit-product' || action === 'edit-product-stock' || action === 'edit-product-media') {
+                    const currentRecord = await retrieveProductForEdit(product.id);
+                    allProducts = allProducts.filter(function (item) { return item.id !== currentRecord.id; });
+                    allProducts.unshift(currentRecord);
+                    populateProductForm(currentRecord);
+                    if (action === 'edit-product-stock') {
+                        const stock = document.querySelector('#product-stock');
+                        if (stock) { stock.focus({ preventScroll: true }); stock.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                    } else if (action === 'edit-product-media') {
+                        const mediaPanel = document.querySelector('.kcbf-product-photo-panel');
+                        if (mediaPanel) { mediaPanel.setAttribute('tabindex', '-1'); mediaPanel.focus({ preventScroll: true }); mediaPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                    }
+                }
                 if (button.getAttribute('data-action') === 'toggle-archive-product') {
+                    if (!window.confirm(product.status === 'archived'
+                        ? 'Restore this archived product as a draft? It will not be publicly visible until published.'
+                        : 'Archive this product? It will be hidden from the public storefront. Existing order history will be preserved.')) return;
                     const next = product.status === 'archived' ? 'draft' : 'archived';
                     const { error } = await client.from('products').update({ status: next }).eq('id', product.id);
                     if (error) throw error;
                     await loadProducts();
                     showStatus('Product status changed to ' + next + '.', 'success');
                 }
+                if (action === 'toggle-publish-product') await toggleProductPublication(product);
             } catch (error) { showStatus(error.message || 'Product action failed.', 'error'); }
         });
 
@@ -1496,6 +1627,32 @@
                     const refreshed = allProducts.find(function (item) { return item.id === productId; });
                     renderProductImages(productId, refreshed && refreshed.product_images || []);
                     showStatus('Main product photo updated.', 'success');
+                } else if (button.getAttribute('data-action') === 'move-image-up' || button.getAttribute('data-action') === 'move-image-down') {
+                    const ordered = (product.product_images || []).slice().sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); });
+                    const index = ordered.findIndex(function (item) { return item.id === image.id; });
+                    const neighborIndex = index + (button.getAttribute('data-action') === 'move-image-up' ? -1 : 1);
+                    const neighbor = ordered[neighborIndex];
+                    if (!neighbor) return;
+                    const oldOrder = Number(image.sort_order || 0);
+                    const neighborOrder = Number(neighbor.sort_order || 0);
+                    const temporaryOrder = Math.max.apply(null, ordered.map(function (item) { return Number(item.sort_order || 0); })) + 1;
+                    const { error: temporaryError } = await client.from('product_images').update({ sort_order: temporaryOrder }).eq('id', image.id).eq('product_id', productId);
+                    if (temporaryError) throw temporaryError;
+                    const { error: neighborError } = await client.from('product_images').update({ sort_order: oldOrder }).eq('id', neighbor.id).eq('product_id', productId);
+                    if (neighborError) {
+                        await client.from('product_images').update({ sort_order: oldOrder }).eq('id', image.id).eq('product_id', productId);
+                        throw neighborError;
+                    }
+                    const { error: finalError } = await client.from('product_images').update({ sort_order: neighborOrder }).eq('id', image.id).eq('product_id', productId);
+                    if (finalError) {
+                        await client.from('product_images').update({ sort_order: neighborOrder }).eq('id', neighbor.id).eq('product_id', productId);
+                        await client.from('product_images').update({ sort_order: oldOrder }).eq('id', image.id).eq('product_id', productId);
+                        throw finalError;
+                    }
+                    await loadProducts(true);
+                    const refreshed = allProducts.find(function (item) { return item.id === productId; });
+                    renderProductImages(productId, refreshed && refreshed.product_images || []);
+                    showStatus('Product photo order updated. Main-photo selection and image files were preserved.', 'success');
                 } else if (button.getAttribute('data-action') === 'remove-product-image') {
                     if (!window.confirm('Remove this photo from the product gallery?')) return;
                     let storageCleanupWarning = false;
