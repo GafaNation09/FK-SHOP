@@ -850,6 +850,30 @@
         fillCategoryOptions();
     }
 
+    function showProductEditor(focusName) {
+        const editor = document.querySelector('[data-product-editor-card]');
+        if (!editor) return;
+        editor.hidden = false;
+        editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const nameField = document.querySelector('[data-product-form]')?.elements.name;
+        if (focusName && nameField) window.setTimeout(function () { nameField.focus({ preventScroll: true }); }, 180);
+    }
+
+    function hideProductEditor() {
+        const editor = document.querySelector('[data-product-editor-card]');
+        if (editor) editor.hidden = true;
+        const catalog = document.querySelector('[data-product-catalog-card]');
+        if (catalog) catalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelector('[data-new-product]')?.focus({ preventScroll: true });
+    }
+
+    function orderProductManagement() {
+        const section = document.querySelector('[data-admin-section="products"]');
+        const catalog = section && section.querySelector('[data-product-catalog-card]');
+        const editor = section && section.querySelector('[data-product-editor-card]');
+        if (section && catalog && editor) section.insertBefore(catalog, editor);
+    }
+
     function safeAdminImageUrl(value) {
         if (typeof value !== 'string' || !value.trim()) return '';
         try {
@@ -1277,6 +1301,7 @@
             return;
         }
         clearProductForm();
+        hideProductEditor();
         const photoMessage = photoResult.uploaded ? ' with ' + photoResult.uploaded + ' photo' + (photoResult.uploaded === 1 ? '' : 's') : '';
         const videoMessage = videoResult.uploaded ? ' and ' + videoResult.uploaded + ' video' + (videoResult.uploaded === 1 ? '' : 's') : '';
         showStatus(refreshError
@@ -1809,8 +1834,14 @@
             try { await saveSettings(settingsForm); } catch (error) { showStatus(error.message || 'Settings could not be saved.', 'error'); }
         });
 
-        document.querySelector('[data-new-product]')?.addEventListener('click', clearProductForm);
-        document.querySelector('[data-cancel-product]')?.addEventListener('click', clearProductForm);
+        document.querySelector('[data-new-product]')?.addEventListener('click', function () {
+            clearProductForm();
+            showProductEditor(true);
+        });
+        document.querySelector('[data-cancel-product]')?.addEventListener('click', function () {
+            clearProductForm();
+            hideProductEditor();
+        });
         document.querySelector('[data-cancel-category]')?.addEventListener('click', function () {
             categoryForm.reset();
             categoryForm.elements.id.value = '';
@@ -1829,6 +1860,7 @@
                     allProducts = allProducts.filter(function (item) { return item.id !== currentRecord.id; });
                     allProducts.unshift(currentRecord);
                     populateProductForm(currentRecord);
+                    showProductEditor(action === 'edit-product');
                     if (action === 'edit-product-stock') {
                         const stock = document.querySelector('#product-stock');
                         if (stock) { stock.focus({ preventScroll: true }); stock.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -2054,6 +2086,7 @@
         setVisible(shell, true);
         const roleLabel = document.querySelector('[data-admin-role]');
         if (roleLabel) roleLabel.textContent = membership.role.replace('_', ' ');
+        orderProductManagement();
         activateTabs();
         bindForms();
         try {

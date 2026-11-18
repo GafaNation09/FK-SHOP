@@ -578,13 +578,17 @@
 }
 
 .kcbf-product-row-menu-items {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 0.3rem;
     margin-top: 0.35rem;
     padding: 0.45rem;
     background: #fff;
     border: 1px solid #e5eae6;
+}
+
+.kcbf-product-row-menu[open] .kcbf-product-row-menu-items {
+    display: flex;
 }
 
 .kcbf-product-row-menu-items .btn,
@@ -803,6 +807,62 @@
     .kcbf-product-upload-tile {
         min-height: 135px;
     }
+
+    .kcbf-product-filter-panel {
+        padding: 0.75rem;
+    }
+
+    .kcbf-product-filter-panel .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 0.65rem;
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .kcbf-product-filter-panel .form-row > .form-group {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        flex: none;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    .kcbf-product-filter-panel .form-row:first-of-type > .form-group:nth-child(-n+2),
+    .kcbf-product-filter-panel .form-row:first-of-type > .form-group:nth-child(5),
+    .kcbf-product-filter-panel .form-row:nth-of-type(2) > .form-group:nth-child(n+4) {
+        grid-column: 1 / -1;
+    }
+
+    .kcbf-product-filter-panel .form-control,
+    .kcbf-product-filter-panel .custom-select {
+        min-width: 0;
+        font-size: 0.9rem;
+    }
+
+    .kcbf-product-filter-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kcbf-product-filter-actions .btn {
+        min-height: 42px;
+        padding: 0.45rem 0.55rem;
+        white-space: normal;
+    }
+
+    .kcbf-admin-section[data-admin-section="products"] > [data-products-header] {
+        align-items: stretch !important;
+        flex-direction: column;
+    }
+
+    .kcbf-admin-section[data-admin-section="products"] > [data-products-header] [data-new-product] {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 0.6rem !important;
+    }
+
 }
 
 @media (max-width: 575.98px) {
@@ -1030,6 +1090,80 @@
     .kcbf-admin-table tbody td[colspan] {
         display: block;
         text-align: left;
+    }
+}
+
+@media (max-width: 767.98px) {
+    [data-admin-section="products"] .kcbf-admin-products-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: auto;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 0.85rem;
+        margin-bottom: 0.8rem;
+        padding: 0.55rem 0.8rem;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td {
+        display: block;
+        width: auto;
+        max-width: none;
+        padding: 0.5rem 0 !important;
+        text-align: left;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:not([colspan])::before {
+        display: block;
+        flex: none;
+        margin: 0 0 0.18rem;
+        font-size: 0.67rem;
+        letter-spacing: 0.025em;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td > * {
+        max-width: 100%;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:first-child {
+        grid-column: 1 / -1;
+        padding-top: 0.15rem !important;
+        border-top: 0;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:first-child::before {
+        display: none;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:nth-child(6),
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:nth-child(7),
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td[colspan] {
+        grid-column: 1 / -1;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table tbody td:nth-child(7) {
+        padding-bottom: 0.15rem !important;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table .kcbf-product-row-actions {
+        display: flex;
+        width: 100%;
+        max-width: none;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0.4rem;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table .kcbf-product-row-menu[open] {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    [data-admin-section="products"] .kcbf-admin-products-table .kcbf-product-row-menu-items {
+        width: min(100%, 16rem);
     }
 }
 

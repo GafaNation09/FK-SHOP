@@ -98,8 +98,8 @@
                     </section>
 
                     <section class="kcbf-admin-section" data-admin-section="products" hidden>
-                        <div class="d-flex align-items-center justify-content-between flex-wrap mb-3"><div><h1 class="h3 mb-1">Products</h1><p class="text-muted mb-0">Create drafts or publish approved products and prices.</p></div><button class="btn btn-outline-dark mt-2" type="button" data-new-product>New product</button></div>
-                        <div class="card kcbf-admin-card mb-4"><div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap mb-3" data-products-header><div><h1 class="h3 mb-1">Products</h1><p class="text-muted mb-0">Manage your existing catalog or create a new product.</p></div><button class="btn btn-primary mt-2" type="button" data-new-product>Create new product</button></div>
+                        <div class="card kcbf-admin-card mb-4 kcbf-product-editor-card" data-product-editor-card hidden><div class="card-body">
                             <div class="kcbf-product-form-heading"><h2 class="h5 mb-1" data-product-form-title>Add new product</h2><div class="kcbf-product-form-actions"><button class="btn btn-outline-dark" type="button" data-cancel-product>Cancel</button><button class="btn btn-primary" type="submit" form="product-editor-form"><i class="fas fa-check mr-1" aria-hidden="true"></i>Save product</button></div></div>
                             <form id="product-editor-form" data-product-form>
                                 <input type="hidden" name="id">
@@ -133,7 +133,7 @@
                                 </div>
                             </form>
                         </div></div>
-                        <div class="card kcbf-admin-card"><div class="card-body">
+                        <div class="card kcbf-admin-card kcbf-product-catalog-card" data-product-catalog-card><div class="card-body">
                             <h2 class="h5 mb-3">Catalog records</h2>
                             <p class="small text-muted" data-products-count aria-live="polite">Products will load with catalog access.</p>
                             <p class="small text-muted" data-products-state role="status" aria-live="polite" hidden></p>

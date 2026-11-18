@@ -28,6 +28,9 @@ assert.match(html, /data-dashboard-recent-orders/, 'overview must expose recent 
 assert.match(html, /data-dashboard-transactions/, 'overview must expose recent transactions');
 assert.match(html, /data-orders-filter-apply/, 'orders must expose status filters');
 assert.match(html, /data-product-search/, 'catalog must expose search');
+assert.match(html, /data-product-catalog-card/, 'existing products must have a distinct catalog-first card');
+assert.match(html, /data-product-editor-card[^>]*hidden/, 'product creation and editing must start collapsed until requested');
+assert.match(html, /data-new-product>Create new product/, 'the catalog-first view must provide a clear create action');
 assert.match(html, /data-products-more/, 'catalog records must be paginated');
 for (const control of ['data-product-status-filter', 'data-product-stock-filter', 'data-product-availability-filter', 'data-product-type-filter', 'data-product-category-filter', 'data-product-sort', 'data-product-price-min-filter', 'data-product-price-max-filter', 'data-product-filter-clear', 'data-products-count', 'data-products-state']) {
   assert.match(html, new RegExp(control), 'catalog must expose ' + control);
@@ -41,6 +44,15 @@ assert.match(js, /query\.lte\('base_price_kes',\s*maximumPrice\)/, 'maximum KES 
 assert.match(js, /cell\.colSpan = 7/, 'empty product results must span the compact seven-column table');
 assert.match(css, /\.kcbf-admin-products-table\s*\{[\s\S]*?min-width:\s*1050px/, 'catalogue table must use the compact width rather than the oversized legacy layout');
 assert.doesNotMatch(css, /min-width:\s*1985px/, 'catalogue must not retain its previous excessively wide fixed minimum');
+assert.match(js, /function orderProductManagement\(\)[\s\S]*?insertBefore\(catalog, editor\)/, 'authenticated Products must place the catalog ahead of the editor in the actual DOM');
+assert.match(js, /orderProductManagement\(\);[\s\S]*?activateTabs\(\)/, 'catalog ordering must complete before the Products tab can be used');
+assert.match(js, /data-new-product[\s\S]*?clearProductForm\(\);\s*showProductEditor\(true\)/, 'New product must reveal the existing editor and focus the product name');
+assert.match(js, /populateProductForm\(currentRecord\);\s*showProductEditor\(action === 'edit-product'\)/, 'Edit, Stock and Media actions must still open the same editor');
+assert.match(js, /data-cancel-product[\s\S]*?clearProductForm\(\);\s*hideProductEditor\(\)/, 'Cancel must reset and close the editor without removing products');
+assert.match(css, /\.kcbf-admin-products-table tbody tr\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, 'mobile products must render as compact two-column information cards');
+assert.match(css, /\.kcbf-product-filter-panel \.form-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, 'mobile filters must use a balanced two-column grid');
+assert.match(css, /\[data-admin-section="products"\] \.kcbf-admin-products-table tbody td:not\(\[colspan\]\)::before\s*\{[\s\S]*?flex:\s*none/, 'product-card labels must not consume a narrow horizontal column on phones');
+assert.match(css, /\.kcbf-product-row-menu-items\s*\{\s*display:\s*none;[\s\S]*?\.kcbf-product-row-menu\[open\] \.kcbf-product-row-menu-items\s*\{\s*display:\s*flex/, 'secondary product actions must stay collapsed until the More control is opened');
 assert.match(html, /data-admin-tab-link="customers"[^>]*data-requires-role="store-admin"/, 'customer metrics must open a role-gated customer section');
 assert.match(html, /data-open-order-status="pending"/, 'pending-order metrics must select the pending filter');
 assert.match(html, /data-open-order-status="delivered"/, 'delivered-order metrics must select the delivered filter');
@@ -206,6 +218,55 @@ function extractFunction(source, name) {
   }
   throw new Error('Unclosed function ' + name);
 }
+
+const editorActions = [];
+const editorCard = {
+  hidden: true,
+  scrollIntoView() { editorActions.push('editor-scroll'); }
+};
+const catalogCard = { scrollIntoView() { editorActions.push('catalog-scroll'); } };
+const newProductButton = { focus(options) { editorActions.push(['new-focus', options.preventScroll]); } };
+const productNameField = { focus(options) { editorActions.push(['name-focus', options.preventScroll]); } };
+const editorForm = { elements: { name: productNameField } };
+let insertedNode = null;
+let referenceNode = null;
+const productsSection = {
+  querySelector(selector) {
+    if (selector === '[data-product-catalog-card]') return catalogCard;
+    if (selector === '[data-product-editor-card]') return editorCard;
+    return null;
+  },
+  insertBefore(node, before) { insertedNode = node; referenceNode = before; }
+};
+const editorTools = runInNewContext([
+  extractFunction(js, 'orderProductManagement'),
+  extractFunction(js, 'showProductEditor'),
+  extractFunction(js, 'hideProductEditor'),
+  '({ orderProductManagement, showProductEditor, hideProductEditor })'
+].join('\n'), {
+  document: {
+    querySelector(selector) {
+      if (selector === '[data-admin-section="products"]') return productsSection;
+      if (selector === '[data-product-editor-card]') return editorCard;
+      if (selector === '[data-product-catalog-card]') return catalogCard;
+      if (selector === '[data-new-product]') return newProductButton;
+      if (selector === '[data-product-form]') return editorForm;
+      return null;
+    }
+  },
+  window: { setTimeout(callback) { callback(); } }
+});
+editorTools.orderProductManagement();
+assert.equal(insertedNode, catalogCard, 'the existing product catalog must be moved before the editor');
+assert.equal(referenceNode, editorCard, 'the product editor must remain available after the catalog');
+editorTools.showProductEditor(true);
+assert.equal(editorCard.hidden, false, 'New product must reveal the existing editor');
+assert.ok(editorActions.includes('editor-scroll'), 'opening the editor must scroll it into view');
+assert.ok(editorActions.some(action => Array.isArray(action) && action[0] === 'name-focus'), 'New product must focus the first product field');
+editorTools.hideProductEditor();
+assert.equal(editorCard.hidden, true, 'Cancel must hide the editor without deleting products');
+assert.ok(editorActions.includes('catalog-scroll'), 'closing the editor must return to the catalog');
+assert.ok(editorActions.some(action => Array.isArray(action) && action[0] === 'new-focus'), 'closing the editor must restore focus to the create action');
 
 const slugIssue = productErrorFns.productErrorDetails({
   code: '23505',
