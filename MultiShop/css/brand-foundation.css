@@ -226,7 +226,14 @@
 }
 
 @media (max-width: 767.98px) {
-    .kcbf-cart-table { min-width: 680px; }
+    .kcbf-cart-table-wrap { width: 100%; overflow-x: visible; }
+
+    .kcbf-cart-table {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        table-layout: fixed;
+    }
 
     .kcbf-cart-table thead {
         display: none;
@@ -240,19 +247,25 @@
 
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) {
         display: block;
+        width: 100%;
         margin-bottom: 0.85rem;
         background: #fff;
         border: 1px solid #e8e8e8;
+        border-radius: 0.35rem;
+        overflow: hidden;
+        box-shadow: 0 0.15rem 0.5rem rgba(0, 0, 0, 0.04);
     }
 
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) td {
         display: flex;
         width: 100%;
+        min-width: 0;
         align-items: center;
         justify-content: space-between;
         padding: 0.7rem !important;
         text-align: right !important;
         border-top: 1px solid #f0f0f0;
+        overflow-wrap: anywhere;
     }
 
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) td::before {
@@ -265,16 +278,44 @@
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) td.kcbf-cart-product-cell {
         display: block;
         text-align: left !important;
+        padding: 0.85rem !important;
     }
 
     .kcbf-cart-product-image,
     .kcbf-cart-no-image {
-        width: 104px;
-        height: 104px;
-        flex-basis: 104px;
+        width: clamp(76px, 24vw, 104px);
+        height: clamp(76px, 24vw, 104px);
+        flex-basis: clamp(76px, 24vw, 104px);
     }
 
     .kcbf-cart-product-details { margin-left: 0.75rem; }
+
+    .kcbf-cart-product-name {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .kcbf-cart-table .kcbf-quantity-control {
+        gap: 0.25rem;
+    }
+
+    .kcbf-cart-table .kcbf-quantity-step {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+    }
+
+    .kcbf-cart-table .kcbf-cart-quantity {
+        width: 3.25rem;
+        min-width: 3.25rem;
+        height: 44px;
+    }
+
+    .kcbf-cart-unavailable-quantity {
+        color: #a12d2d;
+        font-weight: 700;
+    }
 
     .kcbf-cart-table tbody tr:not(.kcbf-cart-empty) td.kcbf-cart-product-cell::before {
         display: block;
@@ -308,4 +349,176 @@
 /* Managed Help/FAQ copy is plain text; preserve authored line breaks without HTML rendering. */
 .kcbf-preserve-lines {
     white-space: pre-line;
+}
+
+.kcbf-shop-filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.kcbf-shop-filter-header [data-mobile-filter-close] {
+    display: none;
+}
+
+.kcbf-shop-filter-group > summary {
+    margin-bottom: 0.65rem;
+    color: #3d342b;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.kcbf-shop-filter-group > summary::marker {
+    color: #f4c84a;
+}
+
+.kcbf-shop-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+}
+
+.kcbf-shop-filter-actions .btn {
+    flex: 1 1 auto;
+}
+
+.kcbf-mobile-filter-trigger,
+.kcbf-filter-backdrop {
+    display: none;
+}
+
+.kcbf-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 0.8rem;
+}
+
+.kcbf-active-filters[hidden] {
+    display: none !important;
+}
+
+.kcbf-filter-chip {
+    padding: 0.3rem 0.55rem;
+    color: #493c25;
+    background: #fff8df;
+    border: 1px solid #e9d48a;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+}
+
+.kcbf-filter-chip:hover,
+.kcbf-filter-chip:focus-visible {
+    background: #fff0ba;
+}
+
+.kcbf-color-swatch {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+    margin-right: 0.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 50%;
+    vertical-align: -0.08rem;
+}
+
+@media (max-width: 767.98px) {
+    .kcbf-shop-filter-sidebar {
+        position: fixed;
+        z-index: 1061;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(90vw, 390px);
+        max-width: 100%;
+        padding: 1rem 1rem 5.5rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+        background: #fff;
+        box-shadow: 0.5rem 0 2rem rgba(0, 0, 0, 0.18);
+        transform: translateX(-105%);
+        visibility: hidden;
+        transition: transform 180ms ease, visibility 180ms ease;
+    }
+
+    .kcbf-shop-filter-sidebar.is-open {
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    .kcbf-shop-filter-header [data-mobile-filter-close] {
+        display: inline-block;
+    }
+
+    .kcbf-shop-filter-group > summary {
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #e9e5dc;
+    }
+
+    .kcbf-shop-filter-actions {
+        position: sticky;
+        z-index: 1;
+        right: 0;
+        bottom: -1rem;
+        margin: 0 -1rem -5.5rem;
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+        background: #fff;
+        border-top: 1px solid #e9e5dc;
+    }
+
+    .kcbf-mobile-filter-trigger {
+        display: inline-block;
+        min-height: 38px;
+        margin-right: 0.4rem;
+    }
+
+    .kcbf-filter-backdrop:not([hidden]) {
+        position: fixed;
+        z-index: 1060;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        background: rgba(23, 22, 19, 0.48);
+        border: 0;
+    }
+
+    body.kcbf-filter-open {
+        overflow: hidden;
+    }
+
+    .kcbf-shop-toolbar {
+        align-items: flex-start !important;
+        gap: 0.65rem;
+        margin-bottom: 0.65rem !important;
+    }
+
+    .kcbf-shop-toolbar > div:first-child {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .kcbf-shop-toolbar > div:last-child {
+        flex: 1 1 100%;
+        margin-left: 0 !important;
+        gap: 0.4rem;
+    }
+
+    .kcbf-shop-toolbar select {
+        min-height: 40px;
+        flex: 1 1 8rem;
+        margin-right: 0 !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kcbf-shop-filter-sidebar {
+        transition: none;
+    }
 }

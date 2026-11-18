@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 const root = resolve(new URL('..', import.meta.url).pathname);
 const html = await readFile(resolve(root, 'MultiShop/admin/index.html'), 'utf8');
 const js = await readFile(resolve(root, 'MultiShop/js/pages/admin.js'), 'utf8');
+const css = await readFile(resolve(root, 'MultiShop/css/auth-admin.css'), 'utf8');
 
 const metrics = [
   'products', 'out-of-stock', 'limited-stock', 'categories', 'customers',
@@ -37,6 +38,13 @@ assert.match(html, /data-payment-status-filter="paid"/, 'paid transaction metric
 assert.match(html, /data-product-filter="published"/, 'published-product metric must open the published-only catalog list');
 assert.match(html, /data-product-filter="out_of_stock"/, 'out-of-stock metrics must open a filtered product list');
 assert.match(html, /kcbf-admin-nav-heading">Main menu/, 'admin navigation should retain reference-style grouped labels');
+assert.match(html, /data-admin-mobile-nav-toggle aria-controls="admin-navigation-panel" aria-expanded="false"/, 'mobile admin must expose a labelled navigation toggle');
+assert.match(html, /data-admin-mobile-nav-backdrop/, 'mobile admin navigation must have a dismissible backdrop');
+assert.match(html, /id="admin-navigation-panel"/, 'mobile navigation toggle must target the existing full admin navigation');
+assert.match(css, /\.kcbf-admin-sidebar\.is-open/, 'mobile admin navigation must slide into view when opened');
+assert.match(css, /data-dashboard-metrics\] > div[\s\S]*?width: 50%/, 'mobile dashboard metrics must use a compact two-column grid');
+assert.match(css, /\.kcbf-admin-table tbody tr[\s\S]*?border-radius/, 'mobile management tables must become readable record cards');
+assert.match(css, /content: attr\(data-admin-label\)/, 'mobile card rows must show the original column labels');
 assert.match(html, /data-admin-tab="orders" data-requires-role="store-admin"/, 'Sales and orders must preserve the existing store-admin gate');
 assert.match(html, /data-admin-tab="team" data-requires-permission="admins:manage"/, 'administrator management must preserve its permission gate');
 assert.match(html, /class="kcbf-product-editor-layout"/, 'product editing should use the reference-inspired two-column form');
@@ -65,6 +73,9 @@ assert.match(js, /query\.eq\('payment_status'/, 'payment filters must be perform
 assert.match(js, /\.or\('availability_status\.eq\.out_of_stock,stock_quantity\.eq\.0'\)/, 'out-of-stock metrics must include explicit status and zero stock');
 assert.match(js, /ready_made.*zero stock must be marked out of stock/, 'product validation must prevent published ready-made stock contradictions');
 assert.match(js, /loadAdminTab\(tab\)\.catch/, 'large admin sections must load only when selected');
+assert.match(js, /function labelResponsiveAdminTables\(root\)/, 'admin table cells must receive readable mobile labels');
+assert.match(js, /new TableObserver\(/, 'dynamically loaded admin records must be labelled as their rows render');
+assert.match(js, /event\.key === 'Escape'[\s\S]*closeMobileNav\(true\)/, 'mobile admin navigation must close with Escape and restore focus');
 assert.match(js, /button\.getAttribute\('data-open-order-status'\)/, 'order metric actions must carry their filter into the order list');
 assert.match(js, /button\.getAttribute\('data-payment-status-filter'\)/, 'payment metric actions must carry their filter into the order list');
 assert.match(js, /button\.getAttribute\('data-product-filter'\)/, 'inventory metric actions must carry their filter into product management');
@@ -127,4 +138,23 @@ assert.ok(galleryNodes.some(node => node.tagName === 'button' && node.dataset.ac
 galleryFunctions.renderProductImages('product-1', [{ id: 'unsafe', image_url: 'data:text/html,unsafe' }]);
 assert.match(gallery.textContent, /No valid product photos/);
 
-console.log('PASS: dashboard metrics and filters; SalesSync-inspired navigation/product editor layout; product gallery HTTPS validation, safe DOM rendering and action controls');
+const tableHeaders = ['Reference', 'Status', ''];
+const mobileCells = tableHeaders.map(() => ({
+  attributes: {},
+  hasAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name); },
+  getAttribute(name) { return this.attributes[name] || null; },
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+}));
+const responsiveTable = {
+  querySelectorAll(selector) {
+    if (selector === 'thead th') return tableHeaders.map(textContent => ({ textContent }));
+    if (selector === 'tbody tr') return [{ cells: mobileCells }];
+    return [];
+  }
+};
+const adminRoot = { querySelectorAll(selector) { return selector === '.kcbf-admin-table' ? [responsiveTable] : []; } };
+const labelTables = runInNewContext(extractFunction(js, 'labelResponsiveAdminTables') + '\nlabelResponsiveAdminTables', {});
+labelTables(adminRoot);
+assert.deepEqual(mobileCells.map(cell => cell.getAttribute('data-admin-label')), ['Reference', 'Status', 'Actions'], 'responsive rows retain accessible labels when visually converted to cards');
+
+console.log('PASS: dashboard metrics/filters, SalesSync layout, accessible mobile navigation/table labels, and safe product gallery rendering');

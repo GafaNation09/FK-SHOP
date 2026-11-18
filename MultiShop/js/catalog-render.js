@@ -112,9 +112,11 @@
                     '</div>' +
                 '</div>' +
                 '<div class="text-center py-4">' +
-                    '<a class="h6 text-decoration-none text-truncate" href="' + detailUrl + '">' + name + '</a>' +
-                    '<div class="d-flex align-items-center justify-content-center mt-2"><h5 class="mb-0">' + price + '</h5></div>' +
-                    '<div class="small text-body mt-2">' + api.escapeHtml(availability) + '</div>' +
+                    '<a class="kcbf-product-card-main d-block text-body text-decoration-none" href="' + detailUrl + '" aria-label="Open ' + name + ' product details">' +
+                        '<span class="h6 d-block text-decoration-none text-truncate">' + name + '</span>' +
+                        '<span class="d-flex align-items-center justify-content-center mt-2"><span class="h5 mb-0">' + price + '</span></span>' +
+                        '<span class="small text-body d-block mt-2">' + api.escapeHtml(availability) + '</span>' +
+                    '</a>' +
                 '</div>' +
             '</div>' +
         '</div>';

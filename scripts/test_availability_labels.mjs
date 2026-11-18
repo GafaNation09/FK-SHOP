@@ -9,7 +9,8 @@ const api = {
   escapeHtml(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); },
   formatKes(value) { return 'KES ' + Number(value).toLocaleString('en-KE'); },
   safeImageUrl(value) { return value || ''; },
-  isPublished(product) { return product.status === 'published'; }
+  isPublished(product) { return product.status === 'published'; },
+  productUrl(slug) { return '/multishop/product/' + slug; }
 };
 const window = { KCBF: api };
 vm.runInContext(source, vm.createContext({ window, Array, Number, String, Set, encodeURIComponent }));
@@ -18,6 +19,10 @@ const product = { id: 'p1', slug: 'dress', name: 'Dress', status: 'published', p
 const card = api.renderProductCard(product);
 assert.equal(api.availabilityLabel(product), 'Contact to confirm availability');
 assert.match(card, /Contact to confirm availability/);
+assert.match(card, /<a class="d-block" href="\/multishop\/product\/dress"/, 'the primary product image must open its exact detail route');
+assert.match(card, /class="kcbf-product-card-main[^\"]*" href="\/multishop\/product\/dress"/, 'the main product content must be a semantic detail link');
+assert.match(card, /data-commerce-action="cart"/, 'the cart action remains a separate control outside the product link');
+assert.match(card, /data-commerce-action="wishlist"/, 'the wishlist action remains a separate control outside the product link');
 assert.doesNotMatch(card, /contact_for_availability/);
 assert.equal(api.availabilityLabel({ availability_status: 'limited_stock' }), 'Limited stock');
 assert.equal(api.availabilityLabel({ availability_status: 'new_status_value' }), 'new status value');

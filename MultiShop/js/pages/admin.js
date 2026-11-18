@@ -1065,14 +1065,67 @@
         }
     }
 
+    function labelResponsiveAdminTables(root) {
+        if (!root || typeof root.querySelectorAll !== 'function') return;
+        root.querySelectorAll('.kcbf-admin-table').forEach(function (table) {
+            const headings = Array.from(table.querySelectorAll('thead th')).map(function (heading) {
+                return (heading.textContent || '').trim();
+            });
+            table.querySelectorAll('tbody tr').forEach(function (row) {
+                Array.from(row.cells || []).forEach(function (cell, index) {
+                    if (cell.hasAttribute('colspan')) return;
+                    const label = headings[index] || (index === headings.length - 1 ? 'Actions' : 'Details');
+                    if (cell.getAttribute('data-admin-label') !== label) cell.setAttribute('data-admin-label', label);
+                });
+            });
+        });
+    }
+
     function activateTabs() {
         const nav = document.querySelector('[data-admin-nav]');
         if (!nav) return;
+        const adminShell = document.querySelector('[data-admin-shell]');
+        labelResponsiveAdminTables(adminShell);
+        const TableObserver = window.MutationObserver;
+        if (adminShell && typeof TableObserver === 'function') {
+            const tableObserver = new TableObserver(function () { labelResponsiveAdminTables(adminShell); });
+            tableObserver.observe(adminShell, { childList: true, subtree: true });
+        }
+        const mobileToggle = document.querySelector('[data-admin-mobile-nav-toggle]');
+        const mobileBackdrop = document.querySelector('[data-admin-mobile-nav-backdrop]');
+        const sidebar = document.querySelector('#admin-navigation-panel');
+        function closeMobileNav(restoreFocus) {
+            if (!sidebar) return;
+            sidebar.classList.remove('is-open');
+            sidebar.setAttribute('aria-hidden', 'true');
+            if (mobileBackdrop) mobileBackdrop.hidden = true;
+            document.body.classList.remove('kcbf-admin-nav-open');
+            if (mobileToggle) mobileToggle.setAttribute('aria-expanded', 'false');
+            if (restoreFocus && mobileToggle) mobileToggle.focus();
+        }
+        if (mobileToggle && sidebar) {
+            mobileToggle.addEventListener('click', function () {
+                const opening = !sidebar.classList.contains('is-open');
+                if (!opening) { closeMobileNav(true); return; }
+                sidebar.classList.add('is-open');
+                sidebar.setAttribute('aria-hidden', 'false');
+                if (mobileBackdrop) mobileBackdrop.hidden = false;
+                document.body.classList.add('kcbf-admin-nav-open');
+                mobileToggle.setAttribute('aria-expanded', 'true');
+                const firstAvailableTab = Array.from(nav.querySelectorAll('[data-admin-tab]')).find(function (item) { return !item.hidden; });
+                if (firstAvailableTab) firstAvailableTab.focus();
+            });
+            if (mobileBackdrop) mobileBackdrop.addEventListener('click', function () { closeMobileNav(true); });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && sidebar.classList.contains('is-open')) closeMobileNav(true);
+            });
+        }
         nav.querySelectorAll('[data-admin-tab]').forEach(function (button) {
             const permission = button.getAttribute('data-requires-permission');
             if (permission && !isAllowed(permission)) button.hidden = true;
             if (button.getAttribute('data-requires-role') === 'store-admin') button.hidden = !(membership && membership.status === 'active' && ['admin', 'super_admin'].includes(membership.role));
             button.addEventListener('click', function () {
+                closeMobileNav(true);
                 const tab = button.getAttribute('data-admin-tab');
                 if (tab === 'orders' && !pendingOrderNavigation) orderIdFilter = '';
                 pendingOrderNavigation = false;

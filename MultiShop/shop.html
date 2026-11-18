@@ -167,31 +167,27 @@
     <div class="container-fluid">
         <div class="row px-xl-5">
             <!-- Shop Sidebar Start -->
-            <div class="col-lg-3 col-md-4">
+            <div class="col-lg-3 col-md-4 kcbf-shop-filter-sidebar" data-shop-filter-panel id="shop-filter-panel">
+                <div class="kcbf-shop-filter-header"><h2 class="h5 mb-0">Filter products</h2><button class="btn btn-sm btn-outline-secondary" type="button" data-mobile-filter-close aria-label="Close filters">Close</button></div>
                 <!-- Category Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by category</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="category"><p class="mb-0 text-body small">Loading real category counts…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by category</summary><div class="bg-light p-4 mb-3" data-facet="category"><p class="mb-0 text-body small">Loading real category counts…</p></div></details>
                 <!-- Category End -->
                 <!-- Price Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by price</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="price"><p class="mb-0 text-body small">Loading verified product prices…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by price</summary><div class="bg-light p-4 mb-3" data-facet="price"><p class="mb-0 text-body small">Loading verified product prices…</p></div></details>
                 <!-- Price End -->
                 <!-- Availability Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by availability</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="availability"><p class="mb-0 text-body small">Loading real availability…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by availability</summary><div class="bg-light p-4 mb-3" data-facet="availability"><p class="mb-0 text-body small">Loading real availability…</p></div></details>
                 <!-- Availability End -->
                 <!-- Product Type Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by product type</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="orderingModes"><p class="mb-0 text-body small">Loading product types…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by product type</summary><div class="bg-light p-4 mb-3" data-facet="orderingModes"><p class="mb-0 text-body small">Loading product types…</p></div></details>
                 <!-- Product Type End -->
                 <!-- Color Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by color</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="colors"><p class="mb-0 text-body small">Loading available colors…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by colour</summary><div class="bg-light p-4 mb-3" data-facet="colors"><p class="mb-0 text-body small">Loading available colors…</p></div></details>
                 <!-- Color End -->
                 <!-- Size Start -->
-                <h5 class="section-title position-relative text-uppercase mb-3"><span class="bg-secondary pr-3">Filter by size</span></h5>
-                <div class="bg-light p-4 mb-30" data-facet="sizes"><p class="mb-0 text-body small">Loading available sizes…</p></div>
+                <details class="kcbf-shop-filter-group" open><summary>Filter by size</summary><div class="bg-light p-4 mb-3" data-facet="sizes"><p class="mb-0 text-body small">Loading available sizes…</p></div></details>
                 <!-- Size End -->
+                <div class="kcbf-shop-filter-actions"><button class="btn btn-primary" type="button" data-mobile-filter-apply>Apply filters</button><button class="btn btn-outline-secondary" type="button" data-filter-clear>Clear all</button></div>
             </div>
             <!-- Shop Sidebar End -->
 
@@ -200,8 +196,9 @@
             <div class="col-lg-9 col-md-8">
                 <div class="row pb-3">
                     <div class="col-12 pb-1">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap mb-4">
+                        <div class="kcbf-shop-toolbar d-flex align-items-center justify-content-between flex-wrap mb-3">
                             <div>
+                                <button class="btn btn-outline-dark kcbf-mobile-filter-trigger" type="button" data-mobile-filter-open aria-controls="shop-filter-panel" aria-expanded="false"><i class="fas fa-sliders-h mr-1" aria-hidden="true"></i>Filter <span class="badge badge-pill badge-primary ml-1" data-active-filter-count hidden>0</span></button>
                                 <button class="btn btn-sm btn-light active" type="button" data-view-mode-button="grid" aria-label="Grid view" aria-pressed="true"><i class="fa fa-th-large" aria-hidden="true"></i></button>
                                 <button class="btn btn-sm btn-light ml-2" type="button" data-view-mode-button="list" aria-label="List view" aria-pressed="false"><i class="fa fa-bars" aria-hidden="true"></i></button>
                                 <span class="small ml-2" data-result-count aria-live="polite">Loading catalog…</span>
@@ -222,6 +219,7 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="kcbf-active-filters" data-active-filters aria-live="polite"></div>
                     </div>
                     <div class="col-12">
                         <div class="row" data-shop-grid data-view-mode="grid">
@@ -234,6 +232,7 @@
         </div>
     </div>
     <!-- Shop End -->
+    <button class="kcbf-filter-backdrop" type="button" data-mobile-filter-backdrop aria-label="Close filters" hidden></button>
 
 
     <!-- Footer Start -->

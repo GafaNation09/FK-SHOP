@@ -123,6 +123,7 @@
     }
 
     function cartLimit(product) {
+        if (!product || product.availability === 'out_of_stock' || product.availability_status === 'out_of_stock' || product.requiresQuote || product.requires_quote) return 0;
         const stock = product && (product.stockQuantity !== undefined ? product.stockQuantity : product.stock_quantity);
         return stock !== null && stock !== undefined && Number.isFinite(Number(stock))
             ? Math.max(0, Math.min(MAX_QUANTITY, Math.floor(Number(stock))))
@@ -321,27 +322,47 @@
         });
     }
 
-    function cartRow(product, entry) {
+    function customerAvailabilityLabel(product) {
+        if (typeof api.availabilityLabel === 'function') return api.availabilityLabel(product);
+        const value = String(product && (product.availability || product.availability_status) || '').trim();
+        const labels = {
+            available: 'Available',
+            in_stock: 'In stock',
+            limited_stock: 'Limited stock',
+            contact_for_availability: 'Contact to confirm availability',
+            out_of_stock: 'Out of stock',
+            to_be_confirmed: 'Availability to be confirmed'
+        };
+        return labels[value] || (value ? value.replace(/[_-]+/g, ' ') : 'Availability to be confirmed');
+    }
+
+    function cartRow(product, entry, effectiveQuantity) {
         const id = escape(entry.id);
         const productHref = escape(typeof api.productUrl === 'function'
             ? api.productUrl(product.slug || product.id)
             : 'detail.html?product=' + encodeURIComponent(product.slug || product.id));
         const price = productPrice(product);
-        const limit = Math.max(1, cartLimit(product));
-        const quantity = Math.min(entry.quantity, limit);
+        const availableStock = cartLimit(product);
+        const limit = Math.max(1, availableStock);
+        const quantity = effectiveQuantity === undefined ? (availableStock > 0 ? Math.min(entry.quantity, limit) : 0) : effectiveQuantity;
         const subtotal = price * quantity;
         const image = imageFor(product) || '<span class="kcbf-cart-no-image" aria-hidden="true"><i class="fas fa-layer-group"></i></span>';
+        const unavailable = availableStock < 1;
+        const availabilityText = unavailable ? 'Out of stock — this item cannot be purchased right now.' : customerAvailabilityLabel(product);
+        const quantityMarkup = unavailable
+            ? '<span class="kcbf-cart-unavailable-quantity" role="status">0 available</span>'
+            : '<div class="kcbf-quantity-control" role="group" aria-label="Quantity for ' + escape(product.name) + '">' +
+                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="-1" data-product-id="' + id + '" aria-label="Decrease quantity of ' + escape(product.name) + '"' + (quantity <= 1 ? ' disabled' : '') + '><i class="fas fa-minus" aria-hidden="true"></i></button>' +
+                '<input class="form-control text-center kcbf-cart-quantity" type="number" min="1" max="' + limit + '" value="' + quantity + '" aria-label="Quantity for ' + escape(product.name) + '" data-cart-quantity="' + id + '">' +
+                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="1" data-product-id="' + id + '" aria-label="Increase quantity of ' + escape(product.name) + '"' + (quantity >= limit ? ' disabled' : '') + '><i class="fas fa-plus" aria-hidden="true"></i></button></div>';
         return '<tr data-cart-row="' + id + '">' +
             '<td class="align-middle text-left kcbf-cart-product-cell" data-label="Product"><div class="d-flex align-items-center kcbf-cart-product">' +
                 '<a class="kcbf-cart-product-image" href="' + productHref + '" aria-label="View ' + escape(product.name) + '">' + image + '</a>' +
                 '<div class="kcbf-cart-product-details"><a class="kcbf-cart-product-name" href="' + productHref + '">' + escape(product.name) + '</a>' +
-                '<div class="small text-muted">' + escape(api.availabilityLabel ? api.availabilityLabel(product) : (product.availability || product.availability_status || 'Availability to be confirmed')) + '</div>' +
+                '<div class="small ' + (unavailable ? 'text-danger' : 'text-muted') + '">' + escape(availabilityText) + '</div>' +
                 '<a class="small" href="' + productHref + '">View product</a></div></div></td>' +
             '<td class="align-middle" data-label="Price">' + priceNode(price) + '</td>' +
-            '<td class="align-middle" data-label="Quantity"><div class="kcbf-quantity-control" role="group" aria-label="Quantity for ' + escape(product.name) + '">' +
-                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="-1" data-product-id="' + id + '" aria-label="Decrease quantity of ' + escape(product.name) + '"' + (quantity <= 1 ? ' disabled' : '') + '><i class="fas fa-minus" aria-hidden="true"></i></button>' +
-                '<input class="form-control text-center kcbf-cart-quantity" type="number" min="1" max="' + limit + '" value="' + quantity + '" aria-label="Quantity for ' + escape(product.name) + '" data-cart-quantity="' + id + '">' +
-                '<button class="btn btn-light kcbf-quantity-step" type="button" data-cart-quantity-adjust="1" data-product-id="' + id + '" aria-label="Increase quantity of ' + escape(product.name) + '"' + (quantity >= limit ? ' disabled' : '') + '><i class="fas fa-plus" aria-hidden="true"></i></button></div></td>' +
+            '<td class="align-middle" data-label="Quantity">' + quantityMarkup + '</td>' +
             '<td class="align-middle" data-label="Total">' + priceNode(subtotal) + '</td>' +
             '<td class="align-middle" data-label="Remove"><button class="btn btn-sm btn-outline-danger" type="button" data-commerce-action="remove-cart" data-product-id="' + id + '" aria-label="Remove ' + escape(product.name) + '"><i class="fa fa-times" aria-hidden="true"></i></button></td>' +
             '</tr>';
@@ -368,11 +389,23 @@
             updateBadges();
             return;
         }
-        body.innerHTML = available.map(function (record) { return cartRow(record.product, record.entry); }).join('');
-        const subtotal = available.reduce(function (total, record) { return total + productPrice(record.product) * record.entry.quantity; }, 0);
+        let quantityNormalized = false;
+        available.forEach(function (record) {
+            const limit = cartLimit(record.product);
+            if (limit > 0 && record.entry.quantity > limit) {
+                record.entry.quantity = limit;
+                record.entry.updated_at = new Date().toISOString();
+                quantityNormalized = true;
+            }
+            record.effectiveQuantity = limit > 0 ? Math.min(record.entry.quantity, limit) : 0;
+        });
+        if (quantityNormalized) persistList('cart', originalItems);
+        body.innerHTML = available.map(function (record) { return cartRow(record.product, record.entry, record.effectiveQuantity); }).join('');
+        const subtotal = available.reduce(function (total, record) { return total + productPrice(record.product) * record.effectiveQuantity; }, 0);
         setAmount('[data-cart-subtotal]', subtotal);
         setPendingTotal();
-        setMessage(document.querySelector('[data-cart-notice]'), 'Product subtotal only. Delivery charges and live payment are not configured, and no order or payment has been placed.');
+        const hasUnavailable = available.some(function (record) { return cartLimit(record.product) < 1; });
+        setMessage(document.querySelector('[data-cart-notice]'), 'Product subtotal only. Delivery charges and live payment are not configured, and no order or payment has been placed.' + (hasUnavailable ? ' Out-of-stock items are retained in your cart but excluded from the subtotal; remove one or check back later.' : ''));
         const checkout = document.querySelector('[data-cart-checkout]');
         if (checkout) {
             checkout.disabled = true;

@@ -31,8 +31,10 @@
         <div class="alert alert-info kcbf-admin-status" data-admin-status role="status" aria-live="polite">Loading account…</div>
 
         <section data-admin-shell hidden>
+            <button class="btn btn-outline-dark kcbf-admin-mobile-menu" type="button" data-admin-mobile-nav-toggle aria-controls="admin-navigation-panel" aria-expanded="false"><i class="fas fa-bars mr-2" aria-hidden="true"></i>Admin sections</button>
+            <button class="kcbf-admin-nav-backdrop" type="button" data-admin-mobile-nav-backdrop aria-label="Close administrator navigation" hidden></button>
             <div class="kcbf-admin-shell">
-                <aside class="kcbf-admin-sidebar" aria-label="Administration sections">
+                <aside class="kcbf-admin-sidebar" id="admin-navigation-panel" aria-label="Administration sections">
                     <a class="kcbf-admin-sidebar-brand" href="../index.html" aria-label="Knit and Crochet by Faith administration">
                         <span class="kcbf-admin-brand-icon"><i class="fas fa-store" aria-hidden="true"></i></span>
                         <span><strong>Knit&amp;Crochet</strong><small>by Faith · Admin</small></span>

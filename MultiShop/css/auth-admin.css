@@ -654,3 +654,199 @@
         grid-column: auto;
     }
 }
+
+.kcbf-admin-mobile-menu,
+.kcbf-admin-nav-backdrop {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    .kcbf-admin-mobile-menu {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        margin: 0 0 0.65rem;
+        background: #fff;
+    }
+
+    .kcbf-admin-shell {
+        overflow: visible;
+    }
+
+    .kcbf-admin-sidebar {
+        position: fixed;
+        z-index: 1051;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(84vw, 310px);
+        max-width: 100%;
+        padding: 1rem 0.9rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+        background: #fbfcfb;
+        border-right: 1px solid #edf0ee;
+        box-shadow: 0.5rem 0 2rem rgba(0, 0, 0, 0.18);
+        transform: translateX(-105%);
+        visibility: hidden;
+        transition: transform 180ms ease, visibility 180ms ease;
+    }
+
+    .kcbf-admin-sidebar.is-open {
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    .kcbf-admin-sidebar .nav {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 0.15rem;
+        overflow: visible;
+        padding-bottom: 0;
+    }
+
+    .kcbf-admin-sidebar .kcbf-admin-nav-heading {
+        display: block;
+    }
+
+    .kcbf-admin-sidebar .nav-link {
+        width: 100%;
+        min-height: 44px;
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        margin: 0.1rem 0;
+        padding: 0.6rem 0.7rem;
+        white-space: normal;
+    }
+
+    .kcbf-admin-nav-backdrop:not([hidden]) {
+        position: fixed;
+        z-index: 1050;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        background: rgba(23, 22, 19, 0.48);
+        border: 0;
+    }
+
+    body.kcbf-admin-nav-open {
+        overflow: hidden;
+    }
+
+    .kcbf-admin-content {
+        padding: 0.85rem;
+    }
+
+    [data-dashboard-metrics] > div {
+        width: 50%;
+        max-width: 50%;
+        flex: 0 0 50%;
+        padding-right: 0.35rem;
+        padding-left: 0.35rem;
+    }
+
+    .kcbf-admin-metric {
+        min-height: 96px;
+        padding: 0.7rem !important;
+    }
+
+    .kcbf-admin-metric strong {
+        font-size: 1.35rem;
+    }
+
+    .kcbf-admin-metric-link > span {
+        font-size: 0.72rem;
+    }
+
+    .kcbf-admin-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .kcbf-admin-table {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .kcbf-admin-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        clip-path: inset(50%);
+    }
+
+    .kcbf-admin-table tbody,
+    .kcbf-admin-table tbody tr {
+        display: block;
+        width: 100%;
+    }
+
+    .kcbf-admin-table tbody tr {
+        margin: 0 0 0.7rem;
+        padding: 0.25rem 0.75rem;
+        background: #fff;
+        border: 1px solid #e8ece9;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(31, 55, 42, 0.035);
+    }
+
+    .kcbf-admin-table tbody td {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.55rem 0 !important;
+        text-align: right;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        border-top: 1px solid #f0f2f0;
+    }
+
+    .kcbf-admin-table tbody td:first-child {
+        border-top: 0;
+    }
+
+    .kcbf-admin-table tbody td:not([colspan])::before {
+        content: attr(data-admin-label);
+        flex: 0 0 34%;
+        color: #758078;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .kcbf-admin-table tbody td > * {
+        min-width: 0;
+        max-width: 66%;
+    }
+
+    .kcbf-admin-table tbody td[colspan] {
+        display: block;
+        text-align: left;
+    }
+}
+
+@media (max-width: 359.98px) {
+    [data-dashboard-metrics] > div {
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kcbf-admin-sidebar { transition: none; }
+}

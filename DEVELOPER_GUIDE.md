@@ -69,3 +69,12 @@ The documented deployment-status note does not define a project-specific rollbac
 - Validator-only Python packages: `lxml` and `pglast`, as declared by `scripts/validate_stage1.py`.
 - No lockfile, `package.json`, documented package install command, build command, or local server command was found.
 - Source-of-truth records: [`README.md`](README.md), [`docs/deployment-status.md`](docs/deployment-status.md), [`docs/supabase-auth-setup.md`](docs/supabase-auth-setup.md), [`docs/stage1-progress.md`](docs/stage1-progress.md), and [`scripts/validate_stage1.py`](scripts/validate_stage1.py).
+
+
+## 2026-11-18 — Responsive UI continuation
+
+The Shop's mobile filter drawer is implemented in `MultiShop/shop.html`, `js/pages/shop.js` and `css/brand-foundation.css`; it preserves all six data-backed facets and keeps the desktop sidebar. Product card image/main-content links use `js/catalog-render.js`. Responsive Cart rendering and stock-normalization logic are in `js/pages/commerce.js`. The admin mobile navigation, record-card labels and permission-preserving section handlers are in `admin/index.html`, `css/auth-admin.css` and `js/pages/admin.js`.
+
+Focused behavior tests are `scripts/test_shop_price_range.mjs`, `scripts/test_commerce.mjs`, `scripts/test_availability_labels.mjs` and `scripts/test_admin_dashboard.mjs`; `python3 scripts/validate_stage1.py` checks the repository. Local Chromium viewport screenshots are in `docs/screenshots/2026-11-18-mobile-ux/`. The Shop screenshot uses current public catalog content; the Cart screenshot uses a temporary local browser-storage fixture. Admin screenshots are disposable static layout previews with auth scripts disabled and blank metric data. They do not prove live provider/database behavior, actual-device usability, accessibility or production release.
+
+These edits add no database migrations or live data writes. The current main migration history remains mismatched for `stage1_storefront` and `auth_admin_access`; follow `docs/supabase-auth-setup.md` before any automated or manual production DDL. Production deployment for this responsive continuation must be verified by commit/deploy ID before it is reported live. Custom request/quote workflows, stock movement ledger/threshold alerts, atomic order-time stock decrement, trusted checkout, payment/delivery configuration, exports/reports, product video management, and physical-device/accessibility/performance testing remain outstanding. See `docs/master-prompt-progress.md` for the acceptance register.

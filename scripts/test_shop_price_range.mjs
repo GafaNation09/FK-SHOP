@@ -5,11 +5,15 @@ import vm from 'node:vm';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const source = await readFile(resolve(root, 'MultiShop/js/pages/shop.js'), 'utf8');
+const html = await readFile(resolve(root, 'MultiShop/shop.html'), 'utf8');
+const css = await readFile(resolve(root, 'MultiShop/css/brand-foundation.css'), 'utf8');
 const selectors = [
   '[data-shop-grid]', '[data-result-count]', '[data-page-size]', '[data-sort-by]', '[data-pagination]',
   '[data-facet="category"]', '[data-facet="price"]', '[data-facet="orderingModes"]',
   '[data-facet="colors"]', '[data-facet="sizes"]', '[data-facet="availability"]',
-  '[data-price-min]', '[data-price-max]', '[data-price-min-output]', '[data-price-max-output]'
+  '[data-price-min]', '[data-price-max]', '[data-price-min-output]', '[data-price-max-output]',
+  '[data-shop-filter-panel]', '[data-mobile-filter-backdrop]', '[data-mobile-filter-open]',
+  '[data-active-filter-count]', '[data-active-filters]', '[data-shop-search]'
 ];
 const nodes = new Map(selectors.map((selector) => [selector, {
   value: '', min: '0', max: '200', innerHTML: '', textContent: '', attributes: {},
@@ -24,23 +28,54 @@ const viewButtons = ['grid', 'list'].map((mode) => ({
   getAttribute(name) { return this.attributes[name] || null; },
   classList: { toggle() {} }
 }));
+const filterInputs = [
+  { id: 'filter-category-0', value: 'Accessories', checked: false, group: 'category' },
+  { id: 'filter-orderingModes-0', value: 'ready_made', checked: false, group: 'orderingModes' },
+  { id: 'filter-orderingModes-1', value: 'made_to_order', checked: false, group: 'orderingModes' },
+  { id: 'filter-colors-0', value: 'Blue', checked: false, group: 'colors' },
+  { id: 'filter-colors-1', value: 'Green', checked: false, group: 'colors' },
+  { id: 'filter-sizes-0', value: 'M', checked: false, group: 'sizes' },
+  { id: 'filter-sizes-1', value: 'S', checked: false, group: 'sizes' },
+  { id: 'filter-availability-0', value: 'available', checked: false, group: 'availability' },
+  { id: 'filter-availability-1', value: 'contact_for_availability', checked: false, group: 'availability' }
+].map((input) => ({
+  ...input,
+  attributes: { 'data-filter-group': input.group },
+  matches(selector) { return selector.includes('[data-filter-group]'); },
+  getAttribute(name) { return name === 'data-filter-group' ? this.group : null; }
+}));
+let focused = '';
+const bodyClasses = new Set();
+const closeButton = { focus() { focused = 'close'; } };
+const panel = nodes.get('[data-shop-filter-panel]');
+panel.querySelector = () => closeButton;
+panel.classList = { values: new Set(), add(value) { this.values.add(value); }, remove(value) { this.values.delete(value); }, contains(value) { return this.values.has(value); } };
+nodes.get('[data-mobile-filter-open]').setAttribute = function (name, value) { this.attributes[name] = String(value); };
+nodes.get('[data-shop-search]').value = '';
 nodes.get('[data-page-size]').value = '9';
 nodes.get('[data-sort-by]').value = 'relevance';
 nodes.get('[data-price-min]').value = '0';
 nodes.get('[data-price-max]').value = '200';
 const listeners = {};
 const document = {
+  activeElement: { focus() { focused = 'restored'; } },
+  body: { classList: { add(value) { bodyClasses.add(value); }, remove(value) { bodyClasses.delete(value); } } },
   querySelector(selector) { return nodes.get(selector) || null; },
-  querySelectorAll(selector) { return selector === '[data-view-mode-button]' ? viewButtons : []; },
+  querySelectorAll(selector) {
+    if (selector === '[data-view-mode-button]') return viewButtons;
+    if (selector === '[data-filter-group]' || selector === '[data-filter-group]:checked') return selector.endsWith(':checked') ? filterInputs.filter((input) => input.checked) : filterInputs;
+    const match = selector.match(/^\[data-filter-group="([^"]+)"\]:checked$/);
+    return match ? filterInputs.filter((input) => input.checked && input.group === match[1]) : [];
+  },
   addEventListener(name, callback) { listeners[name] = callback; }
 };
 const products = [
-  { id: 'a', slug: 'pouch', name: 'Pouch', status: 'published', priceKes: 100, availability: 'contact_for_availability' },
-  { id: 'b', slug: 'shawl', name: 'Shawl', status: 'published', priceKes: 200, availability: 'available' },
+  { id: 'a', slug: 'pouch', name: 'Pouch', status: 'published', priceKes: 100, availability: 'contact_for_availability', categorySlug: 'accessories', orderingModes: ['ready_made'], colors: ['Green'], sizes: ['S'] },
+  { id: 'b', slug: 'shawl', name: 'Shawl', status: 'published', priceKes: 200, availability: 'available', categorySlug: 'accessories', orderingModes: ['made_to_order'], colors: ['Blue'], sizes: ['M'] },
   { id: 'c', slug: 'custom', name: 'Custom quote', status: 'published', priceKes: null, requiresQuote: true }
 ];
 const api = {
-  ready: Promise.resolve({ products, categories: [], settings: { shop: { price_filter_min_kes: 0, price_filter_max_kes: 10000 } } }),
+  ready: Promise.resolve({ products, categories: [{ name: 'Accessories', slug: 'accessories', status: 'active' }], settings: { shop: { price_filter_min_kes: 0, price_filter_max_kes: 10000 } } }),
   availableProducts(data) { return data.products; },
   categorySlug(category) { return category.slug; },
   productCategorySlug(product) { return product.categorySlug || ''; },
@@ -56,9 +91,10 @@ const window = {
     getItem(key) { return localStorage.has(key) ? localStorage.get(key) : null; },
     setItem(key, value) { localStorage.set(key, String(value)); }
   },
+  history: { replaceState(_state, _title, url) { window.location.href = url; } },
   location: { search: '', href: 'https://store.example/multishop/shop.html' }
 };
-const context = vm.createContext({ window, document, URLSearchParams, Promise, Number, String, Array, Map, Set, Math, Date });
+const context = vm.createContext({ window, document, URL, URLSearchParams, Promise, Number, String, Array, Map, Set, Math, Date });
 vm.runInContext(source, context, { filename: 'shop.js' });
 await api.ready;
 await Promise.resolve();
@@ -82,6 +118,53 @@ assert.match(nodes.get('[data-facet="availability"]').innerHTML, /value="contact
 assert.equal(min.min, '0');
 assert.equal(max.max, '10000');
 assert.equal(grid.getAttribute('data-view-mode'), 'grid');
+assert.match(grid.innerHTML, /Pouch/);
+assert.match(grid.innerHTML, /Shawl/);
+assert.equal((html.match(/data-facet="(?:category|price|availability|orderingModes|colors|sizes)"/g) || []).length, 6, 'all six data-driven facets must remain present');
+assert.match(html, /data-mobile-filter-open[\s\S]*data-active-filter-count/, 'the mobile toolbar must expose filters and active-count feedback');
+assert.match(html, /data-mobile-filter-apply[\s\S]*data-filter-clear/, 'the drawer must provide Apply and Clear All actions');
+assert.match(html, /<details class="kcbf-shop-filter-group" open>/, 'filter groups must be expandable');
+assert.match(css, /\.kcbf-shop-filter-sidebar\.is-open/, 'the mobile drawer must expose its open state');
+assert.match(nodes.get('[data-facet="colors"]').innerHTML, />1<\/span>/, 'facet badges must show actual product counts');
+
+const targetFor = (selector, match) => ({ closest(candidate) { return candidate === selector || candidate.split(', ').includes(selector) ? match : null; } });
+const greenFilter = filterInputs.find((input) => input.value === 'Green');
+greenFilter.checked = true;
+listeners.change({ target: greenFilter });
+assert.match(grid.innerHTML, /Pouch/);
+assert.doesNotMatch(grid.innerHTML, /Shawl/);
+assert.equal(nodes.get('[data-active-filter-count]').textContent, '1');
+assert.match(nodes.get('[data-active-filters]').innerHTML, /Colour: Green/);
+listeners.click({ target: targetFor('[data-remove-filter-group]', {
+  getAttribute(name) { return name === 'data-remove-filter-group' ? 'colors' : 'Green'; }
+}) });
+assert.equal(greenFilter.checked, false, 'a single active filter can be removed from its chip');
+assert.match(grid.innerHTML, /Shawl/);
+
+const openButton = nodes.get('[data-mobile-filter-open]');
+listeners.click({ target: targetFor('[data-mobile-filter-open]', openButton) });
+assert.equal(panel.getAttribute('aria-hidden'), 'false');
+assert.equal(openButton.attributes['aria-expanded'], 'true');
+assert.equal(focused, 'close', 'opening the drawer moves focus to its Close button');
+assert.equal(bodyClasses.has('kcbf-filter-open'), true, 'background scrolling is locked while the drawer is open');
+listeners.click({ target: targetFor('[data-mobile-filter-apply]', {}) });
+assert.equal(panel.getAttribute('aria-hidden'), 'true');
+assert.equal(bodyClasses.has('kcbf-filter-open'), false);
+assert.equal(focused, 'restored', 'closing the drawer restores prior focus');
+
+const madeToOrder = filterInputs.find((input) => input.value === 'made_to_order');
+madeToOrder.checked = true;
+listeners.change({ target: madeToOrder });
+assert.doesNotMatch(grid.innerHTML, /Pouch/);
+assert.match(grid.innerHTML, /Shawl/, 'product-type facets filter against the real ordering-mode values');
+min.value = '1000';
+max.value = '5000';
+nodes.get('[data-shop-search]').value = 'shawl';
+listeners.click({ target: targetFor('[data-filter-clear]', {}) });
+assert.equal(madeToOrder.checked, false, 'Clear All clears every checked facet');
+assert.equal(min.value, min.min, 'Clear All restores the lower price bound');
+assert.equal(max.value, max.max, 'Clear All restores the upper price bound');
+assert.equal(nodes.get('[data-shop-search]').value, '', 'Clear All resets the search query');
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
@@ -116,4 +199,4 @@ assert.equal(max.value, max.max);
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
-console.log('PASS: shop range 0–10,000 KES, exact inclusive boundaries, range correction/reset and persisted grid/list modes');
+console.log('PASS: Shop facets/counts, mobile drawer accessibility, apply/chips/Clear All, KES range, price boundaries and grid/list modes');

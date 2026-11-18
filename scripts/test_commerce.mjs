@@ -15,9 +15,11 @@ const checkout = { disabled: false, title: '' };
 const cartBadge = { textContent: '' };
 const wishlistBadge = { textContent: '' };
 const listeners = {};
+const windowListeners = {};
 const products = [
   { id: 'prod-1', slug: 'woven-bag', name: 'Woven bag', status: 'published', priceKes: 1250, stockQuantity: 2, availability: 'available', images: [{ url: 'https://images.example/bag.webp', isMain: true, altText: 'Woven bag' }] },
-  { id: 'prod-quote', slug: 'custom-wrap', name: 'Custom wrap', status: 'published', priceKes: null, requiresQuote: true, availability: 'made_to_order', images: [] }
+  { id: 'prod-quote', slug: 'custom-wrap', name: 'Custom wrap', status: 'published', priceKes: null, requiresQuote: true, availability: 'made_to_order', images: [] },
+  { id: 'prod-zero', slug: 'out-of-stock-wrap', name: 'Out of stock wrap', status: 'published', priceKes: 50, stockQuantity: 0, availability: 'out_of_stock', images: [] }
 ];
 const data = { products };
 const document = {
@@ -45,7 +47,7 @@ const document = {
 const window = {
   KCBF: { ready: Promise.resolve(data), backendReady: Promise.resolve(null), escapeHtml(value) { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }, safeImageUrl(value) { return /^https:\/\//.test(value) ? value : ''; }, formatKes(value) { return 'KES ' + Number(value).toLocaleString('en-KE'); } },
   localStorage: { getItem(key) { return storage.get(key) ?? null; }, setItem(key, value) { storage.set(key, value); }, removeItem(key) { storage.delete(key); } },
-  addEventListener() {},
+  addEventListener(name, callback) { windowListeners[name] = callback; },
   setTimeout(callback) { callback(); return 0; }
 };
 vm.runInContext(source, vm.createContext({ window, document, Promise, JSON, Array, Number, String, Math, Set, URL: globalThis.URL, Object, Boolean }));
@@ -67,6 +69,12 @@ assert.match(cartBody.innerHTML, /data-cart-quantity-adjust="-1"/, 'cart rows mu
 assert.match(cartBody.innerHTML, /data-cart-quantity-adjust="1"/, 'cart rows must provide an accessible increment control');
 assert.equal(total.textContent, 'To be calculated', 'the product subtotal must not be represented as a final payable total');
 assert.equal(checkout.disabled, true, 'checkout remains disabled until verified providers are configured');
+products[0].availability = 'contact_for_availability';
+windowListeners.storage({ key: 'kcbf.cart.guest.v2' });
+assert.match(cartBody.innerHTML, /Contact to confirm availability/);
+assert.doesNotMatch(cartBody.innerHTML, /contact_for_availability/, 'database availability enums must not leak into the customer cart');
+products[0].availability = 'available';
+windowListeners.storage({ key: 'kcbf.cart.guest.v2' });
 
 const wishlistButton = { getAttribute(name) { return name === 'data-commerce-action' ? 'wishlist' : 'prod-1'; }, setAttribute() {}, querySelector() { return null; }, closest() { return null; } };
 await listeners.click({ target: { closest(selector) { return selector === '[data-commerce-action]' ? wishlistButton : null; } } });
@@ -85,9 +93,24 @@ listeners.click({ target: { closest(selector) { return selector === '[data-cart-
 assert.equal(commerce.readCart()[0].quantity, 1, 'minus control must decrement cart quantity');
 assert.equal(subtotal.textContent, 'KES 1,250', 'minus control must immediately recalculate the subtotal');
 
+await listeners.click({ target: { closest(selector) { return selector === '[data-commerce-action]' ? cartButton : null; } } });
+assert.equal(commerce.readCart()[0].quantity, 2, 'the cart can contain the then-current available stock');
+products[0].stockQuantity = 1;
+windowListeners.storage({ key: 'kcbf.cart.guest.v2' });
+assert.equal(commerce.readCart()[0].quantity, 1, 'a saved quantity is normalized after stock falls');
+assert.equal(subtotal.textContent, 'KES 1,250', 'row and aggregate totals use the same stock-capped quantity');
+assert.match(cartBody.innerHTML, /max="1" value="1"/, 'the row quantity control reflects reduced stock');
+
 const removeButton = { getAttribute(name) { return name === 'data-commerce-action' ? 'remove-cart' : 'prod-1'; } };
 listeners.click({ target: { closest(selector) { return selector === '[data-commerce-action]' ? removeButton : null; } } });
 assert.deepEqual(commerce.readCart(), []);
 assert.match(cartBody.innerHTML, /Your cart is empty/);
 
-console.log('PASS: cart/wishlist persistence, product eligibility, KES subtotals, pending final total, badges, stock cap and checkout guard');
+storage.set('kcbf.cart.guest.v2', JSON.stringify([{ id: 'prod-zero', quantity: 2 }]));
+windowListeners.storage({ key: 'kcbf.cart.guest.v2' });
+assert.match(cartBody.innerHTML, /0 available/, 'zero-stock products remain visible with a non-purchasable state');
+assert.match(cartBody.innerHTML, /Out of stock/);
+assert.equal(subtotal.textContent, 'KES 0', 'zero-stock items are excluded from the product subtotal');
+assert.match(notice.textContent, /retained in your cart but excluded from the subtotal/);
+
+console.log('PASS: cart persistence, stock caps, stale/zero-stock normalization, subtotal consistency, pending final total and checkout guard');
