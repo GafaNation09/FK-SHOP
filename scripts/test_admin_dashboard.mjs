@@ -216,6 +216,39 @@ assert.equal(failedPhoto.failed[0].name, 'front.jpg');
 assert.match(failedPhoto.failed[0].reason, /metadata denied/);
 assert.deepEqual(Array.from(failedPhoto.cleanupFailed), ['front.jpg'], 'failed object cleanup must be surfaced');
 
+const orderingModes = [
+  { value: 'ready_made', checked: false },
+  { value: 'made_to_order', checked: false },
+  { value: 'customizable', checked: false }
+];
+const productFormTitle = { textContent: '' };
+const productFormMock = {
+  elements: { id: { value: '' }, slug: { dataset: {} } },
+  querySelector(selector) {
+    if (selector === '[name="ordering_modes"][value="ready_made"]') return orderingModes[0];
+    if (selector === '[name="status"]') return { value: '' };
+    if (selector === '[name="availability_status"]') return { value: '' };
+    return null;
+  },
+  querySelectorAll(selector) { return selector === '[name="ordering_modes"]' ? orderingModes : []; },
+  reset() { orderingModes.forEach(mode => { mode.checked = false; }); }
+};
+const clearProductForm = runInNewContext(extractFunction(js, 'clearProductForm') + '\nclearProductForm', {
+  document: {
+    querySelector(selector) {
+      if (selector === '[data-product-form]') return productFormMock;
+      if (selector === '[data-product-form-title]') return productFormTitle;
+      return null;
+    },
+    querySelectorAll(selector) { return selector === '[name="ordering_modes"]' ? orderingModes : []; }
+  },
+  renderProductImages() {},
+  fillCategoryOptions() {}
+});
+clearProductForm();
+assert.equal(orderingModes.filter(mode => mode.checked).length, 1, 'a new product must start with exactly one ordering mode selected');
+assert.equal(orderingModes[0].checked, true, 'ready-made is the default mode for a new product');
+
 const tableHeaders = ['Reference', 'Status', ''];
 const mobileCells = tableHeaders.map(() => ({
   attributes: {},

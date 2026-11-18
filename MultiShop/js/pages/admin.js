@@ -557,6 +557,8 @@
         form.elements.slug.dataset.userEdited = 'false';
         document.querySelector('[data-product-form-title]').textContent = 'New product';
         document.querySelectorAll('[name="ordering_modes"]').forEach(function (field) { field.checked = false; });
+        const defaultOrderingMode = form.querySelector('[name="ordering_modes"][value="ready_made"]');
+        if (defaultOrderingMode) defaultOrderingMode.checked = true;
         const status = form.querySelector('[name="status"]');
         if (status) status.value = 'draft';
         const availability = form.querySelector('[name="availability_status"]');
