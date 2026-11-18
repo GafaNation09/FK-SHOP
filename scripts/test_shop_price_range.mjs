@@ -7,6 +7,9 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 const source = await readFile(resolve(root, 'MultiShop/js/pages/shop.js'), 'utf8');
 const html = await readFile(resolve(root, 'MultiShop/shop.html'), 'utf8');
 const css = await readFile(resolve(root, 'MultiShop/css/brand-foundation.css'), 'utf8');
+assert.equal((html.match(/data-shop-breadcrumb-shop/g) || []).length, 1, 'Shop breadcrumb should have one dynamic Shop parent link');
+assert.equal((html.match(/data-shop-breadcrumb-current/g) || []).length, 1, 'Shop breadcrumb should have one current-page label');
+assert.doesNotMatch(html, /href="shop\.html">Shop<\/a>/, 'remove the redundant static Shop link that duplicates the dynamic parent');
 const selectors = [
   '[data-shop-grid]', '[data-result-count]', '[data-page-size]', '[data-sort-by]', '[data-pagination]',
   '[data-facet="category"]', '[data-facet="price"]', '[data-facet="orderingModes"]',
