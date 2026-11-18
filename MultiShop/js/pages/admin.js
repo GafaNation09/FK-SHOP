@@ -855,6 +855,8 @@
             // Clear the browser FileList to prevent accidental duplicate retries;
             // retain the saved product fields so only failed files need reselection.
             if (form.elements.photo) form.elements.photo.value = '';
+            const title = document.querySelector('[data-product-form-title]');
+            if (title) title.textContent = 'Edit product';
             showStatus('Product saved, but ' + photoResult.failed.length + ' photo(s) failed. Reselect only these file(s): ' + failedNames.join('; ') + '.' + cleanupMessage, 'warning');
             if (!refreshError) {
                 const refreshed = allProducts.find(function (product) { return product.id === savedId; });

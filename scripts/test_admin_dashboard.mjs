@@ -94,6 +94,7 @@ assert.ok(photoPreflightIndex < saveProductSource.indexOf("await client.from('pr
 assert.match(js, /No product photos were uploaded[\s\S]*?5 MiB/, 'invalid photo preflight must clearly explain that no photos were uploaded and state the limit');
 assert.match(js, /cleanupFailed/, 'media metadata failure must report when Storage object cleanup also fails');
 assert.match(js, /Product saved, but .*photo\(s\) failed[\s\S]*?Reselect only these file\(s\)/, 'partial photo failure must distinguish product persistence and explain safe retry');
+assert.match(js, /if \(photoResult\.failed\.length\)[\s\S]*?title\.textContent = 'Edit product'/, 'partial upload failure must leave the persisted product editor in edit state');
 
 function extractFunction(source, name) {
   let start = source.indexOf('function ' + name + '(');
