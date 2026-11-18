@@ -8,6 +8,8 @@
     const signoutButton = document.querySelector('[data-admin-signout]');
     const bucketName = 'kcbf-product-media';
     const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validVideoTypes = ['video/mp4', 'video/webm'];
+    const maxProductVideoBytes = 25 * 1024 * 1024;
     let client = null;
     let currentUser = null;
     let membership = null;
@@ -140,7 +142,7 @@
             if (body) body.replaceChildren();
         }
         let query = client.from('products')
-            .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main)')
+            .select('id,name,slug,category_id,status,base_price_kes,original_price_kes,availability_status,featured,stock_quantity,short_description,description,ordering_modes,requires_quote,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,product_categories(name),product_images(id,image_url,alt_text,sort_order,is_main),product_videos(id,video_url,storage_path,mime_type,caption,sort_order)')
             .order('updated_at', { ascending: false });
         const statusFilter = document.querySelector('[data-product-status-filter]')?.value || '';
         const categoryFilter = document.querySelector('[data-product-category-filter]')?.value || '';
@@ -564,6 +566,7 @@
         const availability = form.querySelector('[name="availability_status"]');
         if (availability) availability.value = 'to_be_confirmed';
         renderProductImages('', []);
+        renderProductVideos('', []);
         fillCategoryOptions();
     }
 
@@ -634,6 +637,47 @@
         if (!renderedCount) showMessage('No valid product photos are available for this product.');
     }
 
+    function renderProductVideos(productId, videos) {
+        const container = document.querySelector('[data-product-videos]');
+        if (!container) return;
+        container.replaceChildren();
+        if (!productId) {
+            const message = document.createElement('p');
+            message.className = 'small text-muted mb-0';
+            message.textContent = 'Save the product first to manage its videos.';
+            container.appendChild(message);
+            return;
+        }
+        if (!videos || !videos.length) {
+            const message = document.createElement('p');
+            message.className = 'small text-muted mb-0';
+            message.textContent = 'No product videos have been saved yet.';
+            container.appendChild(message);
+            return;
+        }
+        videos.slice().sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); }).forEach(function (item) {
+            const card = document.createElement('div');
+            card.className = 'border bg-white p-2 mb-2';
+            const video = document.createElement('video');
+            video.className = 'w-100 mb-2';
+            video.controls = true;
+            video.preload = 'metadata';
+            video.src = safeAdminImageUrl(item.video_url);
+            video.setAttribute('aria-label', item.caption || 'Product video preview');
+            const caption = document.createElement('p');
+            caption.className = 'small mb-2';
+            caption.textContent = item.caption || 'Product video';
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn btn-sm btn-outline-danger';
+            remove.dataset.action = 'remove-product-video';
+            remove.dataset.id = String(item.id || '');
+            remove.textContent = 'Remove video';
+            card.append(video, caption, remove);
+            container.appendChild(card);
+        });
+    }
+
     function populateProductForm(product) {
         const form = document.querySelector('[data-product-form]');
         if (!form) return;
@@ -665,11 +709,13 @@
         form.elements.status.value = product.status || 'draft';
         form.elements.featured.checked = Boolean(product.featured);
         form.elements.requires_quote.checked = Boolean(product.requires_quote);
+        form.querySelectorAll('[name="ordering_modes"]').forEach(function (field) { field.checked = false; });
         (product.ordering_modes || []).forEach(function (mode) {
             const input = form.querySelector('[name="ordering_modes"][value="' + mode + '"]');
             if (input) input.checked = true;
         });
         renderProductImages(product.id, product.product_images || []);
+        renderProductVideos(product.id, product.product_videos || []);
         document.querySelector('[data-product-form-title]').textContent = 'Edit product';
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -684,6 +730,66 @@
             throw new Error('No product photos were uploaded. Use JPG, PNG or WebP files no larger than 5 MiB. Unsupported or oversized file(s): ' + names + '.');
         }
         return selected;
+    }
+
+    function validateProductVideos(files) {
+        const selected = Array.from(files || []);
+        const invalid = selected.filter(function (file) {
+            return !validVideoTypes.includes(file.type) || !Number.isFinite(Number(file.size)) || Number(file.size) > maxProductVideoBytes;
+        });
+        if (invalid.length) {
+            const names = invalid.map(function (file) { return file.name || 'Unnamed file'; }).join(', ');
+            throw new Error('No product videos were uploaded. Use MP4 or WebM files no larger than 25 MiB each. Unsupported or oversized file(s): ' + names + '.');
+        }
+        return selected;
+    }
+
+    async function uploadProductVideos(productId, files) {
+        const selected = validateProductVideos(files);
+        if (!selected.length) return { uploaded: 0, failed: [], cleanupFailed: [] };
+        const { data: existing, error: readError } = await client.from('product_videos')
+            .select('sort_order').eq('product_id', productId).order('sort_order', { ascending: true });
+        if (readError) throw readError;
+        let nextOrder = (existing || []).reduce(function (max, video) { return Math.max(max, Number(video.sort_order) || 0); }, -1) + 1;
+        let uploaded = 0;
+        const failed = [];
+        const cleanupFailed = [];
+        for (const file of selected) {
+            const extension = file.type === 'video/mp4' ? 'mp4' : 'webm';
+            const path = productId + '/' + crypto.randomUUID() + '.' + extension;
+            let objectUploaded = false;
+            try {
+                const { error: uploadError } = await client.storage.from(bucketName).upload(path, file, {
+                    cacheControl: '3600', contentType: file.type, upsert: false
+                });
+                if (uploadError) throw uploadError;
+                objectUploaded = true;
+                const { data: publicData } = client.storage.from(bucketName).getPublicUrl(path);
+                const { error: metadataError } = await client.from('product_videos').insert({
+                    product_id: productId,
+                    video_url: publicData.publicUrl,
+                    storage_path: path,
+                    mime_type: file.type,
+                    caption: file.name || 'Product video',
+                    sort_order: nextOrder
+                });
+                if (metadataError) throw metadataError;
+                nextOrder += 1;
+                uploaded += 1;
+            } catch (error) {
+                let cleanupError = null;
+                if (objectUploaded) {
+                    try {
+                        const cleanup = await client.storage.from(bucketName).remove([path]);
+                        cleanupError = cleanup && cleanup.error || null;
+                    } catch (removeError) { cleanupError = removeError; }
+                }
+                const name = file.name || 'Selected video';
+                failed.push({ name: name, reason: error && error.message ? error.message : 'Storage or video metadata save failed.' });
+                if (cleanupError) cleanupFailed.push(name);
+            }
+        }
+        return { uploaded: uploaded, failed: failed, cleanupFailed: cleanupFailed };
     }
 
     async function uploadProductPhotos(productId, files) {
@@ -741,6 +847,7 @@
         // Preflight before inserting/updating the product so a rejected file cannot
         // leave a saved product behind while the UI reports that the whole save failed.
         const selectedPhotos = validateProductPhotos(form.elements.photo && form.elements.photo.files);
+        const selectedVideos = validateProductVideos(form.elements.video && form.elements.video.files);
         const values = Object.fromEntries(new FormData(form).entries());
         const modes = Array.from(form.querySelectorAll('[name="ordering_modes"]:checked')).map(function (field) { return field.value; });
         if (!modes.length) throw new Error('Choose at least one ordering option.');
@@ -846,31 +953,43 @@
                 return { name: file.name || 'Selected photo', reason: error && error.message ? error.message : 'The product photo service could not be reached.' };
             }), cleanupFailed: [] };
         }
+        let videoResult;
+        try { videoResult = await uploadProductVideos(savedId, selectedVideos); }
+        catch (error) {
+            videoResult = { uploaded: 0, failed: selectedVideos.map(function (file) {
+                return { name: file.name || 'Selected video', reason: error && error.message ? error.message : 'The product video service could not be reached.' };
+            }), cleanupFailed: [] };
+        }
         let refreshError = null;
         try { await Promise.all([loadProducts(), loadCategories()]); }
         catch (error) { refreshError = error; }
-        const failedNames = photoResult.failed.map(function (item) { return item.name + ' (' + item.reason + ')'; });
-        const cleanupMessage = photoResult.cleanupFailed.length
-            ? ' Cleanup could not remove the stored object for: ' + photoResult.cleanupFailed.join(', ') + '; contact the site administrator before retrying.'
+        const failedNames = photoResult.failed.map(function (item) { return 'Photo ' + item.name + ' (' + item.reason + ')'; })
+            .concat(videoResult.failed.map(function (item) { return 'Video ' + item.name + ' (' + item.reason + ')'; }));
+        const cleanupFiles = photoResult.cleanupFailed.concat(videoResult.cleanupFailed);
+        const cleanupMessage = cleanupFiles.length
+            ? ' Cleanup could not remove the stored object for: ' + cleanupFiles.join(', ') + '; contact the site administrator before retrying.'
             : '';
-        if (photoResult.failed.length) {
+        if (photoResult.failed.length || videoResult.failed.length) {
             // Clear the browser FileList to prevent accidental duplicate retries;
             // retain the saved product fields so only failed files need reselection.
             if (form.elements.photo) form.elements.photo.value = '';
+            if (form.elements.video) form.elements.video.value = '';
             const title = document.querySelector('[data-product-form-title]');
             if (title) title.textContent = 'Edit product';
-            showStatus('Product saved, but ' + photoResult.failed.length + ' photo(s) failed. Reselect only these file(s): ' + failedNames.join('; ') + '.' + cleanupMessage, 'warning');
+            showStatus('Product saved, but ' + failedNames.length + ' media file(s) failed. Reselect only these file(s): ' + failedNames.join('; ') + '.' + cleanupMessage, 'warning');
             if (!refreshError) {
                 const refreshed = allProducts.find(function (product) { return product.id === savedId; });
                 renderProductImages(savedId, refreshed && refreshed.product_images || []);
+                renderProductVideos(savedId, refreshed && refreshed.product_videos || []);
             }
             return;
         }
         clearProductForm();
         const photoMessage = photoResult.uploaded ? ' with ' + photoResult.uploaded + ' photo' + (photoResult.uploaded === 1 ? '' : 's') : '';
+        const videoMessage = videoResult.uploaded ? ' and ' + videoResult.uploaded + ' video' + (videoResult.uploaded === 1 ? '' : 's') : '';
         showStatus(refreshError
-            ? 'Product saved' + photoMessage + ', but the admin list could not refresh. Reload the Products section to confirm the latest records.'
-            : 'Product saved' + photoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.',
+            ? 'Product saved' + photoMessage + videoMessage + ', but the admin list could not refresh. Reload the Products section to confirm the latest records.'
+            : 'Product saved' + photoMessage + videoMessage + '. Published and active records are returned by the public catalog loader; refresh the storefront to see the change.',
             refreshError ? 'warning' : 'success');
     }
 
@@ -1412,6 +1531,28 @@
                         : 'Photo removed from the product gallery.', storageCleanupWarning ? 'warning' : 'success');
                 }
             } catch (error) { showStatus(error.message || 'Product photo action failed.', 'error'); }
+        });
+
+        document.querySelector('[data-product-videos]')?.addEventListener('click', async function (event) {
+            const button = event.target.closest('button[data-action="remove-product-video"]');
+            if (!button) return;
+            const productId = String(productForm.elements.id.value || '').trim();
+            const product = allProducts.find(function (item) { return item.id === productId; });
+            const video = product && (product.product_videos || []).find(function (item) { return item.id === button.dataset.id; });
+            if (!product || !video || !window.confirm('Remove this video from the product?')) return;
+            try {
+                const { error } = await client.from('product_videos').delete().eq('id', video.id).eq('product_id', productId);
+                if (error) throw error;
+                let storageCleanupWarning = false;
+                try {
+                    const { error: storageError } = await client.storage.from(bucketName).remove([video.storage_path]);
+                    storageCleanupWarning = Boolean(storageError);
+                } catch (storageError) { storageCleanupWarning = true; }
+                await loadProducts();
+                const refreshed = allProducts.find(function (item) { return item.id === productId; });
+                renderProductVideos(productId, refreshed && refreshed.product_videos || []);
+                showStatus(storageCleanupWarning ? 'Video removed from the catalog, but its stored file could not be deleted.' : 'Video removed from the product.', storageCleanupWarning ? 'warning' : 'success');
+            } catch (error) { showStatus(error.message || 'Product video action failed.', 'error'); }
         });
 
         document.querySelector('[data-categories-table]')?.addEventListener('click', function (event) {

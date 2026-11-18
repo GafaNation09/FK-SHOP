@@ -52,13 +52,14 @@ assert.match(html, /class="kcbf-product-panel"><h3>General information/, 'produc
 assert.match(html, /class="kcbf-product-panel"><h3>Pricing and stock/, 'product editor must have a Pricing and stock panel');
 assert.match(html, /class="kcbf-product-panel kcbf-product-photo-panel"><h3>Upload images/, 'product editor must retain a dedicated photo upload panel');
 assert.match(html, /After selecting photos, click <strong>Save product<\/strong>/, 'admin must be told that selecting a photo alone does not upload it');
-assert.match(html, /Product video upload is not available yet[\s\S]*?bucket accepts photos only/, 'admin must not be led to believe video uploads work with the photo-only bucket');
+assert.match(html, /id="product-video" name="video" type="file" accept="video\/mp4,video\/webm" multiple/, 'admin must support selecting multiple MP4/WebM videos');
+assert.match(html, /data-product-videos/, 'admin must render saved product video previews and controls');
 assert.match(html, /name="category_id" required/, 'product editor must retain its required category field');
 assert.match(html, /id="mode-ready" type="checkbox" name="ordering_modes" value="ready_made" checked/, 'the initial new-product editor must have Ready-made selected before any reset event');
 assert.match(html, /form="product-editor-form"/, 'the header save action must submit the existing product form');
 assert.doesNotMatch(js, /Administrator access verified\. Product, category and public-content writes use the signed-in user’s RLS permissions\./, 'admin initialization must not present a successful-looking banner as proof that catalog writes were tested');
 assert.match(js, /showStatus\('',\s*'info'\)/, 'admin initialization should clear the loading status after the dashboard loads');
-for (const fieldName of ['name', 'slug', 'short_description', 'description', 'base_price_kes', 'stock_quantity', 'colors', 'sizes', 'materials', 'measurements', 'care_instructions', 'shipping_information', 'attributes', 'ordering_modes', 'requires_quote', 'availability_status', 'status', 'photo', 'featured']) {
+for (const fieldName of ['name', 'slug', 'short_description', 'description', 'base_price_kes', 'stock_quantity', 'colors', 'sizes', 'materials', 'measurements', 'care_instructions', 'shipping_information', 'attributes', 'ordering_modes', 'requires_quote', 'availability_status', 'status', 'photo', 'video', 'featured']) {
   assert.match(html, new RegExp('name="' + fieldName + '"'), 'product editor must retain the ' + fieldName + ' input');
 }
 
@@ -92,12 +93,66 @@ assert.match(js, /photo\.src = url;[\s\S]*?photo\.alt = image\.alt_text \|\| 'Pr
 assert.doesNotMatch(js, /api\.safeImageUrl|api\.escapeHtml/, 'admin product editing must not depend on storefront-only helpers');
 const saveProductSource = extractFunction(js, 'saveProduct');
 const photoPreflightIndex = saveProductSource.indexOf('const selectedPhotos = validateProductPhotos');
+const videoPreflightIndex = saveProductSource.indexOf('const selectedVideos = validateProductVideos');
 assert.ok(photoPreflightIndex >= 0 && photoPreflightIndex < saveProductSource.indexOf("await client.from('products').update(row)"), 'selected photo validation must run before product updates');
 assert.ok(photoPreflightIndex < saveProductSource.indexOf("await client.from('products').insert(row)"), 'selected photo validation must run before product inserts');
+assert.ok(videoPreflightIndex >= 0 && videoPreflightIndex < saveProductSource.indexOf("await client.from('products').insert(row)"), 'selected video validation must run before product inserts');
 assert.match(js, /No product photos were uploaded[\s\S]*?5 MiB/, 'invalid photo preflight must clearly explain that no photos were uploaded and state the limit');
 assert.match(js, /cleanupFailed/, 'media metadata failure must report when Storage object cleanup also fails');
-assert.match(js, /Product saved, but .*photo\(s\) failed[\s\S]*?Reselect only these file\(s\)/, 'partial photo failure must distinguish product persistence and explain safe retry');
-assert.match(js, /if \(photoResult\.failed\.length\)[\s\S]*?title\.textContent = 'Edit product'/, 'partial upload failure must leave the persisted product editor in edit state');
+assert.match(js, /function validateProductVideos\(files\)/, 'product videos must be validated before product writes');
+assert.match(js, /async function uploadProductVideos\(productId, files\)/, 'product videos must upload to product-owned Storage paths and metadata');
+assert.match(js, /product_videos\(id,video_url,storage_path,mime_type,caption,sort_order\)/, 'admin product listing must load persisted videos');
+const videoValidator = runInNewContext(extractFunction(js, 'validateProductVideos') + '\nvalidateProductVideos', {
+  validVideoTypes: ['video/mp4', 'video/webm'],
+  maxProductVideoBytes: 25 * 1024 * 1024
+});
+const validVideo = { name: 'preview.mp4', type: 'video/mp4', size: 1024 };
+assert.equal(Array.from(videoValidator([validVideo]))[0], validVideo, 'valid MP4 video should pass preflight');
+assert.throws(() => videoValidator([{ name: 'bad.gif', type: 'image/gif', size: 1024 }]), /MP4 or WebM/, 'unsupported video format must be rejected');
+assert.throws(() => videoValidator([{ name: 'large.webm', type: 'video/webm', size: 26 * 1024 * 1024 }]), /25 MiB/, 'oversized video must be rejected before product writes');
+assert.match(js, /form\.querySelectorAll\('\[name="ordering_modes"\]'\)\.forEach[\s\S]*?product\.ordering_modes/, 'editing a product must replace the new-product default with exactly its stored ordering modes');
+const videoCalls = [];
+let videoMetadataShouldFail = false;
+const videoClient = {
+  from(table) {
+    assert.equal(table, 'product_videos');
+    return {
+      select() { return this; },
+      eq() { return this; },
+      order() { return Promise.resolve({ data: [{ sort_order: 1 }], error: null }); },
+      insert(row) { videoCalls.push(['insert', row]); return Promise.resolve({ error: videoMetadataShouldFail ? { message: 'video metadata denied' } : null }); }
+    };
+  },
+  storage: {
+    from(bucket) {
+      assert.equal(bucket, 'kcbf-product-media');
+      return {
+        upload(path, file, options) { videoCalls.push(['upload', path, file, options]); return Promise.resolve({ error: null }); },
+        getPublicUrl(path) { return { data: { publicUrl: 'https://storage.example.test/' + path } }; },
+        remove(paths) { videoCalls.push(['remove', paths]); return Promise.resolve({ error: null }); }
+      };
+    }
+  }
+};
+let videoUuid = 0;
+const uploadVideo = runInNewContext(extractFunction(js, 'validateProductVideos') + '\n' + extractFunction(js, 'uploadProductVideos') + '\nuploadProductVideos', {
+  client: videoClient,
+  bucketName: 'kcbf-product-media',
+  crypto: { randomUUID() { videoUuid += 1; return 'video-uuid-' + videoUuid; } },
+  validVideoTypes: ['video/mp4', 'video/webm'],
+  maxProductVideoBytes: 25 * 1024 * 1024
+});
+const uploadedVideo = await uploadVideo('product-1', [validVideo]);
+assert.equal(uploadedVideo.uploaded, 1);
+assert.equal(videoCalls.find(call => call[0] === 'upload')[1], 'product-1/video-uuid-1.mp4', 'video must upload beneath its product ID');
+assert.equal(videoCalls.find(call => call[0] === 'insert')[1].mime_type, 'video/mp4');
+assert.equal(videoCalls.find(call => call[0] === 'insert')[1].sort_order, 2, 'video sort order must append after existing videos');
+videoMetadataShouldFail = true;
+const failedVideo = await uploadVideo('product-1', [validVideo]);
+assert.match(failedVideo.failed[0].reason, /video metadata denied/);
+assert.ok(videoCalls.some(call => call[0] === 'remove' && call[1][0] === 'product-1/video-uuid-2.mp4'), 'failed metadata insertion must clean up the uploaded video object');
+assert.match(js, /Product saved, but .*media file\(s\) failed[\s\S]*?Reselect only these file\(s\)/, 'partial media failure must distinguish product persistence and explain safe retry');
+assert.match(js, /if \(photoResult\.failed\.length \|\| videoResult\.failed\.length\)[\s\S]*?title\.textContent = 'Edit product'/, 'partial media upload failure must leave the persisted product editor in edit state');
 
 function extractFunction(source, name) {
   let start = source.indexOf('function ' + name + '(');
@@ -244,6 +299,7 @@ const clearProductForm = runInNewContext(extractFunction(js, 'clearProductForm')
     querySelectorAll(selector) { return selector === '[name="ordering_modes"]' ? orderingModes : []; }
   },
   renderProductImages() {},
+  renderProductVideos() {},
   fillCategoryOptions() {}
 });
 clearProductForm();

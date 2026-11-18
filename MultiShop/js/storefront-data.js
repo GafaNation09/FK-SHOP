@@ -158,6 +158,7 @@
     function mapProduct(row) {
         const category = Array.isArray(row.product_categories) ? row.product_categories[0] : row.product_categories;
         const images = Array.isArray(row.product_images) ? row.product_images.slice() : [];
+        const videos = Array.isArray(row.product_videos) ? row.product_videos.slice() : [];
         const storedAttributes = row.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes) ? row.attributes : {};
         const previousSlugs = Array.isArray(storedAttributes.previousSlugs)
             ? Array.from(new Set(storedAttributes.previousSlugs.filter(function (slug) {
@@ -220,6 +221,16 @@
                     sort_order: image.sort_order
                 };
             }),
+            videos: videos.sort(function (a, b) { return Number(a.sort_order || 0) - Number(b.sort_order || 0); }).map(function (video) {
+                return {
+                    url: video.video_url,
+                    video_url: video.video_url,
+                    mimeType: video.mime_type || '',
+                    mime_type: video.mime_type || '',
+                    caption: video.caption || '',
+                    sort_order: video.sort_order
+                };
+            }),
             createdAt: row.created_at,
             created_at: row.created_at,
             updatedAt: row.updated_at
@@ -233,7 +244,7 @@
                 .eq('is_active', true)
                 .order('sort_order', { ascending: true }),
             client.from('products')
-                .select('id,category_id,name,slug,short_description,description,ordering_modes,availability_status,base_price_kes,original_price_kes,requires_quote,status,featured,stock_quantity,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,created_at,updated_at,product_categories!inner(name,slug,is_active),product_images(image_url,alt_text,sort_order,is_main)')
+                .select('id,category_id,name,slug,short_description,description,ordering_modes,availability_status,base_price_kes,original_price_kes,requires_quote,status,featured,stock_quantity,production_time_days,colors,sizes,patterns,personalization_options,materials,measurements,weight_grams,care_instructions,shipping_information,attributes,created_at,updated_at,product_categories!inner(name,slug,is_active),product_images(image_url,alt_text,sort_order,is_main),product_videos(video_url,mime_type,caption,sort_order)')
                 .eq('status', 'published')
                 .eq('product_categories.is_active', true)
                 .order('created_at', { ascending: false }),

@@ -143,6 +143,15 @@
             '<i class="far fa-image" aria-hidden="true"></i><small>Approved product photo to be added</small></div>';
     }
 
+    function safeVideoUrl(value) {
+        if (typeof value !== 'string' || !value.trim()) return '';
+        try {
+            const parsed = new URL(value.trim(), window.location.href);
+            if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return '';
+            return parsed.href;
+        } catch (error) { return ''; }
+    }
+
     function renderPublicAttributes(list, wrapper, attributes) {
         if (!list || !wrapper) return;
         list.replaceChildren();
@@ -323,6 +332,36 @@
                 mainImage.src = src;
                 mainImage.alt = photo.altText || photo.alt_text || product.name || 'Product image';
             });
+        }
+        const videos = Array.isArray(product.videos) ? product.videos : [];
+        const videoContainer = document.querySelector('[data-detail-videos]');
+        if (videoContainer) {
+            videoContainer.replaceChildren();
+            videos.forEach(function (item, index) {
+                const source = safeVideoUrl(item && (item.url || item.video_url));
+                if (!source) return;
+                const figure = document.createElement('figure');
+                figure.className = 'mb-3';
+                const player = document.createElement('video');
+                player.className = 'w-100';
+                player.controls = true;
+                player.preload = 'metadata';
+                player.playsInline = true;
+                player.setAttribute('aria-label', item.caption || ('Product video ' + (index + 1)));
+                const media = document.createElement('source');
+                media.src = source;
+                media.type = item.mimeType || item.mime_type || 'video/mp4';
+                player.appendChild(media);
+                figure.appendChild(player);
+                if (item.caption) {
+                    const caption = document.createElement('figcaption');
+                    caption.className = 'small text-muted mt-1';
+                    caption.textContent = item.caption;
+                    figure.appendChild(caption);
+                }
+                videoContainer.appendChild(figure);
+            });
+            videoContainer.hidden = !videoContainer.childElementCount;
         }
     });
 }(window, document));

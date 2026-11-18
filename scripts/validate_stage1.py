@@ -166,6 +166,8 @@ def main() -> None:
     admin_doc = html.fromstring((ROOT / "MultiShop/admin/index.html").read_text())
     assert_ok(bool(admin_doc.xpath("//input[@name='photo' and @multiple]")),
               "Admin product editor must allow multiple photos per product")
+    assert_ok(bool(admin_doc.xpath("//input[@name='video' and @multiple and contains(@accept, 'video/mp4') and contains(@accept, 'video/webm')]")),
+              "Admin product editor must allow multiple MP4/WebM product videos")
     setting_names = admin_doc.xpath("//form[@data-settings-form]//*[@name]/@name")
     assert_ok(all(re.fullmatch(r"[a-z][a-z0-9_.-]{0,99}", name) for name in setting_names),
               "Admin public setting names must satisfy the database's lowercase key constraint")
@@ -184,6 +186,8 @@ def main() -> None:
     detail_doc = html.parse(str(ROOT / "MultiShop/detail.html"))
     assert_ok(bool(detail_doc.xpath("//*[@data-detail-attributes]")),
               "Public product detail must expose approved product-specific specifications")
+    assert_ok(bool(detail_doc.xpath("//*[@data-detail-videos]")),
+              "Public product detail must provide a product video player container")
     print("PASS: JSON records, seven category names/seed, empty catalog, product template, public settings")
 
     migration_paths = [
@@ -192,6 +196,7 @@ def main() -> None:
         ROOT / "supabase/migrations/20261115110000_admin_management_edge_helpers.sql",
         ROOT / "supabase/migrations/20261115210000_customer_storefront_persistence.sql",
         ROOT / "supabase/migrations/20261115213000_customer_price_filter_minimum.sql",
+        ROOT / "supabase/migrations/20261118110018_product_video_media.sql",
         ROOT / "supabase/seed/20261114192000_initial_categories.sql",
     ]
     for sql_path in migration_paths:

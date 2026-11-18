@@ -19,6 +19,7 @@ class Element {
     this.listeners = {};
   }
   append(...nodes) { this.children.push(...nodes); }
+  appendChild(node) { this.children.push(node); return node; }
   replaceChildren(...nodes) { this.children = nodes; }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   removeAttribute(name) { delete this.attributes[name]; }
@@ -49,6 +50,7 @@ const image = new Element();
 const mainImage = new Element();
 image.querySelector = (selector) => selector === '[data-detail-main-image]' ? mainImage : null;
 const gallery = new Element();
+const videos = new Element();
 const metadataSelectors = ['#product-meta-description', '#product-canonical', '#product-og-title', '#product-og-description', '#product-og-url', '#product-og-image', '#product-twitter-title', '#product-twitter-description', '#product-twitter-image'];
 const metadata = new Map(metadataSelectors.map((selector) => [selector, new Element()]));
 let jsonLdNode = null;
@@ -62,6 +64,7 @@ const document = {
       '[data-detail-content]': panel,
       '[data-detail-image]': image,
       '[data-detail-gallery]': gallery,
+      '[data-detail-videos]': videos,
       ...Object.fromEntries(metadata)
     }[selector] || null;
   },
@@ -76,7 +79,8 @@ const product = {
   images: [
     { url: 'https://images.example/bag.webp', isMain: true, altText: 'Woven bag front' },
     { url: 'https://images.example/bag-back.webp', isMain: false, altText: 'Woven bag back' }
-  ]
+  ],
+  videos: [{ url: 'https://media.example/bag.mp4', mimeType: 'video/mp4', caption: 'Bag detail' }]
 };
 const api = {
   ready: Promise.resolve({ products: [product] }),
@@ -96,6 +100,9 @@ await Promise.resolve();
 assert.equal(panel.hidden, false, 'published product detail panel should become visible');
 assert.match(image.innerHTML, /images\.example\/bag\.webp/, 'product image must render in its sibling container');
 assert.match(gallery.innerHTML, /data-detail-photo-index="1"/, 'secondary product images should render as selectable thumbnails');
+assert.equal(videos.hidden, false, 'product videos should reveal their detail section');
+assert.equal(videos.children[0].children[0].controls, true, 'product videos should use native playback controls');
+assert.equal(videos.children[0].children[0].children[0].src, 'https://media.example/bag.mp4', 'video source should use the approved HTTPS URL');
 assert.equal(fields.get('[data-detail-cart]').disabled, false, 'priced published products should expose add-to-cart');
 assert.equal(fields.get('[data-detail-cart]').attributes['data-product-id'], 'product-1');
 assert.equal(fields.get('[data-detail-wishlist]').disabled, false, 'published products should expose favourites');

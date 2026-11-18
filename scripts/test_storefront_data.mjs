@@ -69,7 +69,8 @@ const liveResult = await runLoader(clientFor({
     availability_status: 'available', product_categories: { name: 'Bags', slug: 'bags', is_active: true },
     patterns: ['Floral'], personalization_options: ['Monogram'], materials: 'Cotton yarn', measurements: '20 cm wide',
     weight_grams: 180, care_instructions: 'Hand wash', shipping_information: 'Packed with care', attributes: { fiber: 'Cotton', previousSlugs: ['old-woven-bag', 'bad slug'] },
-    product_images: [{ image_url: 'https://images.example/bag.webp', alt_text: 'Woven bag', is_main: true, sort_order: 0 }]
+    product_images: [{ image_url: 'https://images.example/bag.webp', alt_text: 'Woven bag', is_main: true, sort_order: 0 }],
+    product_videos: [{ video_url: 'https://media.example/bag.mp4', mime_type: 'video/mp4', caption: 'Bag detail', sort_order: 0 }]
   }],
   business_settings: [{ setting_key: 'brand.name', setting_value: 'Knit&Crochet by Faith' }]
 }), { status: 'ready' }, 'fkshopping.netlify.app');
@@ -78,6 +79,8 @@ assert.equal(live.categories[0].status, 'active');
 assert.equal(live.products[0].categorySlug, 'bags');
 assert.equal(live.products[0].priceKes, 1250);
 assert.equal(live.products[0].images[0].isMain, true);
+assert.equal(live.products[0].videos[0].url, 'https://media.example/bag.mp4');
+assert.equal(live.products[0].videos[0].mimeType, 'video/mp4');
 assert.equal(live.products[0].patterns[0], 'Floral');
 assert.equal(live.products[0].personalizationOptions[0], 'Monogram');
 assert.equal(live.products[0].materials, 'Cotton yarn');
