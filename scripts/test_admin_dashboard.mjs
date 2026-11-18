@@ -54,6 +54,7 @@ assert.match(html, /class="kcbf-product-panel kcbf-product-photo-panel"><h3>Uplo
 assert.match(html, /After selecting photos, click <strong>Save product<\/strong>/, 'admin must be told that selecting a photo alone does not upload it');
 assert.match(html, /Product video upload is not available yet[\s\S]*?bucket accepts photos only/, 'admin must not be led to believe video uploads work with the photo-only bucket');
 assert.match(html, /name="category_id" required/, 'product editor must retain its required category field');
+assert.match(html, /id="mode-ready" type="checkbox" name="ordering_modes" value="ready_made" checked/, 'the initial new-product editor must have Ready-made selected before any reset event');
 assert.match(html, /form="product-editor-form"/, 'the header save action must submit the existing product form');
 assert.doesNotMatch(js, /Administrator access verified\. Product, category and public-content writes use the signed-in user’s RLS permissions\./, 'admin initialization must not present a successful-looking banner as proof that catalog writes were tested');
 assert.match(js, /showStatus\('',\s*'info'\)/, 'admin initialization should clear the loading status after the dashboard loads');
