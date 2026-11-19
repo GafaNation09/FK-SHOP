@@ -190,13 +190,7 @@ def main() -> None:
               "Public product detail must provide a product video player container")
     print("PASS: JSON records, seven category names/seed, empty catalog, product template, public settings")
 
-    migration_paths = [
-        ROOT / "supabase/migrations/20261114192000_stage1_storefront.sql",
-        ROOT / "supabase/migrations/20261114214500_auth_admin_access.sql",
-        ROOT / "supabase/migrations/20261115110000_admin_management_edge_helpers.sql",
-        ROOT / "supabase/migrations/20261115210000_customer_storefront_persistence.sql",
-        ROOT / "supabase/migrations/20261115213000_customer_price_filter_minimum.sql",
-        ROOT / "supabase/migrations/20261118110018_product_video_media.sql",
+    migration_paths = sorted((ROOT / "supabase/migrations").glob("*.sql")) + [
         ROOT / "supabase/seed/20261114192000_initial_categories.sql",
     ]
     for sql_path in migration_paths:

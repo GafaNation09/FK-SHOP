@@ -91,7 +91,91 @@ function validEmail(value: unknown): string | null {
   return email
 }
 
-async function authenticate(request: Request, clients: FunctionClients): Promise<{ actor: Actor | null; error: Response | null }> {
+function isSafeProductMediaPath(productId: string, bucketId: unknown, objectPath: unknown): objectPath is string {
+  if (bucketId !== 'kcbf-product-media' || typeof objectPath !== 'string' || objectPath.length > 1024) return false
+  if (!objectPath.startsWith(productId + '/') || objectPath.includes('\\') || /%2f|%5c/i.test(objectPath)) return false
+  return objectPath.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..')
+}
+
+async function processProductMediaCleanup(admin: any, productId: string): Promise<{ pendingCount: number | null }> {
+  const { data: queueRows, error: queueError } = await admin
+    .from('product_media_cleanup_queue')
+    .select('id,bucket_id,object_path,attempt_count')
+    .eq('deleted_product_id', productId)
+    .limit(500)
+  if (queueError) return { pendingCount: null }
+
+  const validRows: Array<{ id: string; bucket_id: string; object_path: string; attempt_count: number }> = []
+  for (const row of queueRows || []) {
+    if (isSafeProductMediaPath(productId, row.bucket_id, row.object_path)) {
+      validRows.push(row)
+    } else {
+      await admin.from('product_media_cleanup_queue')
+        .update({ attempt_count: Number(row.attempt_count || 0) + 1, last_error: 'Stored object path failed safety validation.' })
+        .eq('id', row.id)
+    }
+  }
+
+  for (let start = 0; start < validRows.length; start += 100) {
+    const batch = validRows.slice(start, start + 100)
+    const paths = batch.map((row) => row.object_path)
+    const { error: storageError } = await admin.storage.from('kcbf-product-media').remove(paths)
+    if (storageError) {
+      for (const row of batch) {
+        await admin.from('product_media_cleanup_queue')
+          .update({ attempt_count: Number(row.attempt_count || 0) + 1, last_error: 'Storage removal failed; retry is available.' })
+          .eq('id', row.id)
+      }
+      continue
+    }
+
+    const { error: queueDeleteError } = await admin.from('product_media_cleanup_queue')
+      .delete()
+      .in('id', batch.map((row) => row.id))
+    if (queueDeleteError) {
+      for (const row of batch) {
+        await admin.from('product_media_cleanup_queue')
+          .update({ attempt_count: Number(row.attempt_count || 0) + 1, last_error: 'Storage was removed but the cleanup record remains pending.' })
+          .eq('id', row.id)
+      }
+    }
+  }
+
+  const { count, error: countError } = await admin
+    .from('product_media_cleanup_queue')
+    .select('id', { count: 'exact', head: true })
+    .eq('deleted_product_id', productId)
+  return { pendingCount: countError ? null : Number(count || 0) }
+}
+
+async function countPendingProductMediaCleanup(admin: any): Promise<number | null> {
+  const { count, error } = await admin
+    .from('product_media_cleanup_queue')
+    .select('id', { count: 'exact', head: true })
+  return error ? null : Number(count || 0)
+}
+
+async function processAllProductMediaCleanup(admin: any): Promise<number | null> {
+  const { data, error } = await admin
+    .from('product_media_cleanup_queue')
+    .select('deleted_product_id')
+    .order('created_at', { ascending: true })
+    .limit(500)
+  if (error) return null
+  const productIds: string[] = []
+  for (const row of (data || []) as Array<{ deleted_product_id?: unknown }>) {
+    const productId = row.deleted_product_id
+    if (typeof productId === 'string' && UUID_PATTERN.test(productId) && !productIds.includes(productId)) {
+      productIds.push(productId)
+    }
+  }
+  for (const productId of productIds) {
+    await processProductMediaCleanup(admin, productId)
+  }
+  return await countPendingProductMediaCleanup(admin)
+}
+
+async function authenticate(request: Request, clients: FunctionClients, requiredPermission = 'admins:manage'): Promise<{ actor: Actor | null; error: Response | null }> {
   const authorization = request.headers.get('authorization') || ''
   const match = authorization.match(/^Bearer\s+(.+)$/i)
   if (!match) return { actor: null, error: jsonResponse(request, 401, { error: 'Sign in is required.' }) }
@@ -120,8 +204,11 @@ async function authenticate(request: Request, clients: FunctionClients): Promise
     permissions: Array.isArray(member.permissions) ? member.permissions : [],
     status: member.status
   }
-  if (actor.role !== 'super_admin' && !actor.permissions.includes('admins:manage')) {
-    return { actor: null, error: jsonResponse(request, 403, { error: 'Administrator-management permission is required.' }) }
+  if (actor.role !== 'super_admin' && !actor.permissions.includes(requiredPermission)) {
+    const errorMessage = requiredPermission === 'catalog:write'
+      ? 'Product catalog permission is required.'
+      : 'Administrator-management permission is required.'
+    return { actor: null, error: jsonResponse(request, 403, { error: errorMessage }) }
   }
   return { actor, error: null }
 }
@@ -139,7 +226,21 @@ async function handleRequest(request: Request): Promise<Response> {
 
   const clients = getClients()
   if (!clients) return jsonResponse(request, 503, { error: 'The administrator service is not configured.' })
-  const { actor, error: authError } = await authenticate(request, clients)
+
+  let body: Record<string, unknown> = {}
+  if (request.method !== 'GET') {
+    try {
+      body = await readJson(request)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid request body.'
+      return jsonResponse(request, 400, { error: message })
+    }
+  }
+
+  const isCatalogMutation = (request.method === 'DELETE' && body.action === 'delete-product')
+    || (request.method === 'POST' && ['retry-product-media-cleanup', 'product-media-cleanup-status'].includes(String(body.action || '')))
+  const requiredPermission = isCatalogMutation ? 'catalog:write' : 'admins:manage'
+  const { actor, error: authError } = await authenticate(request, clients, requiredPermission)
   if (authError || !actor) return authError || jsonResponse(request, 401, { error: 'Sign in is required.' })
 
   if (request.method === 'GET') {
@@ -148,12 +249,24 @@ async function handleRequest(request: Request): Promise<Response> {
     return jsonResponse(request, 200, { admins: data || [] })
   }
 
-  let body: Record<string, unknown>
-  try {
-    body = await readJson(request)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid request body.'
-    return jsonResponse(request, 400, { error: message })
+  if (request.method === 'POST' && body.action === 'product-media-cleanup-status') {
+    const pendingCount = await countPendingProductMediaCleanup(clients.admin)
+    if (pendingCount === null) return jsonResponse(request, 503, { error: 'Product media cleanup status could not be checked.' })
+    return jsonResponse(request, 200, { pendingCount: pendingCount })
+  }
+
+  if (request.method === 'POST' && body.action === 'retry-product-media-cleanup') {
+    let pendingCount: number | null
+    if (body.productId === undefined || body.productId === '') {
+      pendingCount = await processAllProductMediaCleanup(clients.admin)
+    } else if (typeof body.productId === 'string' && UUID_PATTERN.test(body.productId)) {
+      const cleanup = await processProductMediaCleanup(clients.admin, body.productId)
+      pendingCount = cleanup.pendingCount
+    } else {
+      return jsonResponse(request, 400, { error: 'A valid product reference is required to retry media cleanup.' })
+    }
+    if (pendingCount === null) return jsonResponse(request, 503, { error: 'Product media cleanup could not be checked. Retry again shortly.' })
+    return jsonResponse(request, 200, { productDeleted: false, pendingCount: pendingCount })
   }
 
   if (request.method === 'POST') {
@@ -198,6 +311,24 @@ async function handleRequest(request: Request): Promise<Response> {
     })
     if (membershipError) return jsonResponse(request, 409, { error: rpcErrorMessage(membershipError) })
     return jsonResponse(request, 201, { invited, emailConfirmed, userId: targetUserId })
+  }
+
+  if (request.method === 'DELETE' && body.action === 'delete-product') {
+    const productId = typeof body.productId === 'string' && UUID_PATTERN.test(body.productId) ? body.productId : ''
+    if (!productId) return jsonResponse(request, 400, { error: 'A valid product reference is required.' })
+    const { data: productDeleted, error: deleteError } = await clients.admin.rpc('delete_catalog_product', {
+      p_product_id: productId,
+      p_actor_user_id: actor.id
+    })
+    if (deleteError) {
+      if (deleteError.code === '42501') return jsonResponse(request, 403, { error: 'Active product catalog permission is required to delete products.' })
+      return jsonResponse(request, 503, { error: 'The product was not deleted. The catalog deletion service may need setup or the record may have linked data that must be reviewed.' })
+    }
+    const cleanup = await processProductMediaCleanup(clients.admin, productId)
+    return jsonResponse(request, 200, {
+      productDeleted: Boolean(productDeleted),
+      pendingCount: cleanup.pendingCount
+    })
   }
 
   const userId = typeof body.userId === 'string' && UUID_PATTERN.test(body.userId) ? body.userId : ''

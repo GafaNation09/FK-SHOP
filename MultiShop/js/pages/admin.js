@@ -16,6 +16,7 @@
     let membership = null;
     let allCategories = [];
     let allProducts = [];
+    let pendingProductDelete = null;
     let productOffset = 0;
     let productTotal = 0;
     let customerOffset = 0;
@@ -435,6 +436,9 @@
                 if (product.status !== 'published') { view.setAttribute('aria-disabled', 'true'); view.title = 'Only published products are shown in the public catalog.'; view.addEventListener('click', function (event) { event.preventDefault(); }); }
                 menuItems.appendChild(view);
                 menuItems.appendChild(makeButton(product.status === 'archived' ? 'Unarchive' : 'Archive', 'toggle-archive-product', product.id, 'btn-outline-danger'));
+                const deleteButton = makeButton('Delete permanently', 'delete-product', product.id, 'btn-outline-danger');
+                deleteButton.setAttribute('aria-label', 'Permanently delete ' + (product.name || 'product'));
+                menuItems.appendChild(deleteButton);
                 menu.append(menuToggle, menuItems);
                 actions.appendChild(menu);
                 row.appendChild(actions); body.appendChild(row);
@@ -872,6 +876,83 @@
         const catalog = section && section.querySelector('[data-product-catalog-card]');
         const editor = section && section.querySelector('[data-product-editor-card]');
         if (section && catalog && editor) section.insertBefore(catalog, editor);
+    }
+
+    function showProductCleanupPending(productId, prefix, pendingCount) {
+        const suffix = pendingCount == null
+            ? ' Storage cleanup could not be confirmed yet.'
+            : ' ' + pendingCount + ' stored media file(s) still need cleanup.';
+        showStatus(prefix + suffix, 'warning');
+        if (!statusBox || !productId) return;
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'btn btn-sm btn-outline-danger ml-2';
+        retry.textContent = 'Retry media cleanup';
+        retry.setAttribute('data-retry-product-media-cleanup', productId);
+        statusBox.appendChild(retry);
+    }
+
+    async function deleteProductRecord(target) {
+        const dialog = document.querySelector('[data-product-delete-dialog]');
+        const confirmButton = document.querySelector('[data-product-delete-confirm]');
+        const feedback = document.querySelector('[data-product-delete-feedback]');
+        if (confirmButton) { confirmButton.disabled = true; confirmButton.textContent = 'Deleting…'; }
+        if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
+        showStatus('Deleting the product record and its stored media…', 'info');
+        try {
+            const result = await callAdminFunction('admin-management', 'DELETE', {
+                action: 'delete-product',
+                productId: target.id
+            });
+            if (dialog && dialog.open) dialog.close();
+            pendingProductDelete = null;
+            let refreshFailed = false;
+            try { await loadProducts(true); } catch (refreshError) { refreshFailed = true; }
+
+            const productMessage = result.productDeleted
+                ? '“' + target.name + '” was permanently removed from Supabase.'
+                : '“' + target.name + '” was already absent from the product catalog.';
+            const refreshMessage = refreshFailed ? ' The product list could not refresh; reload Products to confirm the current catalog.' : '';
+            if (result.pendingCount == null || Number(result.pendingCount) > 0) {
+                showProductCleanupPending(target.id, productMessage + refreshMessage, result.pendingCount);
+            } else {
+                showStatus(productMessage + ' Existing order/payment history was preserved.' + refreshMessage, refreshFailed ? 'warning' : 'success');
+            }
+        } catch (error) {
+            const message = productErrorDetails(error, 'action').message;
+            if (feedback) { feedback.hidden = false; feedback.textContent = message; }
+            showStatus(message, 'error');
+            if (confirmButton) { confirmButton.disabled = false; confirmButton.textContent = 'Delete permanently'; }
+        }
+    }
+
+    function requestProductDeletion(product) {
+        const target = { id: String(product.id), name: String(product.name || 'Untitled product') };
+        const dialog = document.querySelector('[data-product-delete-dialog]');
+        const name = document.querySelector('[data-product-delete-name]');
+        const input = document.querySelector('[data-product-delete-confirm-input]');
+        const button = document.querySelector('[data-product-delete-confirm]');
+        const feedback = document.querySelector('[data-product-delete-feedback]');
+        if (!dialog || typeof dialog.showModal !== 'function') {
+            if (typeof window.prompt !== 'function') {
+                showStatus('This browser cannot safely confirm permanent deletion. Use a browser with dialog/prompt support; nothing was deleted.', 'error');
+                return;
+            }
+            const typedName = window.prompt('To permanently delete “' + target.name + '” from Supabase, type the exact product name. This cannot be undone.');
+            if (typedName !== target.name) {
+                if (typedName !== null) showStatus('The product name did not match. Nothing was deleted.', 'warning');
+                return;
+            }
+            deleteProductRecord(target);
+            return;
+        }
+        pendingProductDelete = target;
+        if (name) name.textContent = target.name;
+        if (input) input.value = '';
+        if (button) button.disabled = true;
+        if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
+        dialog.showModal();
+        if (input) input.focus();
     }
 
     function safeAdminImageUrl(value) {
@@ -1560,6 +1641,14 @@
         if (tab === 'products' && isAllowed('catalog:write')) {
             await loadCategories();
             await loadProducts(true);
+            try {
+                const cleanup = await callAdminFunction('admin-management', 'POST', { action: 'product-media-cleanup-status' });
+                if (Number(cleanup.pendingCount) > 0) {
+                    showProductCleanupPending('all', 'Previously deleted product media still needs cleanup.', Number(cleanup.pendingCount));
+                }
+            } catch (error) {
+                showStatus('Pending product media cleanup could not be checked. The product catalog is still available.', 'warning');
+            }
         } else if (tab === 'categories' && isAllowed('catalog:write')) {
             await loadCategories();
         } else if (tab === 'content' && isAllowed('content:write')) {
@@ -1744,6 +1833,50 @@
                     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             });
         }
+        const deleteDialog = document.querySelector('[data-product-delete-dialog]');
+        const deleteInput = document.querySelector('[data-product-delete-confirm-input]');
+        const deleteConfirm = document.querySelector('[data-product-delete-confirm]');
+        const updateDeleteConfirmation = function () {
+            if (deleteConfirm && deleteInput) {
+                deleteConfirm.disabled = !pendingProductDelete || deleteInput.value !== pendingProductDelete.name;
+            }
+        };
+        deleteInput?.addEventListener('input', updateDeleteConfirmation);
+        document.querySelector('[data-product-delete-cancel]')?.addEventListener('click', function () {
+            if (deleteDialog && deleteDialog.open) deleteDialog.close();
+            pendingProductDelete = null;
+        });
+        deleteDialog?.addEventListener('close', function () {
+            pendingProductDelete = null;
+            if (deleteInput) deleteInput.value = '';
+            if (deleteConfirm) { deleteConfirm.disabled = true; deleteConfirm.textContent = 'Delete permanently'; }
+        });
+        deleteConfirm?.addEventListener('click', async function () {
+            const target = pendingProductDelete;
+            if (!target || !deleteInput || deleteInput.value !== target.name) return;
+            await deleteProductRecord(target);
+        });
+        statusBox?.addEventListener('click', async function (event) {
+            const button = event.target && event.target.closest ? event.target.closest('[data-retry-product-media-cleanup]') : null;
+            if (!button) return;
+            const productId = button.getAttribute('data-retry-product-media-cleanup');
+            button.disabled = true;
+            showStatus('Retrying stored media cleanup…', 'info');
+            try {
+                const payload = {
+                    action: 'retry-product-media-cleanup',
+                };
+                if (productId !== 'all') payload.productId = productId;
+                const result = await callAdminFunction('admin-management', 'POST', payload);
+                if (Number(result.pendingCount) > 0 || result.pendingCount == null) {
+                    showProductCleanupPending(productId, 'The product itself remains deleted.', result.pendingCount);
+                } else {
+                    showStatus('Product media cleanup completed. The product remains permanently deleted.', 'success');
+                }
+            } catch (error) {
+                showProductCleanupPending(productId, productErrorDetails(error, 'action').message, null);
+            }
+        });
         document.querySelector('[data-customers-more]')?.addEventListener('click', async function () { try { await loadCustomers(false); } catch (error) { showStatus(error.message || 'Customers could not be loaded.', 'error'); } });
         document.querySelector('[data-products-more]')?.addEventListener('click', async function () { try { await loadProducts(false); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); } });
         document.querySelector('[data-product-filter-apply]')?.addEventListener('click', async function () { try { await loadProducts(true); } catch (error) { showStatus(productErrorDetails(error, 'load').message, 'error'); } });
@@ -1855,6 +1988,10 @@
             if (!product) return;
             try {
                 const action = button.getAttribute('data-action');
+                if (action === 'delete-product') {
+                    requestProductDeletion(product);
+                    return;
+                }
                 if (action === 'edit-product' || action === 'edit-product-stock' || action === 'edit-product-media') {
                     const currentRecord = await retrieveProductForEdit(product.id);
                     allProducts = allProducts.filter(function (item) { return item.id !== currentRecord.id; });

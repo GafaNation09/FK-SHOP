@@ -7,6 +7,8 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 const html = await readFile(resolve(root, 'MultiShop/admin/index.html'), 'utf8');
 const js = await readFile(resolve(root, 'MultiShop/js/pages/admin.js'), 'utf8');
 const css = await readFile(resolve(root, 'MultiShop/css/auth-admin.css'), 'utf8');
+const edge = await readFile(resolve(root, 'supabase/functions/admin-management/index.ts'), 'utf8');
+const deleteMigration = await readFile(resolve(root, 'supabase/migrations/20261119195000_product_permanent_delete.sql'), 'utf8');
 
 const metrics = [
   'products', 'out-of-stock', 'limited-stock', 'categories', 'customers',
@@ -104,9 +106,52 @@ assert.match(js, /query\.contains\('ordering_modes',\s*\[typeFilter\]\)/, 'produ
 assert.match(js, /query\.gt\('stock_quantity',\s*0\)/, 'in-stock filter must use inventory data server-side');
 assert.match(js, /stockFilter === 'out_of_stock'[\s\S]*?stockFilter === 'limited_stock'[\s\S]*?stockFilter === 'in_stock'/, 'stock filtering must be independent from publication status');
 assert.match(js, /stock_asc:[\s\S]*?stock_desc:[\s\S]*?status_asc:/, 'catalog sorting must support both stock directions and publication status');
-for (const action of ["makeButton('Edit', 'edit-product'", "makeButton('Update stock', 'edit-product-stock'", "makeButton('Manage media', 'edit-product-media'", "'toggle-publish-product'", "'toggle-archive-product'"]) {
+for (const action of ["makeButton('Edit', 'edit-product'", "makeButton('Update stock', 'edit-product-stock'", "makeButton('Manage media', 'edit-product-media'", "'toggle-publish-product'", "'toggle-archive-product'", "makeButton('Delete permanently', 'delete-product'"]) {
   assert.ok(js.includes(action), 'each product row must provide the ' + action + ' action');
 }
+assert.match(html, /<dialog[^>]*data-product-delete-dialog/, 'permanent removal must use an accessible confirmation dialog');
+assert.match(html, /data-product-delete-confirm-input/, 'permanent removal must require typing the exact product name');
+assert.match(html, /data-product-delete-confirm disabled/, 'permanent removal must stay disabled before confirmation');
+assert.match(html, /Customer accounts, orders, payments and saved order details will remain/, 'confirmation must explain which customer and transaction data is preserved');
+assert.match(js, /deleteInput\.value !== target\.name/, 'product removal must require the exact product name');
+assert.match(js, /window\.prompt\([\s\S]*?typedName !== target\.name/, 'browsers without a native dialog must also require the exact product name');
+assert.doesNotMatch(js, /window\.confirm\(message\)\) deleteProductRecord/, 'a simple Yes/No prompt must not bypass typed confirmation');
+assert.match(js, /callAdminFunction\('admin-management', 'DELETE',\s*\{\s*action: 'delete-product'/, 'product removal must use the trusted Edge Function');
+assert.match(js, /action: 'retry-product-media-cleanup'/, 'an administrator must be able to retry failed media cleanup after the product row is gone');
+assert.match(js, /action: 'product-media-cleanup-status'/, 'pending cleanup jobs must be rediscovered when opening Products after a refresh');
+assert.match(js, /data-retry-product-media-cleanup/, 'pending cleanup must expose an actionable retry control');
+assert.match(edge, /isCatalogMutation[\s\S]*?requiredPermission = isCatalogMutation \? 'catalog:write'/, 'product deletion and cleanup retry must require catalog-write authorization');
+assert.match(edge, /rpc\('delete_catalog_product'/, 'the Edge Function must invoke the database transaction rather than directly deleting the row');
+assert.match(edge, /async function processAllProductMediaCleanup[\s\S]*?processProductMediaCleanup/, 'a pending cleanup can be retried after a page reload without its original product row');
+assert.match(edge, /function isSafeProductMediaPath[\s\S]*?kcbf-product-media[\s\S]*?startsWith\(productId \+ '\//, 'Storage cleanup must be limited to the deleted product folder and approved bucket');
+assert.match(edge, /processProductMediaCleanup[\s\S]*?\.remove\(paths\)/, 'queued image/video objects must be removed using the trusted Storage client');
+assert.match(deleteMigration, /revoke delete on table public\.products from anon, authenticated/i, 'browser roles must not bypass the queued permanent-delete workflow');
+assert.match(deleteMigration, /product_media_cleanup_queue/, 'database deletion must persist failed Storage cleanup for retry');
+assert.match(deleteMigration, /auth\.role\(\)[\s\S]*?service_role/, 'the database deletion function must accept only the trusted service role');
+assert.match(deleteMigration, /item\.product_id = p_product_id/, 'all photos for a product with a linked order snapshot must be preserved before product_id is nulled');
+assert.match(deleteMigration, /regexp_match\(\s*item\.photo_url[\s\S]*?regexp_match\(\s*image\.image_url/, 'photo references must compare normalized Storage paths rather than exact full URL strings');
+assert.match(deleteMigration, /strpos\(item\.photo_url, p_product_id::text\)/, 'historical photo references with variant URL encoding must be preserved conservatively');
+assert.match(deleteMigration, /order_items[\s\S]*?set product_id to NULL while retaining their purchased-item snapshots/i, 'the database migration must document preservation of order snapshots');
+const safeStoragePathSource = extractFunction(edge, 'isSafeProductMediaPath').replace('(productId: string, bucketId: unknown, objectPath: unknown): objectPath is string', '(productId, bucketId, objectPath)');
+const safeStoragePath = runInNewContext(safeStoragePathSource + '\nisSafeProductMediaPath');
+const testProductId = '2afddf84-2368-4abe-aadf-430db0a19d73';
+let typedDeleteName = 'not the product name';
+const deleteAttempts = [];
+const deleteFallback = runInNewContext(extractFunction(js, 'requestProductDeletion') + '\nrequestProductDeletion', {
+  document: { querySelector() { return null; } },
+  window: { prompt() { return typedDeleteName; } },
+  showStatus() {},
+  deleteProductRecord(target) { deleteAttempts.push({ id: target.id, name: target.name }); }
+});
+deleteFallback({ id: testProductId, name: 'Example Crochet Basket' });
+assert.equal(deleteAttempts.length, 0, 'a wrong typed product name must leave the product untouched');
+typedDeleteName = 'Example Crochet Basket';
+deleteFallback({ id: testProductId, name: 'Example Crochet Basket' });
+assert.deepEqual(deleteAttempts, [{ id: testProductId, name: 'Example Crochet Basket' }], 'only an exact typed product name may start permanent deletion');
+assert.equal(safeStoragePath(testProductId, 'kcbf-product-media', testProductId + '/photo.webp'), true, 'the deleted product’s own media path should be safe');
+assert.equal(safeStoragePath(testProductId, 'kcbf-product-media', 'other-product/photo.webp'), false, 'cleanup must reject media owned by another product');
+assert.equal(safeStoragePath(testProductId, 'kcbf-product-media', testProductId + '/../private/key'), false, 'cleanup must reject path traversal');
+assert.equal(safeStoragePath(testProductId, 'other-bucket', testProductId + '/photo.webp'), false, 'cleanup must reject any bucket except the product media bucket');
 assert.match(js, /view\.href = '\.\.\/product\/'/, 'product preview must link to the real public detail route');
 assert.match(js, /query\.eq\('category_id'/, 'category filtering must be performed server-side');
 assert.match(js, /query\.eq\('order_status'/, 'order lifecycle filters must be performed server-side');

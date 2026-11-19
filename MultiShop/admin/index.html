@@ -157,6 +157,18 @@
                             <div class="kcbf-admin-table-wrap"><table class="table table-striped kcbf-admin-table kcbf-admin-products-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock / availability</th><th>Type / status</th><th>Dates</th><th>Actions</th></tr></thead><tbody data-products-table></tbody></table></div>
                             <button class="btn btn-outline-dark" type="button" data-products-more hidden>Load more products</button>
                         </div></div>
+                        <dialog class="kcbf-product-delete-dialog" data-product-delete-dialog aria-labelledby="product-delete-title" aria-describedby="product-delete-description">
+                            <h2 class="h5" id="product-delete-title">Permanently delete product?</h2>
+                            <p class="mb-2">You are deleting <strong data-product-delete-name></strong> from the catalog and Supabase. Product photos and videos will also be removed unless a photo is needed by an existing order snapshot. Cart and favourite references to this product will be removed. Customer accounts, orders, payments and saved order details will remain. This cannot be undone.</p>
+                            <p class="small text-muted" id="product-delete-description">Type the exact product name below to enable permanent deletion.</p>
+                            <label for="product-delete-confirm-input">Product name confirmation</label>
+                            <input class="form-control" id="product-delete-confirm-input" type="text" autocomplete="off" data-product-delete-confirm-input>
+                            <p class="small text-danger mt-2 mb-0" data-product-delete-feedback role="alert" hidden></p>
+                            <div class="kcbf-product-delete-actions mt-3">
+                                <button class="btn btn-outline-dark" type="button" data-product-delete-cancel>Cancel</button>
+                                <button class="btn btn-danger" type="button" data-product-delete-confirm disabled>Delete permanently</button>
+                            </div>
+                        </dialog>
                     </section>
 
                     <section class="kcbf-admin-section" data-admin-section="categories" hidden>
