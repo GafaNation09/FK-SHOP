@@ -8,7 +8,7 @@ const html = await readFile(resolve(root, 'MultiShop/admin/index.html'), 'utf8')
 const js = await readFile(resolve(root, 'MultiShop/js/pages/admin.js'), 'utf8');
 const css = await readFile(resolve(root, 'MultiShop/css/auth-admin.css'), 'utf8');
 const edge = await readFile(resolve(root, 'supabase/functions/admin-management/index.ts'), 'utf8');
-const deleteMigration = await readFile(resolve(root, 'supabase/migrations/20261119195000_product_permanent_delete.sql'), 'utf8');
+const deleteMigration = await readFile(resolve(root, 'supabase/migrations/20261119185826_product_permanent_delete.sql'), 'utf8');
 
 const metrics = [
   'products', 'out-of-stock', 'limited-stock', 'categories', 'customers',
