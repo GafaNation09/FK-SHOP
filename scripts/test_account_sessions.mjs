@@ -24,7 +24,7 @@ function createElement(attributes = {}) {
     };
 }
 
-async function loadAccount({ session = null, membership = null, membershipError = null, loginSession = null, search = '', googleEnabled = false } = {}) {
+async function loadAccount({ session = null, membership = null, membershipError = null, loginSession = null, search = '', googleEnabled = false, signUpError = null, recoveryError = null } = {}) {
     const forms = Object.fromEntries(['signin', 'signup', 'recovery', 'update-password'].map((kind) => {
         const submitButton = createElement();
         const form = createElement({ 'data-auth-form': kind });
@@ -61,8 +61,8 @@ async function loadAccount({ session = null, membership = null, membershipError 
             onAuthStateChange(callback) { authCallbacks.push(callback); return { data: { subscription: { unsubscribe() {} } } }; },
             async signInWithPassword() { return { data: { session: loginSession }, error: null }; },
             async signInWithOAuth(options) { oauthCalls.push(options); return { data: {}, error: null }; },
-            async signUp() { return { data: { session: null }, error: null }; },
-            async resetPasswordForEmail() { return { error: null }; },
+            async signUp() { return { data: { session: null }, error: signUpError }; },
+            async resetPasswordForEmail() { return { error: recoveryError }; },
             async updateUser() { return { error: null }; },
             async signOut() { return { error: null }; }
         },
@@ -123,6 +123,23 @@ assert.equal(guest.guestCard.hidden, false, 'logged-out users should see the gue
 assert.equal(guest.sessionCard.hidden, true, 'logged-out users should not see the signed-in panel');
 assert.equal(guest.signout.hidden, true, 'logged-out users should not see sign out');
 assert.equal(guest.googleAuth.hidden, true, 'Google OAuth stays hidden until Supabase confirms the provider is enabled');
+assert.match(guest.status.textContent, /Email confirmation is required/);
+assert.doesNotMatch(guest.status.textContent, /verified SMTP sender/, 'startup status should not claim SMTP is missing from a client-side check');
+
+const rateLimitedSignup = await loadAccount({ signUpError: { message: 'Email rate limit exceeded' } });
+rateLimitedSignup.forms.signup.values = { email: 'customer@example.test', password: 'A sufficiently long password!', confirmPassword: 'A sufficiently long password!', fullName: 'Test Customer' };
+await rateLimitedSignup.forms.signup.listeners.submit({ preventDefault() {} });
+assert.match(rateLimitedSignup.status.textContent, /provider rate limit was reached/);
+
+const unauthorizedRecovery = await loadAccount({ recoveryError: { message: 'Email address not authorized' } });
+unauthorizedRecovery.forms.recovery.values = { email: 'customer@example.test' };
+await unauthorizedRecovery.forms.recovery.listeners.submit({ preventDefault() {} });
+assert.match(unauthorizedRecovery.status.textContent, /default email service does not authorize this recipient/);
+
+const smtpRecovery = await loadAccount({ recoveryError: { message: 'SMTP connection failed' } });
+smtpRecovery.forms.recovery.values = { email: 'customer@example.test' };
+await smtpRecovery.forms.recovery.listeners.submit({ preventDefault() {} });
+assert.match(smtpRecovery.status.textContent, /could not send this email through SMTP/);
 
 const googleGuest = await loadAccount({ googleEnabled: true });
 assert.equal(googleGuest.googleAuth.hidden, false, 'Google OAuth is offered when the provider is enabled');

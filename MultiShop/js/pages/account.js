@@ -95,7 +95,9 @@
         const message = String(error.message || '');
         if (/invalid login credentials/i.test(message)) return 'Email or password is incorrect.';
         if (/email not confirmed/i.test(message)) return 'Confirm your email address using the link we sent before signing in.';
-        if (/email address not authorized|email.*rate limit|smtp/i.test(message)) return 'The confirmation or recovery email could not be delivered to this address yet. The store needs a verified SMTP sender for customer emails; please try again after email delivery is configured.';
+        if (/email.*rate limit|too many email/i.test(message)) return 'Supabase Auth blocked this email request because the current provider rate limit was reached. Wait before retrying; production delivery needs a verified SMTP sender.';
+        if (/email address not authorized|recipient.*not authorized/i.test(message)) return 'Supabase’s default email service does not authorize this recipient. A verified production SMTP sender is required.';
+        if (/\bsmtp\b/i.test(message)) return 'Supabase Auth could not send this email through SMTP. Check the configured SMTP host, port, credentials, TLS, and verified sender in the Auth logs.';
         if (/password/i.test(message) && /weak|short|length/i.test(message)) return 'Choose a stronger password and try again.';
         return message || 'The request could not be completed. Please try again.';
     }
@@ -105,7 +107,7 @@
             form.querySelectorAll('button[type="submit"]').forEach(function (button) { button.disabled = !enabled; });
         });
         if (!enabled) showStatus('Account services are not connected yet. No account information was sent or saved. Please try again after secure project configuration.', 'info');
-        else showStatus('Account services are connected and email confirmation is required. Public customer confirmation and recovery emails still need a verified SMTP sender.', 'info');
+        else showStatus('Account services are connected. Email confirmation is required for new customer accounts.', 'info');
     }
 
     async function isActiveAdministrator(userId) {

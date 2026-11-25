@@ -223,3 +223,14 @@ The Supabase project `bifvzlqeznyhbwoxkgvq` has the additive `product_videos` ta
 - [ ] Payment tables exist but checkout/payment capture remain disabled pending provider details, secure credentials, delivery rules and verified server callbacks. Atomic stock decrement/ledger/oversell prevention, custom quotations/reference uploads, SMTP, analytics/exports and migration reconciliation remain outstanding.
 
 Overall acceptance of the full prompt remains **NOT COMPLETE**. See [`docs/deployment-status.md`](docs/deployment-status.md) and [`docs/master-prompt-progress.md`](docs/master-prompt-progress.md).
+
+
+## 2026-11-25 — Production Auth email delivery and owner admin access (partial)
+- [x] Confirmed Supabase project `sdsiahwkxisvfayvkbkf` keeps email confirmation enabled (`mailer_autoconfirm: false`); production Site URL and account callback are saved and verified. Signup and recovery use production account-page callbacks, and the JWT-protected `admin-management` function uses the production invite callback.
+- [x] Inspected the existing intended owner Auth account before any membership change; no duplicate account was created. Bootstrapped the existing confirmed owner through the repository’s guarded, audited backend function as the initial active Super Admin. The grant and `admins:manage` permission were verified; no password was viewed or attempted.
+- [x] Replaced the account page’s conflated SMTP error with distinct rate-limit, unauthorized-recipient, and SMTP-transport messages; added focused regression tests. Full existing JavaScript tests, `scripts/validate_stage1.py`, and `git diff --check` passed.
+- [x] Prepared branded, mobile-friendly Supabase confirmation, password-reset, and admin-invite templates using `{{ .ConfirmationURL }}` and production-safe redirects in `docs/auth-email-templates.md`. The templates are **not applied** because Supabase locks template editing until custom SMTP is enabled.
+- [ ] **BLOCKED — SMTP setup:** owner must configure a legitimate business-controlled sender/domain and a provider-verified SMTP account in Supabase Auth → Emails → SMTP Settings. Keep provider credentials in the provider/Supabase settings only; do not send them in chat or add them to frontend/GitHub/logs. Do not disable email confirmation.
+- [ ] After custom SMTP is ready, apply the prepared templates; verify real inbox/spam receipt, provider and Supabase Auth outcomes, signup confirmation, recovery, invitation, production callbacks, expired/invalid links, existing-owner sign-in/admin portal, and permission boundaries. Mark any flow not exercised **NOT TESTED**; no real delivery or owner portal login has been tested in this continuation.
+
+Overall production email/admin recovery remains **NOT COMPLETE** until the owner-controlled SMTP setup and the above real end-to-end checks are completed.
