@@ -165,8 +165,16 @@
     }
 
     function updateBadges() {
-        const cartCount = currentCart().reduce(function (total, entry) { return total + entry.quantity; }, 0);
-        const wishCount = currentWishlist().length;
+        const cartCount = currentCart().reduce(function (total, entry) {
+            const product = appData && findProduct(appData, entry.id);
+            if (appData && (!product || product.status !== 'published' || productPrice(product) === null)) return total;
+            const limit = product ? cartLimit(product) : entry.quantity;
+            return total + (limit > 0 ? Math.min(entry.quantity, limit) : 0);
+        }, 0);
+        const wishCount = currentWishlist().filter(function (entry) {
+            const product = appData && findProduct(appData, entry.id);
+            return !appData || Boolean(product && product.status === 'published');
+        }).length;
         document.querySelectorAll('[data-cart-count]').forEach(function (node) { node.textContent = String(cartCount); });
         document.querySelectorAll('[data-wishlist-count]').forEach(function (node) { node.textContent = String(wishCount); });
     }
@@ -503,6 +511,7 @@
         const version = ++activationVersion;
         activeUserId = nextUserId;
         updateBadges();
+        renderCurrentViews();
         setPersistenceMessage();
         if (!activeUserId || !client) {
             renderCurrentViews();

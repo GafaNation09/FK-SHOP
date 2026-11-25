@@ -163,9 +163,20 @@ await settle();
 assert.deepEqual(second.window.KCBF.commerce.readCart(), [], 'sign-out must stop exposing the account cart and show only guest storage');
 assert.deepEqual(second.window.KCBF.commerce.readWishlist(), [], 'sign-out must stop exposing the account favourites and show only guest storage');
 
-await second.window.KCBF.commerce.activateUser(secondUserId);
+const accountSwitch = second.window.KCBF.commerce.activateUser(secondUserId);
+assert.doesNotMatch(second.cartBody.innerHTML, /Blue pouch|Green pouch/, 'the prior account cart is removed from the page immediately on account switch');
+assert.doesNotMatch(second.wishlistGrid.innerHTML, /Blue pouch|Green pouch/, 'the prior account favourites are removed from the page immediately on account switch');
+await accountSwitch;
 await settle();
 assert.deepEqual(second.window.KCBF.commerce.readCart(), [], 'a different signed-in account must not see the first account cart');
 assert.deepEqual(second.window.KCBF.commerce.readWishlist(), [], 'a different signed-in account must not see the first account favourites');
+
+product.status = 'draft';
+await second.window.KCBF.commerce.activateUser(userId);
+assert.equal(second.badges.cart.textContent, '1', 'cart badge counts only the item visible on the cart page');
+assert.equal(second.badges.wishlist.textContent, '1', 'favourites badge counts only published items visible on the favourites page');
+assert.doesNotMatch(second.wishlistGrid.innerHTML, /Blue pouch/, 'unpublished products remain hidden from favourites');
+assert.equal(second.window.KCBF.commerce.readWishlist().length, 2, 'hiding an unpublished favorite does not delete the customer’s saved record');
+product.status = 'published';
 
 console.log('PASS: account-scoped cart/favourites sync across isolated browsers and clears from the visible state on sign-out');
