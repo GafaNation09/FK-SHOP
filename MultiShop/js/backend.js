@@ -77,6 +77,15 @@
                 });
                 api.backendConfig = { supabaseUrl: projectUrl.origin };
                 api.backendState = { status: 'ready', detail: '' };
+                api.authProviderSettings = fetch(new URL('/auth/v1/settings', projectUrl.origin).toString(), {
+                    headers: { apikey: keyValue, Accept: 'application/json' },
+                    cache: 'no-store'
+                }).then(function (response) {
+                    if (!response.ok) return {};
+                    return response.json();
+                }).then(function (settings) {
+                    return settings && settings.external && typeof settings.external === 'object' ? settings.external : {};
+                }).catch(function () { return {}; });
                 document.documentElement.setAttribute('data-backend-status', 'ready');
                 return api.supabase;
             });

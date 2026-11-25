@@ -13,9 +13,13 @@
     const sessionCopy = document.querySelector('[data-auth-session-copy]');
     const statusBox = document.querySelector('[data-auth-status]');
     const signoutButton = document.querySelector('[data-auth-signout]');
+    const googleAuth = document.querySelector('[data-google-auth]');
+    const googleButton = document.querySelector('[data-google-signin]');
     let supabase = null;
     let recoveryActive = false;
     let redirecting = false;
+    let googleEnabled = false;
+    let currentMode = 'signin';
 
     function showStatus(message, kind) {
         if (!statusBox) return;
@@ -33,12 +37,14 @@
 
     function setMode(mode) {
         const selected = mode === 'update-password' ? 'update-password' : mode;
+        currentMode = selected;
         panels.forEach(function (panel) { panel.hidden = panel.getAttribute('data-auth-panel') !== selected; });
         modeButtons.forEach(function (button) {
             const active = button.getAttribute('data-auth-mode') === selected;
             button.classList.toggle('active', active);
             button.setAttribute('aria-selected', String(active));
         });
+        if (googleAuth) googleAuth.hidden = !googleEnabled || selected === 'recovery' || selected === 'update-password';
     }
 
     function setSignedIn(signedIn, inRecoveryFlow) {
@@ -192,6 +198,12 @@
         setConfigured(true);
         subscribeToAuthEvents();
 
+        const providerSettings = api.authProviderSettings && typeof api.authProviderSettings.then === 'function'
+            ? await api.authProviderSettings
+            : {};
+        googleEnabled = Boolean(providerSettings && providerSettings.google === true);
+        setMode(currentMode);
+
         const query = new URLSearchParams(window.location.search);
         if (query.get('mode') === 'signup' || query.get('mode') === 'recovery') setMode(query.get('mode'));
         if (query.get('signedOut') === '1') {
@@ -210,6 +222,12 @@
         }
         const session = sessionData && sessionData.session;
 
+        if (!session && (query.has('error') || query.has('error_description'))) {
+            setSignedIn(false, false);
+            showStatus('Google sign-in was canceled or could not be completed. Please try again.', 'error');
+            return;
+        }
+
         if (query.get('flow') === 'recovery') {
             if (session) {
                 recoveryActive = true;
@@ -227,8 +245,15 @@
         if (session) {
             const redirected = await routeAuthenticatedSession(session);
             if (redirected) return;
+            if (query.get('oauth') === 'google' && session.user.email_confirmed_at) {
+                showStatus('Google sign-in succeeded. Your account is signed in.', 'success');
+            }
         } else {
             setSignedIn(false, false);
+            if (query.get('oauth') === 'google') {
+                showStatus('Google sign-in did not establish a session. Please try again.', 'error');
+                return;
+            }
         }
 
         if (query.get('confirmed') === '1') {
@@ -312,6 +337,30 @@
                 setBusy(form, false);
             }
         });
+    });
+
+    googleButton?.addEventListener('click', async function () {
+        if (!supabase || !googleEnabled) {
+            showStatus('Google sign-in is not configured for this store yet.', 'error');
+            return;
+        }
+        googleButton.disabled = true;
+        googleButton.setAttribute('aria-busy', 'true');
+        showStatus('', 'info');
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: accountUrl('?oauth=google'),
+                    queryParams: { prompt: 'select_account' }
+                }
+            });
+            if (error) throw error;
+        } catch (error) {
+            showStatus('Google sign-in could not start. Please try again or use email sign-in.', 'error');
+            googleButton.disabled = false;
+            googleButton.removeAttribute('aria-busy');
+        }
     });
 
     signoutButton?.addEventListener('click', async function () {

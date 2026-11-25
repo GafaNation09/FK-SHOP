@@ -24,7 +24,7 @@ function createElement(attributes = {}) {
     };
 }
 
-async function loadAccount({ session = null, membership = null, membershipError = null, loginSession = null, search = '' } = {}) {
+async function loadAccount({ session = null, membership = null, membershipError = null, loginSession = null, search = '', googleEnabled = false } = {}) {
     const forms = Object.fromEntries(['signin', 'signup', 'recovery', 'update-password'].map((kind) => {
         const submitButton = createElement();
         const form = createElement({ 'data-auth-form': kind });
@@ -41,8 +41,11 @@ async function loadAccount({ session = null, membership = null, membershipError 
     const modeTabs = createElement();
     const status = createElement({ hidden: true });
     const signout = createElement({ hidden: true });
+    const googleAuth = createElement({ hidden: true });
+    const googleButton = createElement();
     const url = new URL('https://fkshopping.netlify.app/multishop/account.html' + search);
     const redirects = [];
+    const oauthCalls = [];
     const location = {
         href: url.toString(),
         origin: url.origin,
@@ -57,6 +60,7 @@ async function loadAccount({ session = null, membership = null, membershipError 
             async getSession() { return { data: { session }, error: null }; },
             onAuthStateChange(callback) { authCallbacks.push(callback); return { data: { subscription: { unsubscribe() {} } } }; },
             async signInWithPassword() { return { data: { session: loginSession }, error: null }; },
+            async signInWithOAuth(options) { oauthCalls.push(options); return { data: {}, error: null }; },
             async signUp() { return { data: { session: null }, error: null }; },
             async resetPasswordForEmail() { return { error: null }; },
             async updateUser() { return { error: null }; },
@@ -78,7 +82,9 @@ async function loadAccount({ session = null, membership = null, membershipError 
         '[data-auth-guest-copy]': guestCopy,
         '[data-auth-session-copy]': sessionCopy,
         '[data-auth-status]': status,
-        '[data-auth-signout]': signout
+        '[data-auth-signout]': signout,
+        '[data-google-auth]': googleAuth,
+        '[data-google-signin]': googleButton
     };
     const document = {
         querySelector(selector) { return selectorMap[selector] || null; },
@@ -98,7 +104,7 @@ async function loadAccount({ session = null, membership = null, membershipError 
             location.pathname = updated.pathname;
         } },
         setTimeout(callback) { callback(); return 0; },
-        KCBF: { backendReady: Promise.resolve(client) }
+        KCBF: { backendReady: Promise.resolve(client), authProviderSettings: Promise.resolve({ google: googleEnabled }) }
     };
     class FakeFormData {
         constructor(form) { this.form = form; }
@@ -108,15 +114,29 @@ async function loadAccount({ session = null, membership = null, membershipError 
     vm.runInContext(source, context, { filename: 'account.js' });
     await client.auth.getSession();
     await new Promise((resolveTick) => setImmediate(resolveTick));
-    return { forms, panels, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, redirects, authCallbacks, location };
+    return { forms, panels, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, googleAuth, googleButton, redirects, oauthCalls, authCallbacks, location };
 }
 
 const guest = await loadAccount();
+const customerSession = { user: { id: 'customer-1', email_confirmed_at: '2026-01-01T00:00:00Z' } };
 assert.equal(guest.guestCard.hidden, false, 'logged-out users should see the guest forms');
 assert.equal(guest.sessionCard.hidden, true, 'logged-out users should not see the signed-in panel');
 assert.equal(guest.signout.hidden, true, 'logged-out users should not see sign out');
+assert.equal(guest.googleAuth.hidden, true, 'Google OAuth stays hidden until Supabase confirms the provider is enabled');
 
-const customerSession = { user: { id: 'customer-1', email_confirmed_at: '2026-01-01T00:00:00Z' } };
+const googleGuest = await loadAccount({ googleEnabled: true });
+assert.equal(googleGuest.googleAuth.hidden, false, 'Google OAuth is offered when the provider is enabled');
+await googleGuest.googleButton.listeners.click();
+assert.equal(googleGuest.oauthCalls[0].provider, 'google');
+assert.equal(googleGuest.oauthCalls[0].options.redirectTo, 'https://fkshopping.netlify.app/multishop/account.html?oauth=google');
+assert.equal(googleGuest.oauthCalls[0].options.queryParams.prompt, 'select_account');
+
+const oauthFailure = await loadAccount({ search: '?error=access_denied&error_description=cancelled' });
+assert.match(oauthFailure.status.textContent, /Google sign-in was canceled or could not be completed/);
+
+const oauthSuccess = await loadAccount({ session: customerSession, search: '?oauth=google' });
+assert.match(oauthSuccess.status.textContent, /Google sign-in succeeded/);
+
 const customer = await loadAccount({ session: customerSession, search: '?returnTo=%2Fmultishop%2Fadmin%2F' });
 assert.equal(customer.guestCard.hidden, true, 'a signed-in customer should not see sign-in/signup tabs');
 assert.equal(customer.sessionCard.hidden, false, 'a signed-in customer should see the customer session panel');

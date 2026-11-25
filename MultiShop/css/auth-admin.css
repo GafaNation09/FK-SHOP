@@ -15,6 +15,42 @@
     border-color: #e6e1d8 #e6e1d8 #fff;
 }
 
+.kcbf-google-auth[hidden] {
+    display: none !important;
+}
+
+.kcbf-google-auth .btn {
+    background: #fff;
+    border-color: #d8d4cc;
+}
+
+.kcbf-google-auth .btn:hover,
+.kcbf-google-auth .btn:focus-visible {
+    background: #f8f7f4;
+    border-color: #a9a196;
+}
+
+.kcbf-google-auth .fa-google {
+    color: #4285f4;
+}
+
+.kcbf-auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    color: #706a61;
+    font-size: 0.8rem;
+}
+
+.kcbf-auth-divider::before,
+.kcbf-auth-divider::after {
+    height: 1px;
+    flex: 1;
+    content: '';
+    background: #e6e1d8;
+}
+
 .kcbf-auth-card .form-control,
 .kcbf-admin-card .form-control,
 .kcbf-admin-card .custom-select {
