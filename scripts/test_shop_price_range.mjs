@@ -19,8 +19,8 @@ const selectors = [
   '[data-active-filter-count]', '[data-active-filters]', '[data-shop-search]', '[data-filter-clear-top]', '[data-shop-breadcrumb-shop]', '[data-shop-breadcrumb-current]'
 ];
 const nodes = new Map(selectors.map((selector) => [selector, {
-  value: '', min: '0', max: '200', innerHTML: '', textContent: '', attributes: {},
-  querySelectorAll() { return []; }, addEventListener() {},
+  value: '', min: '0', max: '200', innerHTML: '', textContent: '', attributes: {}, listeners: {},
+  querySelectorAll() { return []; }, addEventListener(name, callback) { this.listeners[name] = callback; },
   setAttribute(name, value) { this.attributes[name] = String(value); },
   getAttribute(name) { return this.attributes[name] || null; },
   classList: { toggle() {} }
@@ -77,6 +77,8 @@ const products = [
   { id: 'b', slug: 'shawl', name: 'Shawl', status: 'published', priceKes: 200, availability: 'available', categorySlug: 'accessories', orderingModes: ['made_to_order'], colors: ['Blue'], sizes: ['M'] },
   { id: 'c', slug: 'custom', name: 'Custom quote', status: 'published', priceKes: null, requiresQuote: true }
 ];
+let placeholderCalls = 0;
+const emptyStateMessages = [];
 const api = {
   ready: Promise.resolve({ products, categories: [{ name: 'Accessories', slug: 'accessories', status: 'active' }], settings: { shop: { price_filter_min_kes: 0, price_filter_max_kes: 10000 } } }),
   availableProducts(data) { return data.products; },
@@ -84,8 +86,8 @@ const api = {
   productCategorySlug(product) { return product.categorySlug || ''; },
   escapeHtml(value) { return String(value); },
   renderProductCard(product, column) { return '<div class="' + (column || '') + '">' + product.name + '</div>'; },
-  renderProductPlaceholders() { return ''; },
-  renderEmptyState() { return '<div>empty</div>'; }
+  renderProductPlaceholders() { placeholderCalls += 1; return '<div>dummy placeholder</div>'; },
+  renderEmptyState(message) { emptyStateMessages.push(message); return '<div>' + message + '</div>'; }
 };
 const localStorage = new Map();
 const window = {
@@ -121,6 +123,7 @@ assert.match(nodes.get('[data-facet="availability"]').innerHTML, /value="contact
 assert.equal(min.min, '0');
 assert.equal(max.max, '10000');
 assert.equal(grid.getAttribute('data-view-mode'), 'grid');
+assert.equal(placeholderCalls, 0, 'published products render without placeholder cards');
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 assert.match(grid.innerHTML, /col-6/, 'Shop cards retain two columns even below the Bootstrap sm breakpoint');
@@ -217,4 +220,10 @@ assert.equal(max.value, max.max);
 assert.match(grid.innerHTML, /Pouch/);
 assert.match(grid.innerHTML, /Shawl/);
 
-console.log('PASS: Shop facets/counts, mobile drawer accessibility, apply/chips/Clear All, KES range, price boundaries and grid/list modes');
+products.splice(0, products.length);
+nodes.get('[data-shop-search]').listeners.input();
+assert.match(grid.innerHTML, /No products available yet\./, 'an empty published catalog shows the Shop empty state');
+assert.equal(placeholderCalls, 0, 'an empty catalog never renders dummy product cards');
+assert.equal(emptyStateMessages.at(-1), 'No products available yet.');
+
+console.log('PASS: Shop empty state, published product rendering, facets/counts, mobile drawer accessibility, apply/chips/Clear All, KES range, price boundaries and grid/list modes');

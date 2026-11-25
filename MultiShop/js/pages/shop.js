@@ -335,7 +335,7 @@
             const shopColumn = 'col-6 col-lg-4 col-md-6 pb-1';
             if (grid) {
                 if (pageItems.length) grid.innerHTML = pageItems.map(function (product) { return api.renderProductCard(product, shopColumn); }).join('');
-                else if (!published.length && !params.get('q') && !initialCategory) grid.innerHTML = api.renderProductPlaceholders(pageSize, 'Shop product', shopColumn);
+                else if (!published.length && !params.get('q') && !initialCategory) grid.innerHTML = api.renderEmptyState('No products available yet.');
                 else grid.innerHTML = api.renderEmptyState('No products match this search yet.', published.length
                     ? 'Try clearing a filter or changing the search terms.'
                     : 'The catalog is empty until approved product records and genuine photos are added.');
