@@ -33,14 +33,20 @@
         if (featuredGrid) {
             featuredGrid.innerHTML = featured.length
                 ? featured.map(api.renderProductCard).join('')
-                : api.renderProductPlaceholders(8, 'Featured product');
+                : api.renderEmptyState(
+                    'No featured products available yet.',
+                    'Featured products will appear here after approved catalog records are published.'
+                );
         }
 
         const recentGrid = document.querySelector('[data-recent-grid]');
         if (recentGrid) {
             recentGrid.innerHTML = recent.length
                 ? recent.slice(0, 8).map(api.renderProductCard).join('')
-                : api.renderProductPlaceholders(8, 'Recent product');
+                : api.renderEmptyState(
+                    'No recent products available yet.',
+                    'Recently published products will appear here after they are added to the catalog.'
+                );
         }
     });
 }(window, document));

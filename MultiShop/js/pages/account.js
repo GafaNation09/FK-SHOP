@@ -107,7 +107,7 @@
             form.querySelectorAll('button[type="submit"]').forEach(function (button) { button.disabled = !enabled; });
         });
         if (!enabled) showStatus('Account services are not connected yet. No account information was sent or saved. Please try again after secure project configuration.', 'info');
-        else showStatus('Account services are connected. Email confirmation is required for new customer accounts.', 'info');
+        else showStatus('Account services are connected. Email confirmation is required for new customer accounts; this page cannot verify email delivery.', 'info');
     }
 
     async function isActiveAdministrator(userId) {
@@ -226,7 +226,17 @@
 
         if (!session && (query.has('error') || query.has('error_description'))) {
             setSignedIn(false, false);
-            showStatus('Google sign-in was canceled or could not be completed. Please try again.', 'error');
+            if (query.get('flow') === 'recovery') {
+                setMode('recovery');
+                showStatus('The recovery link is invalid or expired. Request a new password-reset email and use the latest link.', 'error');
+            } else if (query.get('confirmed') === '1' || query.get('type') === 'signup') {
+                setMode('signin');
+                showStatus('The confirmation link is invalid or expired. Request a new confirmation email and use the latest link.', 'error');
+            } else if (query.get('oauth') === 'google') {
+                showStatus('Google sign-in was canceled or could not be completed. Please try again.', 'error');
+            } else {
+                showStatus('This authentication link is invalid or expired. Request a new link and try again.', 'error');
+            }
             return;
         }
 
@@ -300,7 +310,7 @@
                         await routeAuthenticatedSession(data.session);
                     } else {
                         setMode('signin');
-                        showStatus('Account request received. Check your email and confirm the address before signing in.', 'success');
+                        showStatus('Account request received. Check your inbox and spam folder for a confirmation link. This response does not confirm that the email was delivered.', 'success');
                     }
                 } else if (kind === 'signin') {
                     const { data, error } = await supabase.auth.signInWithPassword({
@@ -315,7 +325,7 @@
                         redirectTo: accountUrl('?flow=recovery')
                     });
                     if (error) throw error;
-                    showStatus('If an account exists for that email, a recovery link has been sent.', 'success');
+                    showStatus('If an account exists, a recovery request was accepted. Check your inbox and spam folder for a link; this response does not confirm email delivery.', 'success');
                 } else if (kind === 'update-password') {
                     if (!recoveryActive) throw new Error('Open the password recovery link from your email before setting a new password.');
                     if (values.password !== values.confirmPassword) throw new Error('Passwords do not match.');

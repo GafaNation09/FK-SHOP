@@ -55,14 +55,16 @@ async function loadAccount({ session = null, membership = null, membershipError 
         assign(value) { redirects.push(['assign', value]); }
     };
     const authCallbacks = [];
+    const signUpCalls = [];
+    const recoveryCalls = [];
     const client = {
         auth: {
             async getSession() { return { data: { session }, error: null }; },
             onAuthStateChange(callback) { authCallbacks.push(callback); return { data: { subscription: { unsubscribe() {} } } }; },
             async signInWithPassword() { return { data: { session: loginSession }, error: null }; },
             async signInWithOAuth(options) { oauthCalls.push(options); return { data: {}, error: null }; },
-            async signUp() { return { data: { session: null }, error: signUpError }; },
-            async resetPasswordForEmail() { return { error: recoveryError }; },
+            async signUp(options) { signUpCalls.push(options); return { data: { session: null }, error: signUpError }; },
+            async resetPasswordForEmail(email, options) { recoveryCalls.push({ email, options }); return { error: recoveryError }; },
             async updateUser() { return { error: null }; },
             async signOut() { return { error: null }; }
         },
@@ -114,7 +116,7 @@ async function loadAccount({ session = null, membership = null, membershipError 
     vm.runInContext(source, context, { filename: 'account.js' });
     await client.auth.getSession();
     await new Promise((resolveTick) => setImmediate(resolveTick));
-    return { forms, panels, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, googleAuth, googleButton, redirects, oauthCalls, authCallbacks, location };
+    return { forms, panels, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, googleAuth, googleButton, redirects, oauthCalls, signUpCalls, recoveryCalls, authCallbacks, location };
 }
 
 const guest = await loadAccount();
@@ -141,6 +143,20 @@ smtpRecovery.forms.recovery.values = { email: 'customer@example.test' };
 await smtpRecovery.forms.recovery.listeners.submit({ preventDefault() {} });
 assert.match(smtpRecovery.status.textContent, /could not send this email through SMTP/);
 
+const signupRedirect = await loadAccount();
+signupRedirect.forms.signup.values = { email: 'customer@example.test', password: 'A sufficiently long password!', confirmPassword: 'A sufficiently long password!', fullName: 'Test Customer' };
+await signupRedirect.forms.signup.listeners.submit({ preventDefault() {} });
+assert.equal(signupRedirect.signUpCalls[0].options.emailRedirectTo, 'https://fkshopping.netlify.app/multishop/account.html?confirmed=1', 'signup confirmation must target the production account callback');
+assert.doesNotMatch(signupRedirect.signUpCalls[0].options.emailRedirectTo, /localhost|127\.0\.0\.1/);
+assert.match(signupRedirect.status.textContent, /does not confirm that the email was delivered/i, 'accepted signup must not be reported as proven delivery');
+
+const recoveryRedirect = await loadAccount();
+recoveryRedirect.forms.recovery.values = { email: 'customer@example.test' };
+await recoveryRedirect.forms.recovery.listeners.submit({ preventDefault() {} });
+assert.equal(recoveryRedirect.recoveryCalls[0].options.redirectTo, 'https://fkshopping.netlify.app/multishop/account.html?flow=recovery', 'password recovery must target the production account callback');
+assert.doesNotMatch(recoveryRedirect.recoveryCalls[0].options.redirectTo, /localhost|127\.0\.0\.1/);
+assert.match(recoveryRedirect.status.textContent, /does not confirm email delivery/i, 'accepted recovery must not be reported as proven delivery');
+
 const googleGuest = await loadAccount({ googleEnabled: true });
 assert.equal(googleGuest.googleAuth.hidden, false, 'Google OAuth is offered when the provider is enabled');
 await googleGuest.googleButton.listeners.click();
@@ -148,8 +164,17 @@ assert.equal(googleGuest.oauthCalls[0].provider, 'google');
 assert.equal(googleGuest.oauthCalls[0].options.redirectTo, 'https://fkshopping.netlify.app/multishop/account.html?oauth=google');
 assert.equal(googleGuest.oauthCalls[0].options.queryParams.prompt, 'select_account');
 
-const oauthFailure = await loadAccount({ search: '?error=access_denied&error_description=cancelled' });
+const oauthFailure = await loadAccount({ search: '?oauth=google&error=access_denied&error_description=cancelled' });
 assert.match(oauthFailure.status.textContent, /Google sign-in was canceled or could not be completed/);
+
+const confirmationLinkFailure = await loadAccount({ search: '?confirmed=1&error=access_denied&error_code=otp_expired&error_description=expired' });
+assert.match(confirmationLinkFailure.status.textContent, /confirmation link is invalid or expired/i);
+assert.doesNotMatch(confirmationLinkFailure.status.textContent, /Google sign-in/);
+
+const recoveryLinkFailure = await loadAccount({ search: '?flow=recovery&error=access_denied&error_code=otp_expired&error_description=expired' });
+assert.match(recoveryLinkFailure.status.textContent, /recovery link is invalid or expired/i);
+assert.doesNotMatch(recoveryLinkFailure.status.textContent, /Google sign-in/);
+assert.equal(recoveryLinkFailure.panels.find((panel) => panel.getAttribute('data-auth-panel') === 'recovery').hidden, false, 'a failed recovery link must return to recovery mode');
 
 const oauthSuccess = await loadAccount({ session: customerSession, search: '?oauth=google' });
 assert.match(oauthSuccess.status.textContent, /Google sign-in succeeded/);
