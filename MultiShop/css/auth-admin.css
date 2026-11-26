@@ -1274,3 +1274,124 @@
     stroke-linejoin: round;
     stroke-width: 1.8;
 }
+
+
+/* Keep account/admin surfaces on the storefront's logo-derived palette without touching access logic. */
+.kcbf-admin-page {
+    color: #332c2d;
+    background: #fffdfb !important;
+}
+
+.kcbf-admin-page .kcbf-admin-header {
+    background: #fffdfb !important;
+    border-bottom-color: #e7ded7;
+}
+
+.kcbf-admin-sidebar,
+.kcbf-admin-page .kcbf-admin-sidebar {
+    background: #f8f4ef;
+    border-color: #e7ded7;
+}
+
+.kcbf-admin-sidebar-brand,
+.kcbf-admin-sidebar-brand:hover,
+.kcbf-admin-sidebar-brand:focus {
+    color: #73143a;
+}
+
+.kcbf-admin-sidebar .nav-link:hover,
+.kcbf-admin-sidebar .nav-link:focus-visible {
+    color: #73143a;
+    background: #f6e9ed;
+    outline-color: #c45116;
+}
+
+.kcbf-admin-sidebar .nav-link.active,
+.kcbf-admin-sidebar .nav-link.active i {
+    color: #73143a;
+    background: #f4e7eb;
+}
+
+.kcbf-admin-content h1,
+.kcbf-admin-content h2,
+.kcbf-admin-content h3,
+.kcbf-admin-metric strong {
+    color: #73143a;
+}
+
+.kcbf-admin-page .kcbf-admin-card,
+.kcbf-product-panel {
+    border-color: #e7ded7;
+}
+
+.kcbf-admin-page .kcbf-admin-card .form-control,
+.kcbf-admin-page .kcbf-admin-card .custom-select {
+    color: #332c2d;
+    background-color: #fffdfb;
+    border-color: #e7ded7;
+}
+
+.kcbf-admin-page .kcbf-admin-card .form-control:focus,
+.kcbf-admin-page .kcbf-admin-card .custom-select:focus {
+    border-color: #73143a;
+    box-shadow: 0 0 0 0.18rem rgba(115, 20, 58, 0.18);
+}
+
+.kcbf-admin-page .btn-primary {
+    color: #fff;
+    background: #73143a;
+    border-color: #73143a;
+}
+
+.kcbf-admin-page .btn-primary:hover,
+.kcbf-admin-page .btn-primary:focus {
+    color: #fff;
+    background: #59102d;
+    border-color: #59102d;
+}
+
+.kcbf-admin-page .btn-outline-dark {
+    color: #73143a;
+    border-color: #d7c4ca;
+}
+
+.kcbf-admin-page .btn-outline-dark:hover,
+.kcbf-admin-page .btn-outline-dark:focus {
+    color: #59102d;
+    background: #f8f4ef;
+    border-color: #c7a8b3;
+}
+
+.kcbf-admin-metric {
+    background: #fffdfb;
+    border-color: #e7ded7;
+    border-top-color: #c45116;
+}
+
+.kcbf-admin-metric-link:hover,
+.kcbf-admin-metric-link:focus-visible {
+    background: #fbf4f1;
+    border-color: #d8b6a6;
+    outline-color: #c45116;
+}
+
+.kcbf-product-upload-tile {
+    color: #73143a !important;
+    background: #fbf6f2;
+    border-color: #d9c3b6;
+}
+
+.kcbf-product-upload-tile i {
+    color: #c45116;
+}
+
+.kcbf-product-upload-tile:hover,
+.kcbf-product-upload-tile:focus-within {
+    background: #f8f0eb;
+    border-color: #c45116;
+}
+
+.kcbf-product-photo-panel:focus-within .kcbf-product-upload-tile,
+.kcbf-product-upload-tile:focus-visible {
+    outline-color: #c45116;
+}
