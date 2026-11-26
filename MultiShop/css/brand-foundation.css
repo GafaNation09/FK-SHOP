@@ -847,3 +847,168 @@ button:focus-visible,
         animation-iteration-count: 1 !important;
     }
 }
+
+/* Keep the cart badge compact; the control itself remains comfortably tappable. */
+.row.bg-secondary .kcbf-header-cart {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.row.bg-secondary .kcbf-header-cart [data-cart-count] {
+    display: inline-flex;
+    min-width: 1.15rem;
+    min-height: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.08rem 0.3rem;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--kcbf-plum);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+.navbar .kcbf-header-cart {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.navbar .kcbf-header-cart [data-cart-count] {
+    display: inline-flex;
+    min-width: 1.15rem;
+    min-height: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.08rem 0.3rem;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--kcbf-plum);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+.kcbf-header-cart:focus-visible {
+    outline: 3px solid #a84312;
+    outline-offset: 2px;
+}
+
+/* Footer foregrounds and controls remain readable on the brand's maroon surface. */
+.container-fluid.bg-dark.text-secondary.mt-5 {
+    color: #fffaf4 !important;
+    background-color: #4d102b !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5,
+.container-fluid.bg-dark.text-secondary.mt-5 p,
+.container-fluid.bg-dark.text-secondary.mt-5 h5,
+.container-fluid.bg-dark.text-secondary.mt-5 h6,
+.container-fluid.bg-dark.text-secondary.mt-5 .text-secondary,
+.container-fluid.bg-dark.text-secondary.mt-5 .text-primary,
+.container-fluid.bg-dark.text-secondary.mt-5 .text-body,
+.container-fluid.bg-dark.text-secondary.mt-5 .text-muted {
+    color: #fffaf4 !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 a:not(.btn) {
+    color: #fffaf4 !important;
+    text-underline-offset: 0.18em;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 a:not(.btn):hover,
+.container-fluid.bg-dark.text-secondary.mt-5 a:not(.btn):active {
+    color: #ffd0ad !important;
+    text-decoration: underline;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 a:focus-visible,
+.container-fluid.bg-dark.text-secondary.mt-5 button:focus-visible,
+.container-fluid.bg-dark.text-secondary.mt-5 input:focus-visible {
+    outline: 3px solid #ffd0ad;
+    outline-offset: 3px;
+    box-shadow: none;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .form-control {
+    color: #29101b;
+    background: #fffaf4;
+    border-color: #fffaf4;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .form-control::placeholder {
+    color: #5b4650;
+    opacity: 1;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .form-control:disabled,
+.container-fluid.bg-dark.text-secondary.mt-5 .form-control[aria-disabled="true"] {
+    color: #51434a;
+    background: #e8e0e3;
+    opacity: 1;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .btn-primary {
+    color: #29101b !important;
+    background: #ffc29f !important;
+    border-color: #ffc29f !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .btn-primary:hover,
+.container-fluid.bg-dark.text-secondary.mt-5 .btn-primary:active {
+    color: #fffaf4 !important;
+    background: #7a2448 !important;
+    border-color: #ffd0ad !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .btn-primary:disabled,
+.container-fluid.bg-dark.text-secondary.mt-5 .btn-primary[aria-disabled="true"] {
+    color: #29101b !important;
+    background: #e8d5dc !important;
+    border-color: #e8d5dc !important;
+    opacity: 1;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 [data-form-status] {
+    color: #fffaf4 !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-controls {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-controls > .btn,
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-unconfigured {
+    margin: 0 !important;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    color: #fffaf4 !important;
+    background: #6b1d3b !important;
+    border: 1px solid #e9bba4 !important;
+    border-radius: 0.25rem;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-controls > .btn:hover,
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-controls > .btn:active {
+    color: #29101b !important;
+    background: #ffc29f !important;
+    border-color: #fffaf4 !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .kcbf-social-unconfigured {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+}
+.kcbf-tiktok-icon {
+    display: block;
+    width: 1.2rem;
+    height: 1.2rem;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .back-to-top {
+    color: #29101b !important;
+    background: #ffc29f !important;
+    border-color: #ffc29f !important;
+}
+.container-fluid.bg-dark.text-secondary.mt-5 .back-to-top:hover,
+.container-fluid.bg-dark.text-secondary.mt-5 .back-to-top:active {
+    color: #fffaf4 !important;
+    background: #7a2448 !important;
+    border-color: #ffd0ad !important;
+}
