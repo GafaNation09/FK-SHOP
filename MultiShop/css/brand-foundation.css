@@ -809,6 +809,14 @@ button:focus-visible,
         background-color: var(--kcbf-warm-white) !important;
     }
 
+    .container-fluid.bg-dark.mb-30 .navbar-toggler {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .container-fluid.bg-dark.mb-30 .navbar-collapse {
         margin-top: 0.45rem;
         padding: 0.3rem 0 0.5rem;
