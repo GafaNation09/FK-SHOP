@@ -217,14 +217,14 @@
 
 .kcbf-admin-page .kcbf-admin-header {
     min-height: 68px;
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
     background: #fff !important;
     border-bottom: 1px solid #e8ece9;
 }
 
 .kcbf-admin-page .kcbf-admin-header .kcbf-brand-mark {
-    width: min(190px, 100%);
+    width: min(160px, 100%);
 }
 
 .kcbf-admin-page .kcbf-admin-header .kcbf-brand-logo {

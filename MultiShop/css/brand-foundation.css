@@ -76,7 +76,7 @@
 
 .kcbf-brand-logo {
     display: block;
-    width: clamp(190px, 22vw, 260px);
+    width: clamp(180px, 18vw, 220px);
     max-width: 100%;
     height: auto;
     aspect-ratio: 3 / 2;
@@ -645,7 +645,7 @@ button:focus-visible,
 }
 
 .container-fluid.bg-dark.mb-30 {
-    margin-bottom: 1.2rem !important;
+    margin-bottom: 0.75rem !important;
     border-top: 1px solid var(--kcbf-border);
     border-bottom: 1px solid var(--kcbf-border);
 }
@@ -798,14 +798,14 @@ button:focus-visible,
 
 @media (max-width: 991.98px) {
     .container-fluid.bg-dark.mb-30 {
-        padding-top: 0.5rem;
-        padding-bottom: 0.25rem;
+        padding-top: 0.35rem;
+        padding-bottom: 0.15rem;
     }
 
     .container-fluid.bg-dark.mb-30 .navbar.navbar-expand-lg {
-        min-height: 62px;
-        padding-top: 0.35rem !important;
-        padding-bottom: 0.35rem !important;
+        min-height: 54px;
+        padding-top: 0.2rem !important;
+        padding-bottom: 0.2rem !important;
         background-color: var(--kcbf-warm-white) !important;
     }
 
@@ -848,8 +848,11 @@ button:focus-visible,
     }
 }
 
-/* Keep the cart badge compact; the control itself remains comfortably tappable. */
-.row.bg-secondary .kcbf-header-cart {
+/* The cart control stays tappable; its live count remains readable at zero and above. */
+.row.bg-secondary .kcbf-header-cart,
+.navbar .kcbf-header-cart {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     min-width: 44px;
     min-height: 44px;
@@ -858,45 +861,28 @@ button:focus-visible,
     gap: 0.3rem;
     white-space: nowrap;
 }
-.row.bg-secondary .kcbf-header-cart [data-cart-count] {
-    display: inline-flex;
-    min-width: 1.15rem;
-    min-height: 1.15rem;
-    align-items: center;
-    justify-content: center;
-    padding: 0.08rem 0.3rem;
-    border: 0;
-    border-radius: 999px;
-    color: #fff;
-    background: var(--kcbf-plum);
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1.15;
-    font-variant-numeric: tabular-nums;
-}
-.navbar .kcbf-header-cart {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-}
+
+.row.bg-secondary .kcbf-header-cart [data-cart-count],
 .navbar .kcbf-header-cart [data-cart-count] {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
-    min-width: 1.15rem;
-    min-height: 1.15rem;
+    min-width: 1.25rem;
+    min-height: 1.25rem;
     align-items: center;
     justify-content: center;
     padding: 0.08rem 0.3rem;
-    border: 0;
+    color: var(--kcbf-plum) !important;
+    background: #fffaf4;
+    border: 1px solid var(--kcbf-plum);
     border-radius: 999px;
-    color: #fff;
-    background: var(--kcbf-plum);
+    box-shadow: 0 0 0 1px #fffaf4;
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
 }
+
 .kcbf-header-cart:focus-visible {
     outline: 3px solid #a84312;
     outline-offset: 2px;
@@ -1011,4 +997,126 @@ button:focus-visible,
     color: #fffaf4 !important;
     background: #7a2448 !important;
     border-color: #ffd0ad !important;
+}
+
+/* Keep primary controls legible against the shared dark-plum brand surface. */
+.btn.btn-primary {
+    color: #fffaf4 !important;
+}
+
+.btn:disabled,
+.btn.disabled {
+    opacity: 1;
+    filter: grayscale(0.55);
+    cursor: not-allowed;
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+    color: #4c3440 !important;
+    background: #e8d5dc !important;
+    border-color: #c8b4bc !important;
+}
+
+.btn:focus-visible,
+a.btn:focus-visible,
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid #c45116;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 0.18rem rgba(115, 20, 58, 0.2);
+}
+
+/* Product-card controls stay visible and operable without hover (including touch). */
+.product-item .product-action a.btn,
+.product-item .product-action button.btn {
+    margin-top: 0 !important;
+    color: var(--kcbf-plum) !important;
+    background: #fffaf4;
+    border-color: var(--kcbf-plum);
+    opacity: 1 !important;
+    box-shadow: 0 1px 5px rgba(51, 44, 45, 0.18);
+}
+
+.product-item .product-action a.btn:hover,
+.product-item .product-action a.btn:focus-visible,
+.product-item .product-action button.btn:hover,
+.product-item .product-action button.btn:focus-visible {
+    color: #fffaf4 !important;
+    background: var(--kcbf-plum);
+}
+
+/* Responsive size changes affect only the supplied logo image; its aspect ratio stays 3:2. */
+.kcbf-brand-mark:not(.kcbf-brand-mark--mobile) .kcbf-brand-logo {
+    width: clamp(160px, 17vw, 210px);
+}
+
+.kcbf-brand-mark--mobile {
+    width: min(180px, calc(100vw - 8.5rem));
+    flex: 0 1 180px;
+}
+
+.kcbf-brand-mark--mobile .kcbf-brand-logo {
+    width: 100%;
+}
+
+.row.align-items-center.bg-light.py-3.px-xl-5.d-none.d-lg-flex {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+}
+
+.container-fluid.bg-light.py-3.px-xl-5 > .d-flex.align-items-center.justify-content-between.flex-wrap {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+}
+
+.container-fluid.bg-dark.mb-30 .navbar-collapse {
+    margin-top: 0.3rem;
+}
+
+@media (max-width: 575.98px) {
+    .kcbf-brand-mark:not(.kcbf-brand-mark--mobile) .kcbf-brand-logo {
+        width: min(180px, calc(100vw - 2rem));
+    }
+}
+
+@media (max-width: 380px) {
+    .kcbf-brand-mark--mobile {
+        width: min(160px, calc(100vw - 8.5rem));
+        flex-basis: 160px;
+    }
+}
+
+
+/* Compact floating Shop shortcut, positioned above the independent back-to-top control. */
+.kcbf-floating-shop {
+    position: fixed;
+    z-index: 1030;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.9rem;
+    color: #fffaf4 !important;
+    background: var(--kcbf-plum);
+    border: 1px solid #fffaf4;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(51, 44, 45, 0.25);
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+}
+
+.kcbf-floating-shop:hover,
+.kcbf-floating-shop:active {
+    color: #fffaf4 !important;
+    background: #59102d;
+}
+
+.kcbf-floating-shop:focus-visible {
+    outline: 3px solid #c45116;
+    outline-offset: 3px;
 }

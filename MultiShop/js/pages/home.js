@@ -2,6 +2,15 @@
 (function (window, document) {
     'use strict';
 
+    const shopShortcut = document.querySelector('[data-home-shop-shortcut]');
+    const footer = document.querySelector('.container-fluid.bg-dark.text-secondary.mt-5');
+    if (shopShortcut && footer && 'IntersectionObserver' in window) {
+        const footerObserver = new IntersectionObserver(function (entries) {
+            shopShortcut.hidden = entries.some(function (entry) { return entry.isIntersecting; });
+        }, { rootMargin: '0px 0px -24px 0px' });
+        footerObserver.observe(footer);
+    }
+
     const api = window.KCBF;
     if (!api) return;
 
