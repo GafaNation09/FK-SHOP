@@ -1088,6 +1088,76 @@ a:focus-visible {
 }
 
 
+/* Floating WhatsApp contact action for the Shop and Cart pages only. */
+.kcbf-floating-whatsapp {
+    position: fixed;
+    z-index: 1030;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    display: inline-flex;
+    min-width: 48px;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.6rem 0.95rem;
+    color: #fffaf4 !important;
+    background: #075e54;
+    border: 2px solid #fffaf4;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(51, 44, 45, 0.28);
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.kcbf-floating-whatsapp[hidden] {
+    display: none !important;
+}
+
+.kcbf-floating-whatsapp--obscured {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.kcbf-floating-whatsapp .fab {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.kcbf-floating-whatsapp:hover,
+.kcbf-floating-whatsapp:active {
+    color: #fffaf4 !important;
+    background: #064c44;
+}
+
+.kcbf-floating-whatsapp:focus-visible {
+    outline: 3px solid #c45116;
+    outline-offset: 3px;
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .kcbf-floating-whatsapp {
+        bottom: calc(10rem + env(safe-area-inset-bottom));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .kcbf-floating-whatsapp {
+        bottom: calc(6rem + env(safe-area-inset-bottom));
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        padding: 0;
+    }
+
+    .kcbf-floating-whatsapp > span {
+        display: none;
+    }
+}
+
+
 /* Compact floating Shop shortcut, positioned above the independent back-to-top control. */
 .kcbf-floating-shop {
     position: fixed;
