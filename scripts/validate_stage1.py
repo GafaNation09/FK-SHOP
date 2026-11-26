@@ -282,6 +282,48 @@ def main() -> None:
         admin_links = document.xpath("//a[contains(translate(@href,'ADMIN','admin'),'admin')]")
         assert_ok(not admin_links, f"Public page advertises an admin route: {name}")
         assert_ok("Administrator portal" not in source, f"Public page names the admin portal: {name}")
+    logo_pages = [ROOT / "MultiShop" / name for name in public_pages]
+    logo_pages.append(ROOT / "MultiShop" / "admin" / "index.html")
+    logo_count = 0
+    for page_path in logo_pages:
+        document = html.fromstring(page_path.read_text())
+        brand_links = document.xpath(
+            "//a[contains(concat(' ', normalize-space(@class), ' '), ' kcbf-brand-mark ') "
+            "or contains(concat(' ', normalize-space(@class), ' '), ' kcbf-admin-sidebar-brand ')]"
+        )
+        for link in brand_links:
+            images = link.xpath(
+                "./img[contains(concat(' ', normalize-space(@class), ' '), ' kcbf-brand-logo ')]"
+            )
+            page_name = page_path.relative_to(ROOT)
+            assert_ok(len(images) == 1, f"Brand link must contain exactly one logo image: {page_name}")
+            image = images[0]
+            assert_ok(bool((link.get("aria-label") or "").strip()),
+                      f"Brand link needs an accessible name: {page_name}")
+            assert_ok(bool((image.get("alt") or "").strip()),
+                      f"Logo needs meaningful alternative text: {page_name}")
+            assert_ok(image.get("width") == "1536" and image.get("height") == "1024",
+                      f"Logo needs intrinsic source dimensions: {page_name}")
+            expected_src = (
+                "../img/knit-crochet-by-faith-logo.png"
+                if page_path.parent.name == "admin"
+                else "img/knit-crochet-by-faith-logo.png"
+            )
+            assert_ok(image.get("src") == expected_src,
+                      f"Unexpected or remote logo source in {page_name}: {image.get('src')}")
+            assert_ok((page_path.parent / expected_src).is_file(),
+                      f"Local logo asset is missing for {page_name}")
+            home = (ROOT / "MultiShop" / "index.html").resolve()
+            assert_ok((page_path.parent / (link.get("href") or "")).resolve() == home,
+                      f"Logo link must navigate to the storefront home: {page_name}")
+            assert_ok(not link.xpath("./span"),
+                      f"Text-based brand spans remain in logo link: {page_name}")
+            logo_count += 1
+    assert_ok(logo_count == 21, f"Expected all 21 public/account/Admin logo placements, found {logo_count}")
+    brand_css = (ROOT / "MultiShop" / "css" / "brand-foundation.css").read_text()
+    assert_ok("aspect-ratio: 3 / 2;" in brand_css and "object-fit: contain;" in brand_css
+              and "height: auto;" in brand_css,
+              "Logo CSS must preserve the source aspect ratio and show the complete image")
     account_doc = html.fromstring((ROOT / "MultiShop/account.html").read_text())
     assert_ok(bool(account_doc.xpath("//*[@data-auth-guest]")) and bool(account_doc.xpath("//*[@data-auth-session]")),
               "Account page must provide distinct guest and signed-in states")

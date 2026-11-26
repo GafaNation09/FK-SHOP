@@ -223,18 +223,12 @@
     border-bottom: 1px solid #e8ece9;
 }
 
-.kcbf-admin-page .kcbf-brand-mark span {
-    padding: 0.4rem 0.55rem !important;
-    color: #244b38 !important;
-    background: transparent !important;
-    font-size: 0.9rem;
-    font-weight: 700;
+.kcbf-admin-page .kcbf-admin-header .kcbf-brand-mark {
+    width: min(190px, 100%);
 }
 
-.kcbf-admin-page .kcbf-brand-mark span + span {
-    color: #6e7a72 !important;
-    font-size: 0.75rem;
-    font-weight: 500;
+.kcbf-admin-page .kcbf-admin-header .kcbf-brand-logo {
+    width: 100%;
 }
 
 .kcbf-admin-page main.container-fluid {
@@ -263,7 +257,8 @@
 
 .kcbf-admin-sidebar-brand {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 0.65rem;
     margin: 0 0 1rem;
     padding: 0.35rem 0.45rem 1rem;
@@ -278,30 +273,9 @@
     text-decoration: none;
 }
 
-.kcbf-admin-brand-icon {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    color: #fff;
-    background: #2f8053;
-    border-radius: 10px;
-}
-
-.kcbf-admin-sidebar-brand strong,
-.kcbf-admin-sidebar-brand small {
-    display: block;
-    line-height: 1.25;
-}
-
-.kcbf-admin-sidebar-brand strong {
-    font-size: 0.83rem;
-}
-
-.kcbf-admin-sidebar-brand small {
-    margin-top: 0.15rem;
-    color: #7c8880;
-    font-size: 0.7rem;
+.kcbf-admin-sidebar-brand .kcbf-admin-sidebar-logo {
+    width: min(170px, 100%);
+    height: auto;
 }
 
 .kcbf-admin-identity {
