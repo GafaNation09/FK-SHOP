@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fkshopping.netlify.app/sitemap.xml

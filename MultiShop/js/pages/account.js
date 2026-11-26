@@ -4,6 +4,7 @@
 
     const api = window.KCBF = window.KCBF || {};
     const forms = Array.from(document.querySelectorAll('[data-auth-form]'));
+    const passwordToggles = Array.from(document.querySelectorAll('[data-password-toggle]'));
     const panels = Array.from(document.querySelectorAll('[data-auth-panel]'));
     const modeButtons = Array.from(document.querySelectorAll('[data-auth-mode]'));
     const modeTabs = document.querySelector('[data-auth-tabs]');
@@ -20,6 +21,18 @@
     let redirecting = false;
     let googleEnabled = false;
     let currentMode = 'signin';
+
+    passwordToggles.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const input = document.getElementById(button.getAttribute('aria-controls'));
+            if (!input || (input.type !== 'password' && input.type !== 'text')) return;
+            const showing = input.type === 'password';
+            input.type = showing ? 'text' : 'password';
+            button.textContent = showing ? 'Hide password' : 'Show password';
+            button.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+            button.setAttribute('aria-pressed', String(showing));
+        });
+    });
 
     function showStatus(message, kind) {
         if (!statusBox) return;

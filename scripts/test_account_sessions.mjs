@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
 const source = await readFile(resolve(root, 'MultiShop/js/pages/account.js'), 'utf8');
+const accountHtml = await readFile(resolve(root, 'MultiShop/account.html'), 'utf8');
 
 function createElement(attributes = {}) {
     return {
@@ -33,6 +34,8 @@ async function loadAccount({ session = null, membership = null, membershipError 
         return [kind, form];
     }));
     const panels = ['signin', 'signup', 'recovery', 'update-password'].map((mode) => createElement({ 'data-auth-panel': mode }));
+    const passwordFields = ['signin-password', 'signup-password', 'signup-confirm', 'new-password', 'new-password-confirm'].map((id) => Object.assign(createElement(), { id, type: 'password', value: 'current entered value' }));
+    const passwordToggles = passwordFields.map((input) => createElement({ 'aria-controls': input.id, type: 'button' }));
     const modeButtons = ['signin', 'signup', 'recovery'].map((mode) => createElement({ 'data-auth-mode': mode }));
     const guestCard = createElement({ hidden: true });
     const sessionCard = createElement({ hidden: true });
@@ -79,6 +82,7 @@ async function loadAccount({ session = null, membership = null, membershipError 
     };
     const selectorMap = {
         '[data-auth-tabs]': modeTabs,
+        '[data-password-toggle]': passwordToggles,
         '[data-auth-guest]': guestCard,
         '[data-auth-session]': sessionCard,
         '[data-auth-guest-copy]': guestCopy,
@@ -90,7 +94,9 @@ async function loadAccount({ session = null, membership = null, membershipError 
     };
     const document = {
         querySelector(selector) { return selectorMap[selector] || null; },
+        getElementById(id) { return passwordFields.find((input) => input.id === id) || null; },
         querySelectorAll(selector) {
+            if (selector === '[data-password-toggle]') return passwordToggles;
             if (selector === '[data-auth-form]') return Object.values(forms);
             if (selector === '[data-auth-panel]') return panels;
             if (selector === '[data-auth-mode]') return modeButtons;
@@ -116,10 +122,30 @@ async function loadAccount({ session = null, membership = null, membershipError 
     vm.runInContext(source, context, { filename: 'account.js' });
     await client.auth.getSession();
     await new Promise((resolveTick) => setImmediate(resolveTick));
-    return { forms, panels, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, googleAuth, googleButton, redirects, oauthCalls, signUpCalls, recoveryCalls, authCallbacks, location };
+    return { forms, panels, passwordFields, passwordToggles, guestCard, sessionCard, guestCopy, sessionCopy, modeTabs, status, signout, googleAuth, googleButton, redirects, oauthCalls, signUpCalls, recoveryCalls, authCallbacks, location };
 }
 
+assert.equal((accountHtml.match(/type="password"/g) || []).length, 5, 'all five password entry fields remain covered');
+assert.equal((accountHtml.match(/data-password-toggle/g) || []).length, 5, 'every password field has a visibility button');
+assert.equal((accountHtml.match(/<button[^>]*type="button"[^>]*data-password-toggle/g) || []).length, 5, 'visibility controls are non-submit buttons');
 const guest = await loadAccount();
+for (let index = 0; index < guest.passwordFields.length; index += 1) {
+    const input = guest.passwordFields[index];
+    const button = guest.passwordToggles[index];
+    const value = input.value;
+    assert.equal(input.type, 'password', 'passwords start hidden');
+    await button.listeners.click();
+    assert.equal(input.type, 'text', 'toggle reveals only the currently entered value');
+    assert.equal(input.value, value, 'visibility toggle preserves the entered value');
+    assert.equal(button.textContent, 'Hide password');
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.equal(button.getAttribute('aria-label'), 'Hide password');
+    await button.listeners.click();
+    assert.equal(input.type, 'password', 'second activation hides the password');
+    assert.equal(input.value, value, 'hiding also preserves the entered value');
+    assert.equal(button.textContent, 'Show password');
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+}
 const customerSession = { user: { id: 'customer-1', email_confirmed_at: '2026-01-01T00:00:00Z' } };
 assert.equal(guest.guestCard.hidden, false, 'logged-out users should see the guest forms');
 assert.equal(guest.sessionCard.hidden, true, 'logged-out users should not see the signed-in panel');

@@ -34,8 +34,10 @@ function responseHeaders(request: Request): Headers {
   return headers
 }
 
-function jsonResponse(request: Request, status: number, body: Record<string, unknown>): Response {
-  return new Response(JSON.stringify(body), { status, headers: responseHeaders(request) })
+function jsonResponse(request: Request, status: number, body: Record<string, unknown>, extraHeaders: Record<string, string> = {}): Response {
+  const headers = responseHeaders(request)
+  for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value)
+  return new Response(JSON.stringify(body), { status, headers })
 }
 
 function parseKeyDictionary(raw: string | undefined): Record<string, string> {
@@ -89,6 +91,26 @@ function validEmail(value: unknown): string | null {
   const email = typeof value === 'string' ? value.trim().toLowerCase() : ''
   if (email.length < 3 || email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
   return email
+}
+
+async function enforceAdminRequestLimit(request: Request, clients: FunctionClients, actor: Actor, isMutation: boolean): Promise<Response | null> {
+  const { data, error } = await clients.admin.rpc('consume_admin_management_rate_limit', {
+    p_actor_user_id: actor.id,
+    p_bucket: isMutation ? 'mutation' : 'read',
+    p_limit: isMutation ? 10 : 60,
+    p_window_seconds: 60
+  })
+  if (error) return jsonResponse(request, 503, { error: 'Administrator request limits could not be checked. Please try again shortly.' })
+  const result = Array.isArray(data) ? data[0] : null
+  if (!result || typeof result.allowed !== 'boolean') {
+    return jsonResponse(request, 503, { error: 'Administrator request limits could not be checked. Please try again shortly.' })
+  }
+  if (result.allowed) return null
+  const retryAfter = Math.max(1, Math.min(60, Number(result.retry_after_seconds) || 1))
+  return jsonResponse(request, 429, { error: 'Too many administrator requests. Please wait before trying again.' }, {
+    'Retry-After': String(retryAfter),
+    'Cache-Control': 'no-store'
+  })
 }
 
 function isSafeProductMediaPath(productId: string, bucketId: unknown, objectPath: unknown): objectPath is string {
@@ -242,6 +264,11 @@ async function handleRequest(request: Request): Promise<Response> {
   const requiredPermission = isCatalogMutation ? 'catalog:write' : 'admins:manage'
   const { actor, error: authError } = await authenticate(request, clients, requiredPermission)
   if (authError || !actor) return authError || jsonResponse(request, 401, { error: 'Sign in is required.' })
+
+  const isMutationRequest = request.method === 'PATCH' || request.method === 'DELETE'
+    || (request.method === 'POST' && ['invite', 'retry-product-media-cleanup'].includes(String(body.action || '')))
+  const rateLimitResponse = await enforceAdminRequestLimit(request, clients, actor, isMutationRequest)
+  if (rateLimitResponse) return rateLimitResponse
 
   if (request.method === 'GET') {
     const { data, error } = await clients.admin.rpc('list_admin_memberships_for_management')

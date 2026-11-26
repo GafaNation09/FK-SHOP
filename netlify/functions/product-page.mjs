@@ -27,6 +27,12 @@ function replaceElementById(html, id, replacement) {
     return html.replace(pattern, replacement);
 }
 
+function setHeadElement(html, id, replacement) {
+    const updated = replaceElementById(html, id, replacement);
+    if (updated !== html) return updated;
+    return html.replace(/<\/head>/i, replacement + '</head>');
+}
+
 function getImage(product, origin) {
     const images = Array.isArray(product.product_images) ? product.product_images.slice() : [];
     images.sort(function (a, b) {
@@ -59,11 +65,11 @@ export default async function productPage(request, context) {
     const routeSlug = context && context.params && context.params.slug;
     const slug = String(routeSlug || requestUrl.searchParams.get('slug') || '').trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-        return withHeaders(400, '<!doctype html><title>Invalid product address</title><h1>Invalid product address</h1>');
+        return withHeaders(400, '<!doctype html><html lang="en"><head><meta name="robots" content="noindex,nofollow"><title>Invalid product address</title></head><body><h1>Invalid product address</h1></body></html>');
     }
     const origin = requestUrl.origin;
     if (requestUrl.protocol !== 'https:') {
-        return withHeaders(400, '<!doctype html><title>Invalid request</title><h1>Invalid request</h1>');
+        return withHeaders(400, '<!doctype html><html lang="en"><head><meta name="robots" content="noindex,nofollow"><title>Invalid request</title></head><body><h1>Invalid request</h1></body></html>');
     }
 
     try {
@@ -94,11 +100,11 @@ export default async function productPage(request, context) {
         // The alias metadata is stored under the existing public JSONB attributes column.
         // Current slugs are checked first so a newer product always owns its exact URL.
         if (!product) product = await lookup('attributes', 'cs.' + JSON.stringify({ previousSlugs: [slug] }));
-        if (!product) return withHeaders(404, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Product not found | Knit&amp;Crochet by Faith</title><h1>Product not found</h1><p>This product is not currently published.</p><a href="/multishop/shop.html">Browse the shop</a></html>');
+        if (!product) return withHeaders(404, '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Product not found | Knit&amp;Crochet by Faith</title></head><body><h1>Product not found</h1><p>This product is not currently published.</p><a href="/multishop/shop.html">Browse the shop</a></body></html>');
 
         const canonical = new URL('/multishop/product/' + encodeURIComponent(product.slug || slug), origin).toString();
         if (product.slug && product.slug !== slug) {
-            return withHeaders(301, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Product moved | Knit&amp;Crochet by Faith</title><a href="' + htmlEscape(canonical) + '">Continue to the current product page</a></html>', {
+            return withHeaders(301, '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Product moved | Knit&amp;Crochet by Faith</title></head><body><a href="' + htmlEscape(canonical) + '">Continue to the current product page</a></body></html>', {
                 Location: canonical,
                 'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=300',
                 'Netlify-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300'
@@ -133,14 +139,15 @@ export default async function productPage(request, context) {
 
         html = html.replace(/<title>[\s\S]*?<\/title>/i, '<title>' + htmlEscape(title) + '</title>');
         html = replaceElementById(html, 'product-meta-description', '<meta id="product-meta-description" name="description" content="' + htmlEscape(description) + '">');
-        html = replaceElementById(html, 'product-canonical', '<link id="product-canonical" rel="canonical" href="' + htmlEscape(canonical) + '">');
+        html = setHeadElement(html, 'product-canonical', '<link id="product-canonical" rel="canonical" href="' + htmlEscape(canonical) + '">');
+        html = setHeadElement(html, 'product-robots', '<meta id="product-robots" name="robots" content="index,follow">');
         html = replaceElementById(html, 'product-og-title', '<meta id="product-og-title" property="og:title" content="' + htmlEscape(title) + '">');
         html = replaceElementById(html, 'product-og-description', '<meta id="product-og-description" property="og:description" content="' + htmlEscape(description) + '">');
-        html = replaceElementById(html, 'product-og-url', '<meta id="product-og-url" property="og:url" content="' + htmlEscape(canonical) + '">');
-        html = replaceElementById(html, 'product-og-image', '<meta id="product-og-image" property="og:image" content="' + htmlEscape(image) + '">');
+        html = setHeadElement(html, 'product-og-url', '<meta id="product-og-url" property="og:url" content="' + htmlEscape(canonical) + '">');
+        if (image) html = setHeadElement(html, 'product-og-image', '<meta id="product-og-image" property="og:image" content="' + htmlEscape(image) + '">');
         html = replaceElementById(html, 'product-twitter-title', '<meta id="product-twitter-title" name="twitter:title" content="' + htmlEscape(title) + '">');
         html = replaceElementById(html, 'product-twitter-description', '<meta id="product-twitter-description" name="twitter:description" content="' + htmlEscape(description) + '">');
-        html = replaceElementById(html, 'product-twitter-image', '<meta id="product-twitter-image" name="twitter:image" content="' + htmlEscape(image) + '">');
+        if (image) html = setHeadElement(html, 'product-twitter-image', '<meta id="product-twitter-image" name="twitter:image" content="' + htmlEscape(image) + '">');
         const schemaTag = '<script id="product-jsonld" type="application/ld+json">' + jsonForScript(pageSchema) + '</script>';
         html = html.replace(/<\/head>/i, schemaTag + '</head>');
         return withHeaders(200, html, {
@@ -148,6 +155,6 @@ export default async function productPage(request, context) {
         });
     } catch (error) {
         console.error('Product page metadata generation failed:', error);
-        return withHeaders(503, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Product temporarily unavailable | Knit&amp;Crochet by Faith</title><h1>Product temporarily unavailable</h1><p>Please try again later.</p></html>');
+        return withHeaders(503, '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Product temporarily unavailable | Knit&amp;Crochet by Faith</title></head><body><h1>Product temporarily unavailable</h1><p>Please try again later.</p></body></html>');
     }
 }

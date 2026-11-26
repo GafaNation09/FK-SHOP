@@ -77,6 +77,9 @@ try {
   assert.match(html, /<title>Cute alert\(1\) crochet bag \| Knit&amp;Crochet by Faith<\/title>/);
   assert.match(html, /property="og:url" content="https:\/\/shop\.example\/multishop\/product\/cute-crochet-bag"/);
   assert.match(html, /property="og:image" content="https:\/\/images\.example\/bag\.webp"/);
+  assert.match(html, /rel="canonical" href="https:\/\/shop\.example\/multishop\/product\/cute-crochet-bag"/);
+  assert.match(html, /name="robots" content="index,follow"/);
+  assert.doesNotMatch(html, /(?:og:url|og:image)[^>]*content=""/, 'product response must not emit empty social metadata');
   assert.match(html, /"@type":"Product"/);
   assert.match(html, /"priceCurrency":"KES"/);
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/, 'database text must not inject HTML into the server response');
@@ -118,6 +121,7 @@ try {
   };
   const missing = await productPage(request('missing-item'), { params: { slug: 'missing-item' } });
   assert.equal(missing.status, 404, 'unpublished or absent products must not receive a public product page');
+  assert.match(await missing.text(), /name="robots" content="noindex,nofollow"/, 'missing product error page must be noindex');
 } finally {
   globalThis.fetch = originalFetch;
 }
