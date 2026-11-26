@@ -28,8 +28,13 @@
             if (!input || (input.type !== 'password' && input.type !== 'text')) return;
             const showing = input.type === 'password';
             input.type = showing ? 'text' : 'password';
-            button.textContent = showing ? 'Hide password' : 'Show password';
-            button.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+            const eye = button.querySelector('[data-password-eye]');
+            const eyeSlash = button.querySelector('[data-password-eye-slash]');
+            if (eye) eye.hidden = showing;
+            if (eyeSlash) eyeSlash.hidden = !showing;
+            const label = showing ? 'Hide password' : 'Show password';
+            button.setAttribute('aria-label', label);
+            button.setAttribute('title', label);
             button.setAttribute('aria-pressed', String(showing));
         });
     });

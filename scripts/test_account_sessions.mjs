@@ -16,7 +16,9 @@ function createElement(attributes = {}) {
         values: {},
         listeners: {},
         attributes: { ...attributes },
+        children: {},
         classList: { toggle() {} },
+        querySelector(selector) { return this.children[selector] || null; },
         getAttribute(name) { return this.attributes[name] ?? null; },
         setAttribute(name, value) { this.attributes[name] = String(value); },
         addEventListener(name, handler) { this.listeners[name] = handler; },
@@ -35,7 +37,12 @@ async function loadAccount({ session = null, membership = null, membershipError 
     }));
     const panels = ['signin', 'signup', 'recovery', 'update-password'].map((mode) => createElement({ 'data-auth-panel': mode }));
     const passwordFields = ['signin-password', 'signup-password', 'signup-confirm', 'new-password', 'new-password-confirm'].map((id) => Object.assign(createElement(), { id, type: 'password', value: 'current entered value' }));
-    const passwordToggles = passwordFields.map((input) => createElement({ 'aria-controls': input.id, type: 'button' }));
+    const passwordToggles = passwordFields.map((input) => {
+        const button = createElement({ 'aria-controls': input.id, type: 'button', 'aria-label': 'Show password', 'aria-pressed': 'false' });
+        button.children['[data-password-eye]'] = createElement();
+        button.children['[data-password-eye-slash]'] = createElement({ hidden: true });
+        return button;
+    });
     const modeButtons = ['signin', 'signup', 'recovery'].map((mode) => createElement({ 'data-auth-mode': mode }));
     const guestCard = createElement({ hidden: true });
     const sessionCard = createElement({ hidden: true });
@@ -128,22 +135,33 @@ async function loadAccount({ session = null, membership = null, membershipError 
 assert.equal((accountHtml.match(/type="password"/g) || []).length, 5, 'all five password entry fields remain covered');
 assert.equal((accountHtml.match(/data-password-toggle/g) || []).length, 5, 'every password field has a visibility button');
 assert.equal((accountHtml.match(/<button[^>]*type="button"[^>]*data-password-toggle/g) || []).length, 5, 'visibility controls are non-submit buttons');
+assert.equal((accountHtml.match(/class="btn btn-outline-secondary kcbf-password-toggle"[^>]*type="button"[^>]*data-password-toggle/g) || []).length, 5, 'all toggles use the compact styled native button control');
+assert.equal((accountHtml.match(/aria-label="Show password" aria-pressed="false" title="Show password"/g) || []).length, 5, 'all controls start with a clear accessible name and state');
+assert.equal((accountHtml.match(/data-password-eye-slash[^>]*hidden/g) || []).length, 5, 'all eye-slash icons start hidden');
+const authStyles = await readFile(resolve(root, 'MultiShop/css/auth-admin.css'), 'utf8');
+assert.match(authStyles, /\.kcbf-password-toggle\s*\{[^}]*min-height:\s*2\.75rem/s, 'icon button has a comfortable touch target');
+assert.match(authStyles, /\.kcbf-password-toggle:focus-visible\s*\{/s, 'keyboard focus is clearly visible');
 const guest = await loadAccount();
 for (let index = 0; index < guest.passwordFields.length; index += 1) {
     const input = guest.passwordFields[index];
     const button = guest.passwordToggles[index];
     const value = input.value;
     assert.equal(input.type, 'password', 'passwords start hidden');
+    assert.equal(button.children['[data-password-eye]'].hidden, false, 'eye icon starts visible');
+    assert.equal(button.children['[data-password-eye-slash]'].hidden, true, 'eye-slash icon starts hidden');
     await button.listeners.click();
     assert.equal(input.type, 'text', 'toggle reveals only the currently entered value');
     assert.equal(input.value, value, 'visibility toggle preserves the entered value');
-    assert.equal(button.textContent, 'Hide password');
+    assert.equal(button.children['[data-password-eye]'].hidden, true, 'eye icon hides while password is visible');
+    assert.equal(button.children['[data-password-eye-slash]'].hidden, false, 'eye-slash icon appears while password is visible');
     assert.equal(button.getAttribute('aria-pressed'), 'true');
     assert.equal(button.getAttribute('aria-label'), 'Hide password');
     await button.listeners.click();
     assert.equal(input.type, 'password', 'second activation hides the password');
     assert.equal(input.value, value, 'hiding also preserves the entered value');
-    assert.equal(button.textContent, 'Show password');
+    assert.equal(button.children['[data-password-eye]'].hidden, false);
+    assert.equal(button.children['[data-password-eye-slash]'].hidden, true);
+    assert.equal(button.getAttribute('aria-label'), 'Show password');
     assert.equal(button.getAttribute('aria-pressed'), 'false');
 }
 const customerSession = { user: { id: 'customer-1', email_confirmed_at: '2026-01-01T00:00:00Z' } };
